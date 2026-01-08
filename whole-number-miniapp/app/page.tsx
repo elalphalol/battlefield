@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { WalletConnect } from './components/WalletConnect';
-import { ArmySelection } from './components/ArmySelection';
 import { PaperMoneyClaim } from './components/PaperMoneyClaim';
 import { TradingPanel } from './components/TradingPanel';
 import { Leaderboard } from './components/Leaderboard';
 import { useBTCPrice } from './hooks/useBTCPrice';
+import { WholeNumberStrategy } from './lib/strategy';
 
 interface UserData {
   id: number;
@@ -31,6 +31,29 @@ export default function BattlefieldHome() {
   const { price: btcPrice, isLoading } = useBTCPrice(5000);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard'>('trade');
+  const [strategy] = useState(() => new WholeNumberStrategy());
+
+  // Update strategy with new price
+  useEffect(() => {
+    if (btcPrice > 0) {
+      strategy.updatePrice(btcPrice);
+    }
+  }, [btcPrice, strategy]);
+
+  // Calculate strategy values
+  const coordinate = useMemo(() => strategy.getCoordinate(btcPrice), [btcPrice, strategy]);
+  const wholeNumber = useMemo(() => strategy.getWholeNumber(btcPrice), [btcPrice, strategy]);
+  const nextWholeNumber = useMemo(() => strategy.getNextWholeNumber(btcPrice), [btcPrice, strategy]);
+  const zoneInfo = useMemo(() => strategy.getZoneInfo(coordinate), [coordinate, strategy]);
+  const direction = useMemo(() => strategy.getMarketDirection(), [strategy]);
+  const recommendation = useMemo(() => strategy.getRecommendedAction(coordinate, direction), [coordinate, direction, strategy]);
+
+  // Check beams
+  useEffect(() => {
+    if (btcPrice > 0) {
+      strategy.checkBeams(coordinate, wholeNumber);
+    }
+  }, [btcPrice, coordinate, wholeNumber, strategy]);
 
   // Fetch or create user when wallet connects
   const fetchUserData = useCallback(async () => {
@@ -49,11 +72,11 @@ export default function BattlefieldHome() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            fid: Math.floor(Math.random() * 1000000), // Mock FID for now
+            fid: Math.floor(Math.random() * 1000000),
             walletAddress: address,
             username: `Trader${address.slice(2, 8)}`,
             pfpUrl: '',
-            army: 'bulls'
+            army: 'bulls' // Default army for backend
           })
         });
 
@@ -113,19 +136,131 @@ export default function BattlefieldHome() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* BTC Price Display */}
-        <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-lg p-6 mb-6 shadow-xl">
+        {/* BTC Price & Battlefield Display */}
+        <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
           <div className="text-center">
-            <div className="text-sm text-gray-400 mb-2 font-semibold">⚡ BITCOIN PRICE</div>
+            <div className="text-sm text-gray-400 mb-2">BITCOIN PRICE</div>
             <div className="text-5xl md:text-6xl font-bold text-yellow-400 mb-2">
-              {isLoading ? (
-                <span className="animate-pulse">Loading...</span>
-              ) : (
-                `$${btcPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              )}
+              {isLoading ? 'Loading...' : `$${strategy.formatNumber(btcPrice)}`}
             </div>
-            <div className="text-xs text-gray-500">
-              Live Price • Updates every 5s
+            <div className="text-sm text-gray-500">
+              {new Date().toLocaleTimeString()}
+            </div>
+          </div>
+
+          {/* Whole Number Info */}
+          <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="bg-slate-900 rounded-lg p-4 text-center">
+              <div className="text-xs text-gray-400 mb-1">Current Whole</div>
+              <div className="text-xl font-bold text-blue-400">
+                ${strategy.formatNumber(wholeNumber)}
+              </div>
+            </div>
+            <div className="bg-slate-900 rounded-lg p-4 text-center">
+              <div className="text-xs text-gray-400 mb-1">Coordinate</div>
+              <div className="text-2xl font-bold text-yellow-400">
+                {coordinate.toString().padStart(3, '0')}
+              </div>
+            </div>
+            <div className="bg-slate-900 rounded-lg p-4 text-center">
+              <div className="text-xs text-gray-400 mb-1">Next Whole</div>
+              <div className="text-xl font-bold text-green-400">
+                ${strategy.formatNumber(nextWholeNumber)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Zone Info */}
+        <div className={`rounded-lg p-6 mb-6 border-2 ${
+          zoneInfo.signal === 'bullish' ? 'bg-green-900/20 border-green-500' :
+          zoneInfo.signal === 'bearish' ? 'bg-red-900/20 border-red-500' :
+          zoneInfo.signal === 'opportunity' ? 'bg-yellow-900/20 border-yellow-500' :
+          'bg-slate-800 border-slate-600'
+        }`}>
+          <h3 className="text-2xl font-bold mb-2">{zoneInfo.name}</h3>
+          <p className="text-gray-300">{zoneInfo.description}</p>
+        </div>
+
+        {/* Market Direction & Recommendation */}
+        <div className="grid md:grid-cols-2 gap-6 mb-6">
+          {/* Direction */}
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              🧭 MARKET DIRECTION
+            </h3>
+            <div className={`text-4xl font-bold text-center py-4 rounded ${
+              direction === 'bullish' ? 'bg-green-900/30 text-green-400' :
+              direction === 'bearish' ? 'bg-red-900/30 text-red-400' :
+              'bg-slate-700 text-gray-400'
+            }`}>
+              {direction === 'bullish' ? '⬆️ BULLISH' :
+               direction === 'bearish' ? '⬇️ BEARISH' :
+               '↔️ NEUTRAL'}
+            </div>
+          </div>
+
+          {/* Recommendation */}
+          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              ⚡ RECOMMENDATION
+            </h3>
+            <div className={`text-2xl font-bold px-4 py-2 rounded mb-3 text-center ${
+              recommendation.action === 'long' ? 'bg-green-600' :
+              recommendation.action === 'short' ? 'bg-red-600' :
+              recommendation.action === 'caution' ? 'bg-yellow-600' :
+              'bg-gray-600'
+            }`}>
+              {recommendation.action.toUpperCase()}
+            </div>
+            <p className="text-sm text-gray-300 leading-relaxed">
+              {recommendation.description}
+            </p>
+            <div className="mt-3 text-xs text-gray-500">
+              Confidence: {recommendation.confidence.toUpperCase()}
+            </div>
+          </div>
+        </div>
+
+        {/* Beams Status */}
+        <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
+          <h3 className="text-lg font-bold mb-4">🔨 THE BEAMS</h3>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className={`p-4 rounded ${strategy.beamsBroken.beam226 ? 'bg-red-900/30' : 'bg-slate-700'}`}>
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">226 BEAM</span>
+                <span className="text-2xl">{strategy.beamsBroken.beam226 ? '🔴' : '🟢'}</span>
+              </div>
+              <div className="text-sm text-gray-400 mt-1">
+                ${strategy.formatNumber(wholeNumber + 226)}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {strategy.beamsBroken.beam226 ? 'BROKEN' : 'INTACT'}
+              </div>
+            </div>
+            <div className={`p-4 rounded ${strategy.beamsBroken.beam113 ? 'bg-red-900/30' : 'bg-slate-700'}`}>
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">113 BEAM</span>
+                <span className="text-2xl">{strategy.beamsBroken.beam113 ? '🔴' : '🟢'}</span>
+              </div>
+              <div className="text-sm text-gray-400 mt-1">
+                ${strategy.formatNumber(wholeNumber + 113)}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {strategy.beamsBroken.beam113 ? 'BROKEN' : 'INTACT'}
+              </div>
+            </div>
+            <div className={`p-4 rounded ${strategy.beamsBroken.beam086 ? 'bg-red-900/30' : 'bg-slate-700'}`}>
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">086 BEAM</span>
+                <span className="text-2xl">{strategy.beamsBroken.beam086 ? '🔴' : '🟢'}</span>
+              </div>
+              <div className="text-sm text-gray-400 mt-1">
+                ${strategy.formatNumber(wholeNumber + 86)}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {strategy.beamsBroken.beam086 ? 'BROKEN' : 'INTACT'}
+              </div>
             </div>
           </div>
         </div>
@@ -197,12 +332,8 @@ export default function BattlefieldHome() {
         {/* Content Based on Active Tab */}
         {activeTab === 'trade' ? (
           <div className="grid lg:grid-cols-3 gap-6">
-            {/* Left Column - Army & Claims */}
+            {/* Left Column - Claims */}
             <div className="space-y-6">
-              <ArmySelection 
-                currentArmy={userData?.army}
-                onArmyChange={handleArmyChange}
-              />
               <PaperMoneyClaim onClaim={handleClaim} />
             </div>
 
