@@ -202,11 +202,11 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                     </div>
                     
                     <div className="flex gap-4 text-xs text-gray-400">
-                      <span>💰 ${entry.paper_balance.toFixed(0)}</span>
-                      <span className={entry.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'}>
-                        P&L: {entry.total_pnl >= 0 ? '+' : ''}${entry.total_pnl.toFixed(2)}
+                      <span>💰 ${Number(entry.paper_balance).toFixed(0)}</span>
+                      <span className={Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}>
+                        P&L: {Number(entry.total_pnl) >= 0 ? '+' : ''}${Number(entry.total_pnl).toFixed(2)}
                       </span>
-                      <span>📊 {entry.win_rate.toFixed(1)}% WR</span>
+                      <span>📊 {Number(entry.win_rate).toFixed(1)}% WR</span>
                       <span>🔥 {entry.current_streak} streak</span>
                     </div>
                   </div>
@@ -214,7 +214,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                   {/* Stats */}
                   <div className="hidden md:flex flex-col items-end gap-1">
                     <div className="text-sm font-bold text-yellow-400">
-                      Score: {entry.score.toFixed(0)}
+                      Score: {Number(entry.score).toFixed(0)}
                     </div>
                     <div className="text-xs text-gray-400">
                       {entry.total_trades} trades

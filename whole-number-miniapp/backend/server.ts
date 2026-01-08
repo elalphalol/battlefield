@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import { Pool } from 'pg';
 
 // Load environment variables
-dotenv.config({ path: '../.env.local' });
+dotenv.config();
 
 // Initialize Express app
 const app = express();
@@ -290,10 +290,10 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
     });
   }
 
-  if (![10, 25, 50, 100].includes(leverage)) {
+  if (leverage < 1 || leverage > 100) {
     return res.status(400).json({ 
       success: false, 
-      message: 'Leverage must be 10, 25, 50, or 100' 
+      message: 'Leverage must be between 1x and 100x' 
     });
   }
 
@@ -381,12 +381,19 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
       ? exitPrice - t.entry_price 
       : t.entry_price - exitPrice;
     const pnlPercentage = (priceChange / t.entry_price) * t.leverage;
-    const pnl = pnlPercentage * t.position_size;
+    let pnl = pnlPercentage * t.position_size;
+
+    // Calculate trading fee based on leverage (0.1% per 1x leverage, minimum 0% for 1x)
+    const feePercentage = t.leverage > 1 ? t.leverage * 0.1 : 0; // 2x = 0.2%, 10x = 1%, 50x = 5%, 100x = 10%
+    const tradingFee = (feePercentage / 100) * t.position_size;
+    
+    // Apply fee to P&L
+    const pnlAfterFee = pnl - tradingFee;
 
     // Determine if liquidated
-    const isLiquidated = pnl <= -t.position_size;
+    const isLiquidated = pnlAfterFee <= -t.position_size;
     const status = isLiquidated ? 'liquidated' : 'closed';
-    const finalAmount = isLiquidated ? 0 : t.position_size + pnl;
+    const finalAmount = isLiquidated ? 0 : t.position_size + pnlAfterFee;
 
     // Update trade
     await pool.query(
@@ -396,25 +403,31 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
 
     // Update user balance (triggers will update stats)
     if (finalAmount > 0) {
-      await pool.query(
-        'UPDATE users SET paper_balance = paper_balance + $1, last_active = NOW() WHERE id = $2',
+      const balanceUpdate = await pool.query(
+        'UPDATE users SET paper_balance = paper_balance + $1, last_active = NOW() WHERE id = $2 RETURNING paper_balance',
         [finalAmount, t.user_id]
       );
+      console.log(`✅ Trade closed: Added $${finalAmount.toFixed(2)} back. New balance: $${balanceUpdate.rows[0].paper_balance}`);
     } else {
       await pool.query(
         'UPDATE users SET last_active = NOW() WHERE id = $1',
         [t.user_id]
       );
+      console.log(`💥 Trade liquidated: $0 returned`);
     }
 
     await pool.query('COMMIT');
 
     res.json({ 
       success: true, 
-      pnl, 
+      pnl,
+      pnlAfterFee,
+      tradingFee,
+      feePercentage,
       pnlPercentage: pnlPercentage * 100,
       status,
-      finalAmount: Math.max(0, finalAmount)
+      finalAmount: Math.max(0, finalAmount),
+      newBalance: finalAmount > 0 ? (await pool.query('SELECT paper_balance FROM users WHERE id = $1', [t.user_id])).rows[0].paper_balance : null
     });
   } catch (error) {
     await pool.query('ROLLBACK');

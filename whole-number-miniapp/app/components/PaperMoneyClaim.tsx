@@ -5,13 +5,17 @@ import { useAccount } from 'wagmi';
 
 interface PaperMoneyClaimProps {
   onClaim: (newBalance: number) => void;
+  paperBalance: number;
 }
 
-export function PaperMoneyClaim({ onClaim }: PaperMoneyClaimProps) {
+export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps) {
   const { address } = useAccount();
-  const [canClaim, setCanClaim] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(0);
   const [claiming, setClaiming] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [cooldownActive, setCooldownActive] = useState(true);
+
+  // Can claim if balance is below $100 AND cooldown is over
+  const canClaim = Number(paperBalance) < 100 && !cooldownActive;
 
   useEffect(() => {
     if (!address) return;
@@ -27,7 +31,7 @@ export function PaperMoneyClaim({ onClaim }: PaperMoneyClaimProps) {
         
         const data = await response.json();
         if (data.success) {
-          setCanClaim(data.canClaim);
+          setCooldownActive(!data.canClaim);
           setTimeLeft(data.timeLeft || 0);
         }
       } catch (error) {
@@ -40,6 +44,12 @@ export function PaperMoneyClaim({ onClaim }: PaperMoneyClaimProps) {
     
     return () => clearInterval(interval);
   }, [address]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleClaim = async () => {
     if (!address || !canClaim || claiming) return;
@@ -55,8 +65,6 @@ export function PaperMoneyClaim({ onClaim }: PaperMoneyClaimProps) {
       const data = await response.json();
       if (data.success) {
         onClaim(data.newBalance);
-        setCanClaim(false);
-        setTimeLeft(600); // 10 minutes
       } else {
         alert(data.message || 'Failed to claim paper money');
       }
@@ -66,12 +74,6 @@ export function PaperMoneyClaim({ onClaim }: PaperMoneyClaimProps) {
     } finally {
       setClaiming(false);
     }
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (!address) {
@@ -88,46 +90,48 @@ export function PaperMoneyClaim({ onClaim }: PaperMoneyClaimProps) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-green-400">💰 Paper Money Claim</h3>
         <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">
-          Every 10 minutes
+          Balance &lt; $100 • 10min cooldown
         </span>
       </div>
       
       <p className="text-gray-300 mb-4 text-sm">
-        Claim <span className="font-bold text-green-400">$1,000</span> paper money to keep trading
+        Claim <span className="font-bold text-green-400">$1,000</span> when balance is low
       </p>
       
-      {canClaim ? (
-        <button
-          onClick={handleClaim}
-          disabled={claiming}
-          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-6 py-4 rounded-lg font-bold text-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-        >
-          {claiming ? (
-            <>
-              <span className="inline-block animate-spin mr-2">⏳</span>
-              Claiming...
-            </>
-          ) : (
-            <>
-              <span className="mr-2">💵</span>
-              Claim $1,000 Now!
-            </>
-          )}
-        </button>
-      ) : (
-        <div className="text-center p-6 bg-slate-700/50 rounded-lg">
-          <div className="text-yellow-400 text-4xl font-bold mb-2">
-            {formatTime(timeLeft)}
-          </div>
-          <p className="text-gray-400 text-sm">Next claim available</p>
-          <div className="mt-3 w-full bg-slate-600 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-1000"
-              style={{ width: `${Math.max(0, 100 - (timeLeft / 600) * 100)}%` }}
-            />
-          </div>
-        </div>
-      )}
+      <button
+        onClick={handleClaim}
+        disabled={!canClaim || claiming}
+        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-6 py-4 rounded-lg font-bold text-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+      >
+        {claiming ? (
+          <>
+            <span className="inline-block animate-spin mr-2">⏳</span>
+            Claiming...
+          </>
+        ) : canClaim ? (
+          <>
+            <span className="mr-2">💵</span>
+            Claim $1,000 Now!
+          </>
+        ) : cooldownActive ? (
+          <>
+            <span className="mr-2">⏰</span>
+            On Cooldown
+          </>
+        ) : (
+          <>
+            <span className="mr-2">💰</span>
+            Balance too high: ${Number(paperBalance).toFixed(0)}
+          </>
+        )}
+      </button>
+
+      {/* Info text below button */}
+      <div className="mt-3 text-center text-xs text-gray-400">
+        {!canClaim && !cooldownActive && (
+          <p>Balance must be below $100 to claim</p>
+        )}
+      </div>
 
       <div className="mt-4 p-3 bg-slate-700/30 rounded text-xs text-gray-400 space-y-1">
         <div className="flex items-center">
@@ -140,9 +144,11 @@ export function PaperMoneyClaim({ onClaim }: PaperMoneyClaimProps) {
         </div>
         <div className="flex items-center">
           <span className="mr-2">🔄</span>
-          <span>Claim as many times as you need (10min cooldown)</span>
+          <span>Claim when balance &lt; $100 (10min cooldown)</span>
         </div>
       </div>
     </div>
   );
 }
+
+

@@ -7,6 +7,7 @@ import { PaperMoneyClaim } from './components/PaperMoneyClaim';
 import { TradingPanel } from './components/TradingPanel';
 import { Leaderboard } from './components/Leaderboard';
 import { BattlefieldVisual } from './components/BattlefieldVisual';
+import { UserStats } from './components/UserStats';
 import { useBTCPrice } from './hooks/useBTCPrice';
 import { WholeNumberStrategy } from './lib/strategy';
 
@@ -58,7 +59,10 @@ export default function BattlefieldHome() {
 
   // Fetch or create user when wallet connects
   const fetchUserData = useCallback(async () => {
-    if (!address) return;
+    if (!address) {
+      setUserData(null);
+      return;
+    }
 
     try {
       // Try to get existing user
@@ -92,11 +96,9 @@ export default function BattlefieldHome() {
   }, [address]);
 
   useEffect(() => {
-    if (address) {
-      fetchUserData();
-    } else {
-      setUserData(null);
-    }
+    // Data fetching on address change is intentional
+    // eslint-disable-next-line
+    fetchUserData();
   }, [address, fetchUserData]);
 
   const handleArmyChange = (army: 'bears' | 'bulls') => {
@@ -137,17 +139,6 @@ export default function BattlefieldHome() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Battlefield Visual */}
-        <div className="mb-6">
-          <BattlefieldVisual
-            coordinate={coordinate}
-            wholeNumber={wholeNumber}
-            nextWholeNumber={nextWholeNumber}
-            beamsBroken={strategy.beamsBroken}
-            zoneInfo={zoneInfo}
-          />
-        </div>
-
         {/* BTC Price & Details */}
         <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
           <div className="text-center">
@@ -156,7 +147,7 @@ export default function BattlefieldHome() {
               {isLoading ? 'Loading...' : `$${strategy.formatNumber(btcPrice)}`}
             </div>
             <div className="text-sm text-gray-500">
-              {new Date().toLocaleTimeString()}
+              Live • Updates every 5s
             </div>
           </div>
 
@@ -181,6 +172,17 @@ export default function BattlefieldHome() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Battlefield Visual */}
+        <div className="mb-6">
+          <BattlefieldVisual
+            coordinate={coordinate}
+            wholeNumber={wholeNumber}
+            nextWholeNumber={nextWholeNumber}
+            beamsBroken={strategy.beamsBroken}
+            zoneInfo={zoneInfo}
+          />
         </div>
 
         {/* Zone Info */}
@@ -295,8 +297,8 @@ export default function BattlefieldHome() {
               </div>
               <div>
                 <div className="text-xs text-gray-400">Total P&L</div>
-                <div className={`text-lg font-bold ${userData.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {userData.total_pnl >= 0 ? '+' : ''}${userData.total_pnl.toFixed(2)}
+                <div className={`text-lg font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toFixed(2)}
                 </div>
               </div>
               <div>
@@ -343,19 +345,69 @@ export default function BattlefieldHome() {
 
         {/* Content Based on Active Tab */}
         {activeTab === 'trade' ? (
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Left Column - Claims */}
-            <div className="space-y-6">
-              <PaperMoneyClaim onClaim={handleClaim} />
-            </div>
+          <div>
+            {/* Demo Mode Warning if no wallet */}
+            {!address && (
+              <div className="bg-yellow-900/30 border-2 border-yellow-500 rounded-lg p-6 mb-6">
+                <h3 className="text-2xl font-bold text-yellow-400 mb-2">📱 Connect Wallet to Play</h3>
+                <p className="text-gray-300 mb-4">
+                  This game requires wallet connection. Click &quot;Connect Wallet&quot; above to start with $10,000 paper money!
+                </p>
+                <p className="text-sm text-gray-400">
+                  Note: Full game requires Farcaster Frame integration for real user profiles.
+                </p>
+              </div>
+            )}
 
-            {/* Middle/Right Column - Trading */}
-            <div className="lg:col-span-2">
-              <TradingPanel
-                btcPrice={btcPrice}
-                paperBalance={userData?.paper_balance || 0}
-                onTradeComplete={handleTradeComplete}
-              />
+            {/* If connected but no balance, show get started button */}
+            {address && userData && userData.paper_balance === 0 && (
+              <div className="bg-green-900/30 border-2 border-green-500 rounded-lg p-6 mb-6 text-center">
+                <h3 className="text-2xl font-bold text-green-400 mb-3">🎮 Get Started!</h3>
+                <p className="text-gray-300 mb-4">
+                  Click below to claim your starting $10,000 paper money
+                </p>
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('http://localhost:3001/api/claims', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ walletAddress: address })
+                      });
+                      const data = await response.json();
+                      if (data.success) {
+                        await fetchUserData(); // Refresh user data
+                        alert('✅ $1,000 added! Click 9 more times to reach $10k or start trading!');
+                      }
+                    } catch (error) {
+                      console.error('Error:', error);
+                    }
+                  }}
+                  className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-lg font-bold text-xl"
+                >
+                  💵 Claim $10,000 to Start Playing!
+                </button>
+              </div>
+            )}
+
+            <div className="grid lg:grid-cols-3 gap-6">
+              {/* Left Column - Claims & Stats */}
+              <div className="space-y-6">
+                <PaperMoneyClaim 
+                  onClaim={handleClaim} 
+                  paperBalance={userData?.paper_balance || 0} 
+                />
+                <UserStats userData={userData} />
+              </div>
+
+              {/* Middle/Right Column - Trading */}
+              <div className="lg:col-span-2">
+                <TradingPanel
+                  btcPrice={btcPrice}
+                  paperBalance={userData?.paper_balance || 0}
+                  onTradeComplete={handleTradeComplete}
+                />
+              </div>
             </div>
           </div>
         ) : (

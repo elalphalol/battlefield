@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS trades (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   position_type VARCHAR(10) CHECK (position_type IN ('long', 'short')),
-  leverage INTEGER CHECK (leverage IN (10, 25, 50, 100)),
+  leverage INTEGER CHECK (leverage >= 1 AND leverage <= 100),
   entry_price DECIMAL(18, 2) NOT NULL,              -- BTC price when opened
   exit_price DECIMAL(18, 2),                        -- BTC price when closed
   position_size DECIMAL(18, 2) NOT NULL,            -- Amount of paper money used

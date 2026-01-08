@@ -52,8 +52,8 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   };
 
   const handleOpenTrade = async () => {
-    if (!address || positionSize > paperBalance) {
-      alert(`Insufficient balance. Available: $${paperBalance.toFixed(2)}`);
+    if (!address || positionSize > Number(paperBalance)) {
+      alert(`Insufficient balance. Available: $${Number(paperBalance).toFixed(2)}`);
       return;
     }
 
@@ -73,7 +73,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
 
       const data = await response.json();
       if (data.success) {
-        alert(`✅ ${tradeType.toUpperCase()} position opened at $${btcPrice.toFixed(2)}`);
+        // Silently open position - no alert
         fetchOpenTrades();
         onTradeComplete();
       } else {
@@ -103,9 +103,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
 
       const data = await response.json();
       if (data.success) {
-        const pnlSign = data.pnl >= 0 ? '+' : '';
-        const statusEmoji = data.status === 'liquidated' ? '💥' : data.pnl >= 0 ? '✅' : '❌';
-        alert(`${statusEmoji} Position closed!\nP&L: ${pnlSign}$${data.pnl.toFixed(2)} (${data.pnlPercentage.toFixed(2)}%)`);
+        // Silently close position - no alert
         fetchOpenTrades();
         onTradeComplete();
       } else {
@@ -128,11 +126,15 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   };
 
   const calculatePnL = (trade: Trade) => {
+    const entryPrice = Number(trade.entry_price);
+    const positionSize = Number(trade.position_size);
+    const tradeLeverage = Number(trade.leverage);
+    
     const priceChange = trade.position_type === 'long'
-      ? btcPrice - trade.entry_price
-      : trade.entry_price - btcPrice;
-    const pnlPercentage = (priceChange / trade.entry_price) * trade.leverage;
-    const pnl = pnlPercentage * trade.position_size;
+      ? btcPrice - entryPrice
+      : entryPrice - btcPrice;
+    const pnlPercentage = (priceChange / entryPrice) * tradeLeverage;
+    const pnl = pnlPercentage * positionSize;
     return { pnl, percentage: pnlPercentage * 100 };
   };
 
@@ -183,10 +185,12 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
         {/* Leverage Selection */}
         <div className="mb-4">
           <label className="block text-sm font-semibold text-gray-300 mb-2">
-            Leverage: {leverage}x
+            Leverage: <span className="text-yellow-400">{leverage}x</span>
           </label>
-          <div className="grid grid-cols-4 gap-2">
-            {[10, 25, 50, 100].map((lev) => (
+          
+          {/* Quick Buttons */}
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {[10, 25, 50, 86].map((lev) => (
               <button
                 key={lev}
                 onClick={() => setLeverage(lev)}
@@ -199,6 +203,24 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                 {lev}x
               </button>
             ))}
+          </div>
+          
+          {/* Leverage Slider */}
+          <div>
+            <input
+              type="range"
+              min="1"
+              max="100"
+              step="1"
+              value={leverage}
+              onChange={(e) => setLeverage(Number(e.target.value))}
+              className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+            />
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>1x</span>
+              <span className="text-gray-500">Custom: {leverage}x</span>
+              <span>100x</span>
+            </div>
           </div>
         </div>
 
@@ -234,14 +256,14 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Available Balance:</span>
-            <span className="text-green-400 font-bold">${paperBalance.toFixed(2)}</span>
+            <span className="text-green-400 font-bold">${Number(paperBalance).toFixed(2)}</span>
           </div>
         </div>
 
         {/* Open Button */}
         <button
           onClick={handleOpenTrade}
-          disabled={isOpening || positionSize > paperBalance}
+          disabled={isOpening || positionSize > Number(paperBalance)}
           className={`w-full py-4 rounded-lg font-bold text-lg transition-all ${
             tradeType === 'long'
               ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500'
@@ -289,10 +311,10 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 mb-3">
-                    <div>Entry: ${trade.entry_price.toFixed(2)}</div>
+                    <div>Entry: ${Number(trade.entry_price).toFixed(2)}</div>
                     <div>Current: ${btcPrice.toFixed(2)}</div>
                     <div>Size: ${trade.position_size}</div>
-                    <div>Liq: ${trade.liquidation_price.toFixed(2)}</div>
+                    <div>Liq: ${Number(trade.liquidation_price).toFixed(2)}</div>
                   </div>
 
                   {isLiquidationWarning && (
