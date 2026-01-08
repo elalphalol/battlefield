@@ -6,6 +6,7 @@ import { WalletConnect } from './components/WalletConnect';
 import { PaperMoneyClaim } from './components/PaperMoneyClaim';
 import { TradingPanel } from './components/TradingPanel';
 import { Leaderboard } from './components/Leaderboard';
+import { BattlefieldVisual } from './components/BattlefieldVisual';
 import { useBTCPrice } from './hooks/useBTCPrice';
 import { WholeNumberStrategy } from './lib/strategy';
 
@@ -136,7 +137,18 @@ export default function BattlefieldHome() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* BTC Price & Battlefield Display */}
+        {/* Battlefield Visual */}
+        <div className="mb-6">
+          <BattlefieldVisual
+            coordinate={coordinate}
+            wholeNumber={wholeNumber}
+            nextWholeNumber={nextWholeNumber}
+            beamsBroken={strategy.beamsBroken}
+            zoneInfo={zoneInfo}
+          />
+        </div>
+
+        {/* BTC Price & Details */}
         <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
           <div className="text-center">
             <div className="text-sm text-gray-400 mb-2">BITCOIN PRICE</div>
