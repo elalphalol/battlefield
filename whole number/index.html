@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHOLE NUMBER WAR - BTC Strategy Battle</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>⚔️ WHOLE NUMBER WAR ⚔️</h1>
+            <p class="tagline">The Battle Between RED ARMY (Shorts) vs GREEN ARMY (Longs)</p>
+        </header>
+
+        <!-- Main Dashboard -->
+        <div class="dashboard">
+            <!-- Live Price Section -->
+            <div class="price-section">
+                <div class="current-price">
+                    <span class="label">BITCOIN PRICE</span>
+                    <div class="price-display">
+                        <span id="btcPrice" class="price">Loading...</span>
+                    </div>
+                    <div class="price-details">
+                        <span id="timestamp" class="timestamp">Connecting...</span>
+                    </div>
+                    <button class="screenshot-battlefield-btn" id="screenshotBattlefieldBtn">
+                        📸 Screenshot Strategy
+                    </button>
+                </div>
+
+                <!-- Whole Number Info -->
+                <div class="whole-number-info">
+                    <div class="info-card">
+                        <span class="info-label">Current Whole Number</span>
+                        <span id="currentWholeNumber" class="info-value">$0,000</span>
+                    </div>
+                    <div class="info-card">
+                        <span class="info-label">Next Whole Number</span>
+                        <span id="nextWholeNumber" class="info-value">$0,000</span>
+                    </div>
+                    <div class="info-card">
+                        <span class="info-label">Position in Range</span>
+                        <span id="positionInRange" class="info-value">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Battle & Trading Section (Side by Side) -->
+            <div class="battle-trading-container">
+                <!-- Battle Visualization -->
+                <div class="battle-zone">
+                    <h2 class="battle-title">🎯 THE BATTLEFIELD 🎯</h2>
+                    
+                    <!-- Coordinate Display -->
+                    <div class="coordinates-display">
+                        <div class="coordinate-number" id="coordinateNumber">000</div>
+                        <div class="coordinate-label">Current Coordinate</div>
+                    </div>
+
+                    <!-- Visual Battle Line -->
+                    <div class="battle-line">
+                        <div class="army-indicator red-army" id="redArmy">
+                            <div class="army-icon">🔴</div>
+                            <div class="army-label">SHORT ARMY</div>
+                            <div class="army-strength" id="redStrength">50%</div>
+                        </div>
+                        
+                        <div class="battlefield-center">
+                            <div class="whole-number-line">
+                                <div class="line-marker top">⚠️ NEXT WHOLE</div>
+                                <div class="battlefield-bar">
+                                    <div class="position-marker" id="positionMarker">
+                                        <span class="marker-icon">⚡</span>
+                                    </div>
+                                    <!-- Zone indicators -->
+                                    <div class="zone-indicator acceleration">900s 🚀</div>
+                                    <div class="zone-indicator middle">500s ⚖️</div>
+                                    <div class="zone-indicator beams">BEAMS ⚠️</div>
+                                    <div class="zone-indicator dip">DIP BUY 🎯</div>
+                                </div>
+                                <div class="line-marker bottom">⚠️ CURRENT WHOLE</div>
+                            </div>
+                        </div>
+
+                        <div class="army-indicator green-army" id="greenArmy">
+                            <div class="army-icon">🟢</div>
+                            <div class="army-label">LONG ARMY</div>
+                            <div class="army-strength" id="greenStrength">50%</div>
+                        </div>
+                    </div>
+
+                    <!-- Zone Status -->
+                    <div class="zone-status">
+                        <div class="zone-card" id="zoneCard">
+                            <div class="zone-name">Loading Zone...</div>
+                            <div class="zone-description">Analyzing price position...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compact Paper Trading Panel -->
+                <div class="paper-trading-compact">
+                    <h3 class="compact-title">🎮 PAPER TRADING</h3>
+                    
+                    <!-- Controls -->
+                    <div class="compact-controls">
+                        <div class="compact-control">
+                            <label class="compact-label">Leverage: <span id="leverageValue">10</span>x</label>
+                            <input type="range" id="leverageSlider" min="1" max="100" value="10" class="leverage-slider">
+                            <div class="leverage-presets-compact">
+                                <button class="preset-btn-sm" data-leverage="10">10x</button>
+                                <button class="preset-btn-sm" data-leverage="50">50x</button>
+                                <button class="preset-btn-sm" data-leverage="86">86x</button>
+                            </div>
+                        </div>
+
+                        <div class="compact-control">
+                            <label class="compact-label">Size: $<span id="positionSizeValue">1000</span></label>
+                            <input type="range" id="positionSizeSlider" min="100" max="10000" step="100" value="1000" class="position-slider">
+                        </div>
+
+                        <div class="compact-buttons">
+                            <button class="entry-btn-compact long-btn" id="openLongBtn">
+                                🟢 LONG
+                            </button>
+                            <button class="entry-btn-compact short-btn" id="openShortBtn">
+                                🔴 SHORT
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Active Positions Compact -->
+                    <div class="positions-compact">
+                        <h4 class="positions-compact-title">Active Positions</h4>
+                        <div class="positions-container-compact" id="positionsContainer">
+                            <div class="no-positions-compact">💤 No positions</div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Compact -->
+                    <div class="stats-compact">
+                        <div class="stat-compact">
+                            <span class="stat-compact-label">Trades:</span>
+                            <span class="stat-compact-value" id="totalTrades">0</span>
+                        </div>
+                        <div class="stat-compact">
+                            <span class="stat-compact-label">Win Rate:</span>
+                            <span class="stat-compact-value" id="winRate">0%</span>
+                        </div>
+                        <div class="stat-compact pnl-highlight">
+                            <span class="stat-compact-label">Total P&L:</span>
+                            <span class="stat-compact-value" id="totalPnl">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Share Button -->
+                    <button class="share-btn-compact" id="shareBtn">
+                        📤 Share Results
+                    </button>
+                </div>
+            </div>
+
+            <!-- Strategy Panel -->
+            <div class="strategy-panel">
+                <h2 class="panel-title">📊 BATTLE STRATEGY</h2>
+                
+                <div class="strategy-grid">
+                    <!-- Direction Indicator -->
+                    <div class="strategy-card direction-card" id="directionCard">
+                        <div class="card-header">
+                            <span class="card-icon">🧭</span>
+                            <span class="card-title">MARKET DIRECTION</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="direction-indicator" id="directionIndicator">
+                                <div class="direction-arrow">↔️</div>
+                                <div class="direction-text">NEUTRAL</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Recommendation -->
+                    <div class="strategy-card action-card" id="actionCard">
+                        <div class="card-header">
+                            <span class="card-icon">⚡</span>
+                            <span class="card-title">RECOMMENDED ACTION</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="action-badge" id="actionBadge">WAIT</div>
+                            <div class="action-description" id="actionDescription">
+                                Analyzing market conditions...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Entry Points -->
+                    <div class="strategy-card entry-card">
+                        <div class="card-header">
+                            <span class="card-icon">🎯</span>
+                            <span class="card-title">ENTRY ZONES</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="entry-point long-entry">
+                                <span class="entry-label">LONG ENTRY:</span>
+                                <span class="entry-value" id="longEntry">$0,000</span>
+                            </div>
+                            <div class="entry-point short-entry">
+                                <span class="entry-label">SHORT ENTRY:</span>
+                                <span class="entry-value" id="shortEntry">$0,000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Beams Status -->
+                    <div class="strategy-card beams-card">
+                        <div class="card-header">
+                            <span class="card-icon">🔨</span>
+                            <span class="card-title">THE BEAMS</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="beam-status" id="beam226">
+                                <span class="beam-label">226 BEAM:</span>
+                                <span class="beam-value">$0,226</span>
+                                <span class="beam-indicator">⚪</span>
+                            </div>
+                            <div class="beam-status" id="beam113">
+                                <span class="beam-label">113 BEAM:</span>
+                                <span class="beam-value">$0,113</span>
+                                <span class="beam-indicator">⚪</span>
+                            </div>
+                            <div class="beam-status" id="beam086">
+                                <span class="beam-label">086 BEAM:</span>
+                                <span class="beam-value">$0,086</span>
+                                <span class="beam-indicator">⚪</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div class="alerts-section" id="alertsSection">
+                <h3 class="alerts-title">🚨 BATTLE ALERTS</h3>
+                <div class="alerts-container" id="alertsContainer">
+                    <div class="alert-item info">
+                        <span class="alert-icon">ℹ️</span>
+                        <span class="alert-text">Loading battle data...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Cycle Indicator -->
+            <div class="time-cycle">
+                <h3 class="cycle-title">⏰ TIME CYCLE INDICATOR</h3>
+                <div class="cycle-info">
+                    <div class="cycle-current">
+                        <span class="cycle-label">Current NY Time:</span>
+                        <span id="nyTime" class="cycle-value">--:--:-- --</span>
+                    </div>
+                    <div class="cycle-phase" id="cyclePhase">
+                        <span class="phase-icon">🌙</span>
+                        <span class="phase-name">Analyzing...</span>
+                        <span class="phase-description">Determining market phase...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Reference Panel -->
+        <div class="quick-reference">
+            <button class="toggle-reference" id="toggleReference">
+                📖 QUICK STRATEGY GUIDE
+            </button>
+            <div class="reference-content" id="referenceContent">
+                <div class="reference-section">
+                    <h4>🎯 THE NUMBER SYSTEM</h4>
+                    <ul>
+                        <li><strong>900s (Acceleration):</strong> Price heading to next whole number 🚀</li>
+                        <li><strong>500s/400s/600s (Middle):</strong> Neutral zone, wait for direction ⚖️</li>
+                        <li><strong>300s (Weakness):</strong> Breaking down toward lower whole number ⚠️</li>
+                        <li><strong>226/113/086 (Beams):</strong> Critical breakdown points 🔨</li>
+                        <li><strong>888-700 (Dip Buy):</strong> Psychological buying zone 🎯</li>
+                    </ul>
+                </div>
+                <div class="reference-section">
+                    <h4>⚔️ BATTLE RULES</h4>
+                    <ul>
+                        <li><strong>RED ARMY (Short):</strong> Enter ABOVE whole number when bearish 🔴</li>
+                        <li><strong>GREEN ARMY (Long):</strong> Enter BELOW whole number when bullish 🟢</li>
+                        <li><strong>$3,000 Gap:</strong> Always maintain this safety buffer �️</li>
+                        <li><strong>Walk Away:</strong> Don't watch every tick, trust the gap 🚶</li>
+                        <li><strong>Dwarf Toss:</strong> Let it break first, then short the pump 🪓</li>
+                    </ul>
+                </div>
+                <div class="reference-section">
+                    <h4>⏰ TIME CYCLES</h4>
+                    <ul>
+                        <li><strong>6:30 AM:</strong> Typical overnight low point 🌅</li>
+                        <li><strong>9:30 AM:</strong> AM pump (stock market open) 📈</li>
+                        <li><strong>Daytime:</strong> Pumps more likely ☀️</li>
+                        <li><strong>Nighttime:</strong> Dumps more likely 🌙</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>⚠️ Educational purposes only. High leverage trading carries substantial risk. Never risk more than you can afford to lose.</p>
+            <p class="credits">Based on the Oracle WHOLE NUMBER Strategy</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
