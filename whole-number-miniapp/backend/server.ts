@@ -390,10 +390,26 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
     // Apply fee to P&L
     const pnlAfterFee = pnl - tradingFee;
 
-    // Determine if liquidated
+    // Determine if liquidated (loss is greater than or equal to 100% of position)
     const isLiquidated = pnlAfterFee <= -t.position_size;
     const status = isLiquidated ? 'liquidated' : 'closed';
     const finalAmount = isLiquidated ? 0 : t.position_size + pnlAfterFee;
+
+    console.log(`
+📊 Trade Close Details:
+- Trade ID: ${tradeId}
+- Position Type: ${t.position_type}
+- Entry Price: $${t.entry_price}
+- Exit Price: $${exitPrice}
+- Price Change: $${priceChange.toFixed(2)}
+- Leverage: ${t.leverage}x
+- Position Size: $${t.position_size}
+- Raw P&L: $${pnl.toFixed(2)} (${(pnlPercentage * 100).toFixed(2)}%)
+- Trading Fee: $${tradingFee.toFixed(2)} (${feePercentage.toFixed(2)}%)
+- P&L After Fee: $${pnlAfterFee.toFixed(2)}
+- Final Amount: $${finalAmount.toFixed(2)}
+- Status: ${status}
+    `);
 
     // Update trade
     await pool.query(

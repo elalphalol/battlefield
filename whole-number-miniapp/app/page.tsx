@@ -8,6 +8,8 @@ import { TradingPanel } from './components/TradingPanel';
 import { Leaderboard } from './components/Leaderboard';
 import { BattlefieldVisual } from './components/BattlefieldVisual';
 import { UserStats } from './components/UserStats';
+import { TradeHistory } from './components/TradeHistory';
+import { WholeNumberStrategy as StrategyGuide } from './components/WholeNumberStrategy';
 import { useBTCPrice } from './hooks/useBTCPrice';
 import { WholeNumberStrategy } from './lib/strategy';
 
@@ -390,6 +392,11 @@ export default function BattlefieldHome() {
               </div>
             )}
 
+            {/* Strategy Guide - Expandable */}
+            <div className="mb-6">
+              <StrategyGuide />
+            </div>
+
             <div className="grid lg:grid-cols-3 gap-6">
               {/* Left Column - Claims & Stats */}
               <div className="space-y-6">
@@ -398,6 +405,7 @@ export default function BattlefieldHome() {
                   paperBalance={userData?.paper_balance || 0} 
                 />
                 <UserStats userData={userData} />
+                <TradeHistory />
               </div>
 
               {/* Middle/Right Column - Trading */}
