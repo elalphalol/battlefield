@@ -562,7 +562,7 @@ app.get('/api/leaderboard/rank/:walletAddress', async (req: Request, res: Respon
   try {
     const result = await pool.query(
       `SELECT 
-        ROW_NUMBER() OVER (ORDER BY score DESC) as rank,
+        ROW_NUMBER() OVER (ORDER BY total_pnl DESC) as rank,
         *
        FROM current_leaderboard
        WHERE wallet_address = $1`,
