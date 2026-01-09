@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // Exclude backend folder from build
+  webpack: (config, { isServer }) => {
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ['**/backend/**', '**/node_modules/**'],
+    };
+    return config;
+  },
   images: {
     remotePatterns: [
       {
