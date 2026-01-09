@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd whole-number-miniapp && npm run build",
+  "devCommand": "cd whole-number-miniapp && npm run dev",
+  "installCommand": "cd whole-number-miniapp && npm install",
+  "framework": "nextjs",
+  "outputDirectory": "whole-number-miniapp/.next"
+}
