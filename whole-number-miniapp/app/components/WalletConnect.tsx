@@ -56,18 +56,20 @@ export function WalletConnect() {
           <div className="p-4">
             <div className="text-white font-bold mb-3">Select Wallet</div>
             <div className="space-y-2">
-              {connectors.map((connector) => (
-                <button
-                  key={connector.id}
-                  onClick={() => {
-                    connect({ connector });
-                    setShowModal(false);
-                  }}
-                  className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-bold text-left px-4"
-                >
-                  {connector.name}
-                </button>
-              ))}
+              {connectors
+                .filter((connector) => connector.id === 'injected')
+                .map((connector) => (
+                  <button
+                    key={connector.id}
+                    onClick={() => {
+                      connect({ connector });
+                      setShowModal(false);
+                    }}
+                    className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-bold text-left px-4"
+                  >
+                    MetaMask / Browser Wallet
+                  </button>
+                ))}
             </div>
           </div>
         </div>
