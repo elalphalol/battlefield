@@ -430,54 +430,56 @@ export default function BattlefieldHome() {
             </div>
           </div>
         ) : (
-          <Leaderboard />
+          <div>
+            <Leaderboard />
+            
+            {/* Info Section */}
+            <div className="mt-8 bg-slate-800/50 border border-slate-700 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-yellow-400 mb-4">📚 How to Play</h3>
+              <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
+                <div>
+                  <div className="font-bold text-white mb-2">1️⃣ Choose Your Army</div>
+                  <p>Join the Bears 🐻 or Bulls 🐂. Your army affects leaderboard rankings and monthly rewards.</p>
+                </div>
+                <div>
+                  <div className="font-bold text-white mb-2">2️⃣ Start Trading</div>
+                  <p>Open leveraged positions (10x-100x). Profit from Bitcoin price movements with paper money.</p>
+                </div>
+                <div>
+                  <div className="font-bold text-white mb-2">3️⃣ Compete & Win</div>
+                  <p>Climb the leaderboard! Top traders earn $BATTLE tokens and glory for their army.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Rewards Info */}
+            <div className="mt-6 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-purple-400 mb-3 text-center">💎 Weekly Rewards</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
+                <div>
+                  <div className="text-2xl mb-1">🥇</div>
+                  <div className="font-bold text-yellow-400">1st Place</div>
+                  <div className="text-purple-300">5M $BATTLE</div>
+                </div>
+                <div>
+                  <div className="text-2xl mb-1">🥈</div>
+                  <div className="font-bold text-gray-300">2nd Place</div>
+                  <div className="text-purple-300">3M $BATTLE</div>
+                </div>
+                <div>
+                  <div className="text-2xl mb-1">🥉</div>
+                  <div className="font-bold text-orange-400">3rd Place</div>
+                  <div className="text-purple-300">2M $BATTLE</div>
+                </div>
+                <div>
+                  <div className="text-2xl mb-1">🎯</div>
+                  <div className="font-bold text-blue-400">4th-10th</div>
+                  <div className="text-purple-300">1M each</div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
-
-        {/* Info Section */}
-        <div className="mt-8 bg-slate-800/50 border border-slate-700 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-yellow-400 mb-4">📚 How to Play</h3>
-          <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
-            <div>
-              <div className="font-bold text-white mb-2">1️⃣ Choose Your Army</div>
-              <p>Join the Bears 🐻 or Bulls 🐂. Your army affects leaderboard rankings and monthly rewards.</p>
-            </div>
-            <div>
-              <div className="font-bold text-white mb-2">2️⃣ Start Trading</div>
-              <p>Open leveraged positions (10x-100x). Profit from Bitcoin price movements with paper money.</p>
-            </div>
-            <div>
-              <div className="font-bold text-white mb-2">3️⃣ Compete & Win</div>
-              <p>Climb the leaderboard! Top traders earn $BATTLE tokens and glory for their army.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Rewards Info */}
-        <div className="mt-6 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-purple-400 mb-3 text-center">💎 Weekly Rewards</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
-            <div>
-              <div className="text-2xl mb-1">🥇</div>
-              <div className="font-bold text-yellow-400">1st Place</div>
-              <div className="text-purple-300">5M $BATTLE</div>
-            </div>
-            <div>
-              <div className="text-2xl mb-1">🥈</div>
-              <div className="font-bold text-gray-300">2nd Place</div>
-              <div className="text-purple-300">3M $BATTLE</div>
-            </div>
-            <div>
-              <div className="text-2xl mb-1">🥉</div>
-              <div className="font-bold text-orange-400">3rd Place</div>
-              <div className="text-purple-300">2M $BATTLE</div>
-            </div>
-            <div>
-              <div className="text-2xl mb-1">🎯</div>
-              <div className="font-bold text-blue-400">4th-10th</div>
-              <div className="text-purple-300">1M each</div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Footer */}

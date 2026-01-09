@@ -231,19 +231,6 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
           })
         )}
       </div>
-
-      {/* Rewards Info */}
-      <div className="p-4 bg-slate-900/50 border-t border-slate-700">
-        <div className="text-center text-xs text-gray-400 space-y-1">
-          <div className="font-bold text-yellow-400">💎 Weekly Rewards</div>
-          <div className="flex justify-center gap-4">
-            <span>🥇 5M $BATTLE</span>
-            <span>🥈 3M $BATTLE</span>
-            <span>🥉 2M $BATTLE</span>
-            <span>4-10th: 1M each</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
