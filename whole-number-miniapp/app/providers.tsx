@@ -12,14 +12,21 @@ const queryClient = new QueryClient();
 const wagmiConfig = createConfig({
   chains: [base],
   connectors: [
-    injected(),
-    coinbaseWallet({
-      appName: 'Battlefield',
-      appLogoUrl: 'https://battlefield-mini.vercel.app/opengraph-image.jpg',
-    }),
     walletConnect({
       projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
       showQrModal: true,
+      metadata: {
+        name: 'Battlefield',
+        description: 'Bears vs Bulls Bitcoin Paper Trading',
+        url: 'https://battlefield-mini.vercel.app',
+        icons: ['https://battlefield-mini.vercel.app/opengraph-image.jpg']
+      },
+      qrModalOptions: {
+        themeMode: 'dark',
+        themeVariables: {
+          '--wcm-z-index': '9999'
+        }
+      }
     }),
   ],
   transports: {
