@@ -440,6 +440,15 @@ export default function StrategyPage() {
         </section>
 
       </div>
+
+      {/* Sticky Back to Battlefield Button */}
+      <Link 
+        href="/"
+        className="fixed bottom-8 right-8 z-40 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-slate-900 p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
+      >
+        <span className="text-2xl">⚔️</span>
+        <span className="hidden sm:inline">Back to Battlefield</span>
+      </Link>
     </div>
   );
 }

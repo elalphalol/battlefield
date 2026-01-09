@@ -27,6 +27,7 @@ export function TradeHistory() {
   const [history, setHistory] = useState<ClosedTrade[]>([]);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [openShareMenuId, setOpenShareMenuId] = useState<number | null>(null);
 
   useEffect(() => {
     if (address) {
@@ -100,8 +101,6 @@ export function TradeHistory() {
           const isProfit = pnl >= 0;
           const isLiquidated = trade.status === 'liquidated';
 
-          const [showShareMenu, setShowShareMenu] = useState(false);
-
           const generateImageUrl = () => {
             const army = userData?.army || 'bulls';
             const username = userData?.username || address?.slice(0, 8);
@@ -141,7 +140,7 @@ export function TradeHistory() {
               alert('✅ Copied to clipboard! Paste in any social media.');
             }
             
-            setShowShareMenu(false);
+            setOpenShareMenuId(null);
           };
 
           return (
@@ -195,13 +194,13 @@ export function TradeHistory() {
                 </div>
                 <div className="relative">
                   <button
-                    onClick={() => setShowShareMenu(!showShareMenu)}
+                    onClick={() => setOpenShareMenuId(openShareMenuId === trade.id ? null : trade.id)}
                     className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
                   >
                     📤 Share
                   </button>
                   
-                  {showShareMenu && (
+                  {openShareMenuId === trade.id && (
                     <div className="absolute right-0 bottom-full mb-2 w-48 bg-slate-900 border-2 border-purple-500 rounded-lg shadow-xl z-50 overflow-hidden">
                       <button
                         onClick={() => handleShare('farcaster')}
