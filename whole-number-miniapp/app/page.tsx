@@ -178,6 +178,11 @@ export default function BattlefieldHome() {
           </div>
         </div>
 
+        {/* Strategy Guide - Expandable */}
+        <div className="mb-6">
+          <StrategyGuide />
+        </div>
+
         {/* Battlefield Visual */}
         <div className="mb-6">
           <BattlefieldVisual
@@ -239,11 +244,11 @@ export default function BattlefieldHome() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between p-2 rounded border border-green-600 bg-green-900/20">
                   <span className="text-sm text-white">LONG ENTRY:</span>
-                  <span className="text-sm font-bold text-green-400">${strategy.formatNumber(wholeNumber - 200)}</span>
+                  <span className="text-sm font-bold text-green-400">${strategy.formatNumber(wholeNumber + 800)}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded border border-red-600 bg-red-900/20">
                   <span className="text-sm text-white">SHORT ENTRY:</span>
-                  <span className="text-sm font-bold text-red-400">${strategy.formatNumber(wholeNumber + 200)}</span>
+                  <span className="text-sm font-bold text-red-400">${strategy.formatNumber(nextWholeNumber + 150)}</span>
                 </div>
               </div>
             </div>
@@ -405,11 +410,6 @@ export default function BattlefieldHome() {
                 </button>
               </div>
             )}
-
-            {/* Strategy Guide - Expandable */}
-            <div className="mb-6">
-              <StrategyGuide />
-            </div>
 
             <div className="grid lg:grid-cols-12 gap-4">
               {/* Left Column - Claims & Stats (Smaller - 2 columns) */}
