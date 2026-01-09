@@ -17,19 +17,39 @@ interface ClosedTrade {
   closed_at: string;
 }
 
+interface UserData {
+  army: 'bears' | 'bulls';
+  username?: string;
+}
+
 export function TradeHistory() {
   const { address } = useAccount();
   const [history, setHistory] = useState<ClosedTrade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
   useEffect(() => {
     if (address) {
       fetchHistory();
+      fetchUserData();
       // Refresh every 30 seconds
       const interval = setInterval(fetchHistory, 30000);
       return () => clearInterval(interval);
     }
   }, [address]);
+
+  const fetchUserData = async () => {
+    if (!address) return;
+    try {
+      const response = await fetch(getApiUrl(`api/users/${address}`));
+      const data = await response.json();
+      if (data.success) {
+        setUserData(data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
   const fetchHistory = async () => {
     if (!address) return;
@@ -80,6 +100,34 @@ export function TradeHistory() {
           const isProfit = pnl >= 0;
           const isLiquidated = trade.status === 'liquidated';
 
+          const handleShare = () => {
+            const army = userData?.army || 'bulls';
+            const armyEmoji = army === 'bears' ? '🐻' : '🐂';
+            const armyColor = army === 'bears' ? '#ef4444' : '#22c55e';
+            const positionEmoji = trade.position_type === 'long' ? '📈' : '📉';
+            const username = userData?.username || address?.slice(0, 8);
+            
+            const shareText = `${armyEmoji} BATTLEFIELD ${armyEmoji}
+
+${username} - ${army.toUpperCase()} ARMY
+
+${positionEmoji} ${trade.position_type.toUpperCase()} ${trade.leverage}x
+${isProfit ? '✅' : '❌'} ${isProfit ? '+' : ''}$${pnl.toFixed(2)} (${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%)
+
+Entry: $${Number(trade.entry_price).toFixed(2)}
+Exit: $${Number(trade.exit_price).toFixed(2)}
+Size: $${Number(trade.position_size)}
+
+⚔️ Bears vs Bulls | battlefield-mini.vercel.app`;
+
+            // Copy to clipboard
+            navigator.clipboard.writeText(shareText);
+            
+            // Try to open Farcaster composer (Warpcast)
+            const encodedText = encodeURIComponent(shareText);
+            window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
+          };
+
           return (
             <div
               key={trade.id}
@@ -125,8 +173,17 @@ export function TradeHistory() {
                 </div>
               </div>
 
-              <div className="mt-2 text-xs text-gray-500">
-                {new Date(trade.closed_at).toLocaleString()}
+              <div className="mt-2 flex items-center justify-between">
+                <div className="text-xs text-gray-500">
+                  {new Date(trade.closed_at).toLocaleString()}
+                </div>
+                <button
+                  onClick={handleShare}
+                  className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all"
+                  title="Share on Farcaster"
+                >
+                  📤 Share
+                </button>
               </div>
             </div>
           );

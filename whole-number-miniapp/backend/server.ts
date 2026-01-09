@@ -391,6 +391,45 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
   }
 });
 
+// Helper function to update user's army based on P&L from longs vs shorts
+async function updateUserArmy(userId: number) {
+  try {
+    // Get total P&L from long positions
+    const longPnl = await pool.query(
+      `SELECT COALESCE(SUM(pnl), 0) as total_pnl 
+       FROM trades 
+       WHERE user_id = $1 AND position_type = 'long' AND status IN ('closed', 'liquidated')`,
+      [userId]
+    );
+
+    // Get total P&L from short positions
+    const shortPnl = await pool.query(
+      `SELECT COALESCE(SUM(pnl), 0) as total_pnl 
+       FROM trades 
+       WHERE user_id = $1 AND position_type = 'short' AND status IN ('closed', 'liquidated')`,
+      [userId]
+    );
+
+    const longTotal = Number(longPnl.rows[0].total_pnl);
+    const shortTotal = Number(shortPnl.rows[0].total_pnl);
+
+    // Assign army based on which position type made more profit
+    const newArmy = longTotal > shortTotal ? 'bulls' : 'bears';
+
+    // Update user's army
+    await pool.query(
+      'UPDATE users SET army = $1 WHERE id = $2',
+      [newArmy, userId]
+    );
+
+    console.log(`👤 User ${userId} army updated to ${newArmy.toUpperCase()} (LONG P&L: $${longTotal.toFixed(2)}, SHORT P&L: $${shortTotal.toFixed(2)})`);
+    
+    return newArmy;
+  } catch (error) {
+    console.error('Error updating user army:', error);
+  }
+}
+
 // Close trade
 app.post('/api/trades/close', async (req: Request, res: Response) => {
   const { tradeId, exitPrice } = req.body;
@@ -484,6 +523,9 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
       console.log(`💥 Trade liquidated: $0 returned`);
     }
 
+    // Update user's army based on P&L performance
+    const updatedArmy = await updateUserArmy(t.user_id);
+
     await pool.query('COMMIT');
 
     res.json({ 
@@ -495,7 +537,8 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
       leveragedPositionSize,
       status,
       finalAmount: Math.max(0, finalAmount),
-      newBalance: finalAmount > 0 ? (await pool.query('SELECT paper_balance FROM users WHERE id = $1', [t.user_id])).rows[0].paper_balance : null
+      newBalance: finalAmount > 0 ? (await pool.query('SELECT paper_balance FROM users WHERE id = $1', [t.user_id])).rows[0].paper_balance : null,
+      updatedArmy
     });
   } catch (error) {
     await pool.query('ROLLBACK');
