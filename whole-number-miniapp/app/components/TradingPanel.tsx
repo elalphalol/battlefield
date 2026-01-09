@@ -133,12 +133,20 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
     const positionSize = Number(trade.position_size);
     const tradeLeverage = Number(trade.leverage);
     
+    // Calculate price-based P&L
     const priceChange = trade.position_type === 'long'
       ? btcPrice - entryPrice
       : entryPrice - btcPrice;
     const pnlPercentage = (priceChange / entryPrice) * tradeLeverage;
     const pnl = pnlPercentage * positionSize;
-    return { pnl, percentage: pnlPercentage * 100 };
+    
+    // Subtract the trading fee that was paid upfront (to show true P&L)
+    const feePercentage = tradeLeverage > 1 ? tradeLeverage * 0.1 : 0;
+    const tradingFee = (feePercentage / 100) * positionSize;
+    const pnlAfterFee = pnl - tradingFee;
+    const percentageAfterFee = (pnlAfterFee / positionSize) * 100;
+    
+    return { pnl: pnlAfterFee, percentage: percentageAfterFee };
   };
 
   const isNearLiquidation = (trade: Trade) => {

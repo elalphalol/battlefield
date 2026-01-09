@@ -60,13 +60,13 @@ export function BattlefieldVisual({
       {/* Whole Number Labels */}
       <div className="flex justify-between items-center mb-3">
         <div className="text-center">
-          <div className="text-xl font-bold text-red-400">⚠️ CURRENT WHOLE</div>
+          <div className="text-xl font-bold text-red-400">⚠️</div>
           <div className="text-2xl font-bold text-white mt-1">
             ${(wholeNumber / 1000).toFixed(0)}K
           </div>
         </div>
         <div className="text-center">
-          <div className="text-xl font-bold text-green-400">⚡ NEXT WHOLE</div>
+          <div className="text-xl font-bold text-green-400">⚡</div>
           <div className="text-2xl font-bold text-white mt-1">
             ${(nextWholeNumber / 1000).toFixed(0)}K
           </div>

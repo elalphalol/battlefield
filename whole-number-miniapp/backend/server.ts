@@ -315,6 +315,19 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
       });
     }
 
+    // Calculate trading fee (paid upfront when opening position)
+    const feePercentage = leverage > 1 ? leverage * 0.1 : 0; // 2x = 0.2%, 10x = 1%, 50x = 5%, 100x = 10%
+    const tradingFee = (feePercentage / 100) * size;
+    const totalCost = size + tradingFee; // Position size + fee
+    
+    // Check if user has enough for position + fee
+    if (user.rows[0].paper_balance < totalCost) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Insufficient balance.  Available: $${user.rows[0].paper_balance}, Required: $${totalCost.toFixed(2)} (position + ${feePercentage.toFixed(2)}% fee)` 
+      });
+    }
+
     // Calculate liquidation price
     const liquidationPrice = type === 'long' 
       ? entryPrice * (1 - 1 / leverage)
@@ -322,10 +335,10 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
 
     await pool.query('BEGIN');
 
-    // Deduct from balance
+    // Deduct position size + fee from balance
     await pool.query(
       'UPDATE users SET paper_balance = paper_balance - $1, last_active = NOW() WHERE wallet_address = $2',
-      [size, walletAddress]
+      [totalCost, walletAddress]
     );
 
     // Create trade
@@ -335,6 +348,15 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
        RETURNING *`,
       [user.rows[0].id, type, leverage, entryPrice, size, liquidationPrice]
     );
+
+    console.log(`
+🚀 Trade Opened:
+- Position: ${type.toUpperCase()} ${leverage}x
+- Size: $${size}
+- Entry: $${entryPrice}
+- Fee: $${tradingFee.toFixed(2)} (${feePercentage.toFixed(2)}%)
+- Total Cost: $${totalCost.toFixed(2)}
+    `);
 
     await pool.query('COMMIT');
 
@@ -381,24 +403,21 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
     const positionSize = Number(t.position_size);
     const leverage = Number(t.leverage);
 
-    // Calculate P&L
+    // Calculate P&L (fee was already paid when opening, so don't deduct again)
     const priceChange = t.position_type === 'long' 
       ? exitPrice - entryPrice 
       : entryPrice - exitPrice;
     const pnlPercentage = (priceChange / entryPrice) * leverage;
     let pnl = pnlPercentage * positionSize;
 
-    // Calculate trading fee based on leverage (0.1% per 1x leverage, minimum 0% for 1x)
-    const feePercentage = leverage > 1 ? leverage * 0.1 : 0; // 2x = 0.2%, 10x = 1%, 50x = 5%, 100x = 10%
+    // Trading fee was already paid upfront when opening position
+    const feePercentage = leverage > 1 ? leverage * 0.1 : 0;
     const tradingFee = (feePercentage / 100) * positionSize;
-    
-    // Apply fee to P&L
-    const pnlAfterFee = pnl - tradingFee;
 
     // Determine if liquidated (loss is greater than or equal to 100% of position)
-    const isLiquidated = pnlAfterFee <= -positionSize;
+    const isLiquidated = pnl <= -positionSize;
     const status = isLiquidated ? 'liquidated' : 'closed';
-    const finalAmount = isLiquidated ? 0 : positionSize + pnlAfterFee;
+    const finalAmount = isLiquidated ? 0 : positionSize + pnl;
 
     console.log(`
 📊 Trade Close Details:
@@ -409,9 +428,8 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
 - Price Change: $${priceChange.toFixed(2)}
 - Leverage: ${t.leverage}x
 - Position Size: $${t.position_size}
-- Raw P&L: $${pnl.toFixed(2)} (${(pnlPercentage * 100).toFixed(2)}%)
-- Trading Fee: $${tradingFee.toFixed(2)} (${feePercentage.toFixed(2)}%)
-- P&L After Fee: $${pnlAfterFee.toFixed(2)}
+- P&L: $${pnl.toFixed(2)} (${(pnlPercentage * 100).toFixed(2)}%)
+- Trading Fee: $${tradingFee.toFixed(2)} (paid upfront, ${feePercentage.toFixed(2)}%)
 - Final Amount: $${Number(finalAmount).toFixed(2)}
 - Status: ${status}
     `);
@@ -442,7 +460,6 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
     res.json({ 
       success: true, 
       pnl,
-      pnlAfterFee,
       tradingFee,
       feePercentage,
       pnlPercentage: pnlPercentage * 100,
@@ -658,3 +675,4 @@ process.on('SIGTERM', () => {
 });
 
 export default app;
+

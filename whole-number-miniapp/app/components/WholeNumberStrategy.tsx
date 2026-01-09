@@ -66,7 +66,7 @@ export function WholeNumberStrategy() {
           <div className="bg-slate-800/50 rounded-lg p-4">
             <h4 className="font-bold text-purple-400 mb-2">🔨 The BEAMS System</h4>
             <p className="text-sm leading-relaxed mb-2">
-              The three BEAMSare critical support/resistance levels that act as psychological barriers:
+              The three BEAMS are critical support/resistance levels that act as psychological barriers:
             </p>
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2">
