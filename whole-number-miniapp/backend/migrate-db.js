@@ -15,14 +15,14 @@ async function migrateDatabase() {
     console.log('✅ Connected!');
 
     console.log('📄 Reading migration file...');
-    const migrationPath = path.join(__dirname, 'database', 'migrate-leverage.sql');
+    const migrationPath = path.join(__dirname, 'database', 'rank-by-pnl-only.sql');
     const migration = fs.readFileSync(migrationPath, 'utf8');
     
-    console.log('🔨 Running migration to update leverage constraint...');
+    console.log('🔨 Running migration to rank leaderboard by PNL only...');
     await client.query(migration);
     
     console.log('✅ Migration completed successfully!');
-    console.log('🎯 Leverage constraint now allows values from 1x to 100x');
+    console.log('🎯 Leaderboard now ranks purely by total PNL (highest to lowest)');
     
   } catch (error) {
     console.error('❌ Error:', error.message);

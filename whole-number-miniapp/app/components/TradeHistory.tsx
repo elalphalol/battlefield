@@ -87,7 +87,7 @@ export function TradeHistory() {
                   ? 'border-red-900 bg-red-950/30'
                   : isProfit
                   ? 'border-green-900 bg-green-950/30'
-                  : 'border-gray-700 bg-gray-900/30'
+                  : 'border-red-700 bg-red-950/20'
               }`}
             >
               <div className="flex items-center justify-between mb-2">

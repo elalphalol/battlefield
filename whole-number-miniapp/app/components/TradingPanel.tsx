@@ -145,19 +145,22 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
       ? btcPrice - entryPrice
       : entryPrice - btcPrice;
     
-    // P&L is based on leveraged position size and price change
+    // P&L is based on leveraged position size and price change percentage
     const priceChangePercentage = priceChange / entryPrice;
-    const pnl = priceChangePercentage * leveragedPositionSize;
+    const pnlFromPriceMovement = priceChangePercentage * leveragedPositionSize;
     
-    // Subtract the trading fee that was paid upfront (to show true P&L)
+    // Include the trading fee in the PNL so users see the break-even needed
+    // Fee was paid upfront, so we subtract it to show real net P&L
     const feePercentage = tradeLeverage > 1 ? tradeLeverage * 0.1 : 0;
     const tradingFee = (feePercentage / 100) * collateral;
-    const pnlAfterFee = pnl - tradingFee;
-    const percentageAfterFee = (pnlAfterFee / collateral) * 100;
+    const netPnl = pnlFromPriceMovement - tradingFee;
+    
+    // Calculate percentage return including fee impact
+    const percentageReturn = (netPnl / collateral) * 100;
     
     return { 
-      pnl: pnlAfterFee, 
-      percentage: percentageAfterFee,
+      pnl: netPnl, 
+      percentage: percentageReturn,
       leveragedPosition: leveragedPositionSize 
     };
   };
