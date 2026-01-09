@@ -376,24 +376,29 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
 
     const t = trade.rows[0];
 
+    // Convert all numeric values from database to proper numbers
+    const entryPrice = Number(t.entry_price);
+    const positionSize = Number(t.position_size);
+    const leverage = Number(t.leverage);
+
     // Calculate P&L
     const priceChange = t.position_type === 'long' 
-      ? exitPrice - t.entry_price 
-      : t.entry_price - exitPrice;
-    const pnlPercentage = (priceChange / t.entry_price) * t.leverage;
-    let pnl = pnlPercentage * t.position_size;
+      ? exitPrice - entryPrice 
+      : entryPrice - exitPrice;
+    const pnlPercentage = (priceChange / entryPrice) * leverage;
+    let pnl = pnlPercentage * positionSize;
 
     // Calculate trading fee based on leverage (0.1% per 1x leverage, minimum 0% for 1x)
-    const feePercentage = t.leverage > 1 ? t.leverage * 0.1 : 0; // 2x = 0.2%, 10x = 1%, 50x = 5%, 100x = 10%
-    const tradingFee = (feePercentage / 100) * t.position_size;
+    const feePercentage = leverage > 1 ? leverage * 0.1 : 0; // 2x = 0.2%, 10x = 1%, 50x = 5%, 100x = 10%
+    const tradingFee = (feePercentage / 100) * positionSize;
     
     // Apply fee to P&L
     const pnlAfterFee = pnl - tradingFee;
 
     // Determine if liquidated (loss is greater than or equal to 100% of position)
-    const isLiquidated = pnlAfterFee <= -t.position_size;
+    const isLiquidated = pnlAfterFee <= -positionSize;
     const status = isLiquidated ? 'liquidated' : 'closed';
-    const finalAmount = isLiquidated ? 0 : t.position_size + pnlAfterFee;
+    const finalAmount = isLiquidated ? 0 : positionSize + pnlAfterFee;
 
     console.log(`
 📊 Trade Close Details:

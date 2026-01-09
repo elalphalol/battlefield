@@ -53,31 +53,38 @@ export function WholeNumberStrategy() {
           </div>
 
           <div className="bg-slate-800/50 rounded-lg p-4">
-            <h4 className="font-bold text-blue-400 mb-2">💡 Example Trade</h4>
-            <div className="text-sm space-y-2">
-              <p className="text-yellow-300 font-semibold">Scenario: BTC is at $90,500 and dropping...</p>
-              <p>
-                <strong className="text-red-400">SHORT at $90,100</strong> with 10x leverage for $1,000<br/>
-                <span className="text-gray-400">→ Expecting it to break through $90,000 (whole number) and drop to $89,500</span>
-              </p>
-              <p className="text-green-400 font-semibold mt-2">
-                ✅ If price drops to $89,500: +5.5% × 10x = +55% profit = $550!<br/>
-                <span className="text-xs text-gray-400">(Minus 1% trading fee for 10x leverage = $10)</span>
-              </p>
-              <p className="text-red-400 font-semibold">
-                ❌ If price goes back to $91,000: -10% × 10x = -100% = LIQUIDATED!
-              </p>
-            </div>
+            <h4 className="font-bold text-orange-400 mb-2">📍 Understanding Coordinates</h4>
+            <p className="text-sm leading-relaxed mb-2">
+              Each whole number ($90k, $91k, $92k) is divided into 1,000 points called <strong className="text-yellow-400">coordinates</strong>. 
+              When BTC is at $90,350, that's coordinate <strong className="text-yellow-400">350</strong> between $90k and $91k.
+            </p>
+            <p className="text-sm leading-relaxed text-gray-400">
+              Coordinates help you precisely track Bitcoin's position and predict which direction it will move next.
+            </p>
           </div>
 
-          <div className="bg-red-900/30 border border-red-500 rounded-lg p-4">
-            <h4 className="font-bold text-red-400 mb-2">⚠️ Risk Management</h4>
-            <ul className="space-y-1 text-sm">
-              <li>• <strong>Never risk more than you can afford to lose</strong></li>
-              <li>• Higher leverage = Higher fees (100x = 10% fee!)</li>
-              <li>• Set mental stop-losses - close losers fast</li>
-              <li>• The market can stay irrational longer than you can stay solvent</li>
+          <div className="bg-slate-800/50 rounded-lg p-4">
+            <h4 className="font-bold text-purple-400 mb-2">🔨 The BEAMS System</h4>
+            <p className="text-sm leading-relaxed mb-2">
+              The three BEAMSare critical support/resistance levels that act as psychological barriers:
+            </p>
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-start gap-2">
+                <span className="text-yellow-400">•</span>
+                <span><strong className="text-cyan-400">086 BEAM</strong> - Minor resistance at coordinate 86</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-yellow-400">•</span>
+                <span><strong className="text-blue-400">113 BEAM</strong> - Mid-level barrier at coordinate 113</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-yellow-400">•</span>
+                <span><strong className="text-purple-400">226 BEAM</strong> - Strong resistance at coordinate 226</span>
+              </li>
             </ul>
+            <p className="text-sm leading-relaxed text-gray-400 mt-3">
+              When price breaks through a BEAM, it signals momentum shift. Broken beams often become the next support or resistance level.
+            </p>
           </div>
 
           <div className="bg-gradient-to-r from-green-900/30 to-red-900/30 border border-yellow-500 rounded-lg p-4 text-center">
