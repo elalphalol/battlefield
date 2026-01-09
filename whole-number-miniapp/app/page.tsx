@@ -136,13 +136,20 @@ export default function BattlefieldHome() {
       <header className="border-b-2 border-yellow-500/50 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-yellow-400 flex items-center gap-2">
-                ⚔️ BATTLEFIELD
-              </h1>
-              <p className="text-sm text-gray-400">
-                Bears 🐻 vs Bulls 🐂 | Bitcoin Paper Trading
-              </p>
+            <div className="flex items-center gap-3">
+              <img 
+                src="/battlefield-logo.jpg" 
+                alt="BATTLEFIELD Logo" 
+                className="h-12 w-12 md:h-14 md:w-14 rounded-lg object-cover"
+              />
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-yellow-400">
+                  BATTLEFIELD
+                </h1>
+                <p className="text-sm text-gray-400">
+                  Bears 🐻 vs Bulls 🐂 | Bitcoin Paper Trading
+                </p>
+              </div>
             </div>
             <WalletConnect />
           </div>
