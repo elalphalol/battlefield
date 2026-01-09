@@ -93,28 +93,34 @@ export function MarketCycle() {
   const phase = getMarketPhase(nycHour);
 
   return (
-    <div className={`bg-gradient-to-r ${phase.bgColor} border-2 ${phase.borderColor} rounded-lg p-6`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-white">⏰ Market Cycle</h3>
-        <div className="text-right">
-          <div className="text-xs text-gray-400">New York Time</div>
-          <div className="text-2xl font-bold text-yellow-400 font-mono">{nycTimeString}</div>
+    <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+      <h2 className="text-2xl font-bold text-yellow-400 mb-6 text-center flex items-center justify-center gap-2">
+        <span>🕐</span> TIME CYCLE INDICATOR
+      </h2>
+      
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Current NY Time */}
+        <div className="bg-slate-900 rounded-lg p-6 border border-slate-700">
+          <div className="text-sm text-gray-400 mb-2 text-center">Current NY Time:</div>
+          <div className="text-4xl font-bold text-yellow-400 font-mono text-center">{nycTimeString}</div>
         </div>
-      </div>
 
-      <div className="mb-3">
-        <div className="text-lg font-bold text-white mb-2">{phase.name}</div>
-        <p className="text-sm text-gray-300 leading-relaxed">{phase.description}</p>
-      </div>
-
-      {/* Time-based trading tips */}
-      <div className="bg-slate-900/50 rounded p-3 text-xs text-gray-400">
-        <strong className="text-white">Trading Tip:</strong>{' '}
-        {phase.sentiment === 'opportunity' && 'Look for dip entries in 888-700 zones. Quick scalps possible!'}
-        {phase.sentiment === 'bullish' && 'Long positions below whole numbers. Ride the morning momentum!'}
-        {phase.sentiment === 'active' && 'High volatility. Watch BEAMS closely for breakdown signals.'}
-        {phase.sentiment === 'neutral' && 'Consolidation phase. Wait for clearer directional signals.'}
-        {phase.sentiment === 'bearish' && 'Caution with longs. Consider shorts above whole numbers or stay flat.'}
+        {/* Market Phase */}
+        <div className={`bg-gradient-to-r ${phase.bgColor} rounded-lg p-6 border-2 ${phase.borderColor}`}>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="text-4xl">
+              {phase.sentiment === 'opportunity' && '🌅'}
+              {phase.sentiment === 'bullish' && '📈'}
+              {phase.sentiment === 'active' && '☀️'}
+              {phase.sentiment === 'neutral' && '🌆'}
+              {phase.sentiment === 'bearish' && '🌙'}
+            </div>
+            <div>
+              <div className="text-lg font-bold text-white">{phase.name}</div>
+              <div className="text-xs text-gray-300">{phase.description}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

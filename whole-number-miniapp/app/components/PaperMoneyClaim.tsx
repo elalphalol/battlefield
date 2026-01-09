@@ -87,16 +87,7 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
 
   return (
     <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-2 border-green-500/50 rounded-lg p-6 shadow-lg">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-green-400">💰 Paper Money Claim</h3>
-        <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">
-          Balance &lt; $100 • 10min cooldown
-        </span>
-      </div>
-      
-      <p className="text-gray-300 mb-4 text-sm">
-        Claim <span className="font-bold text-green-400">$1,000</span> when balance is low
-      </p>
+      <h3 className="text-xl font-bold text-green-400 mb-4">💰 Claim</h3>
       
       <button
         onClick={handleClaim}
@@ -126,29 +117,16 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
         )}
       </button>
 
-      {/* Info text below button */}
-      <div className="mt-3 text-center text-xs text-gray-400">
-        {!canClaim && !cooldownActive && (
-          <p>Balance must be below $100 to claim</p>
-        )}
-      </div>
+      {!canClaim && cooldownActive && timeLeft > 0 && (
+        <div className="mt-3 text-center text-sm text-yellow-400">
+          ⏰ {formatTime(timeLeft)}
+        </div>
+      )}
 
-      <div className="mt-4 p-3 bg-slate-700/30 rounded text-xs text-gray-400 space-y-1">
-        <div className="flex items-center">
-          <span className="mr-2">📊</span>
-          <span>Claimed paper money is added to your balance instantly</span>
-        </div>
-        <div className="flex items-center">
-          <span className="mr-2">⚡</span>
-          <span>Use it to open new leveraged positions</span>
-        </div>
-        <div className="flex items-center">
-          <span className="mr-2">🔄</span>
-          <span>Claim when balance &lt; $100 (10min cooldown)</span>
-        </div>
+      <div className="mt-3 text-center text-xs text-gray-400">
+        Claim $1,000 when balance &lt; $100 (10min cooldown)
       </div>
     </div>
   );
 }
-
 

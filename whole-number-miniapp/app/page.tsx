@@ -11,6 +11,7 @@ import { UserStats } from './components/UserStats';
 import { TradeHistory } from './components/TradeHistory';
 import { WholeNumberStrategy as StrategyGuide } from './components/WholeNumberStrategy';
 import { MarketCycle } from './components/MarketCycle';
+import { BattleAlerts } from './components/BattleAlerts';
 import { useBTCPrice } from './hooks/useBTCPrice';
 import { WholeNumberStrategy } from './lib/strategy';
 
@@ -278,6 +279,15 @@ export default function BattlefieldHome() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Battle Alerts */}
+        <div className="mb-6">
+          <BattleAlerts 
+            btcPrice={btcPrice}
+            coordinate={coordinate}
+            beamsBroken={strategy.beamsBroken}
+          />
         </div>
 
         {/* Market Cycle - NYC Time */}
