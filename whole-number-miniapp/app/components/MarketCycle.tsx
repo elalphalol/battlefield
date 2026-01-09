@@ -3,15 +3,32 @@
 import { useState, useEffect } from 'react';
 
 export function MarketCycle() {
-  const [nycTime, setNycTime] = useState<Date>(new Date());
+  const [nycTime, setNycTime] = useState<Date | null>(null);
 
   useEffect(() => {
+    // Initialize time on mount
+    setNycTime(new Date());
+    
     const timer = setInterval(() => {
       setNycTime(new Date());
     }, 1000);
 
     return () => clearInterval(timer);
   }, []);
+
+  // Don't render time until mounted to avoid hydration mismatch
+  if (!nycTime) {
+    return (
+      <div className="bg-gradient-to-r from-slate-800 to-slate-700 border-2 border-slate-600 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold text-white">⏰ Market Cycle</h3>
+          <div className="text-right">
+            <div className="text-xs text-gray-400">Loading...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Get NYC time (EST/EDT - UTC-5/UTC-4)
   const nycTimeString = nycTime.toLocaleTimeString('en-US', {
