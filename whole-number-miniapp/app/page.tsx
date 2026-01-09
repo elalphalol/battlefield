@@ -188,53 +188,94 @@ export default function BattlefieldHome() {
           />
         </div>
 
-        {/* Zone Info */}
-        <div className={`rounded-lg p-6 mb-6 border-2 ${
-          zoneInfo.signal === 'bullish' ? 'bg-green-900/20 border-green-500' :
-          zoneInfo.signal === 'bearish' ? 'bg-red-900/20 border-red-500' :
-          zoneInfo.signal === 'opportunity' ? 'bg-yellow-900/20 border-yellow-500' :
-          'bg-slate-800 border-slate-600'
-        }`}>
-          <h3 className="text-2xl font-bold mb-2">{zoneInfo.name}</h3>
-          <p className="text-gray-300">{zoneInfo.description}</p>
-        </div>
-
-        {/* Market Direction & Recommendation */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {/* Direction */}
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              🧭 MARKET DIRECTION
-            </h3>
-            <div className={`text-4xl font-bold text-center py-4 rounded ${
-              direction === 'bullish' ? 'bg-green-900/30 text-green-400' :
-              direction === 'bearish' ? 'bg-red-900/30 text-red-400' :
-              'bg-slate-700 text-gray-400'
-            }`}>
-              {direction === 'bullish' ? '⬆️ BULLISH' :
-               direction === 'bearish' ? '⬇️ BEARISH' :
-               '↔️ NEUTRAL'}
+        {/* Battle Strategy - Clean 4-card layout */}
+        <div className="bg-slate-800/50 rounded-lg p-6 mb-6 border border-slate-700">
+          <h2 className="text-2xl font-bold text-yellow-400 mb-6 text-center">⚔️ BATTLE STRATEGY</h2>
+          
+          <div className="grid md:grid-cols-4 gap-4">
+            {/* Market Direction */}
+            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">🧭</span>
+                <h3 className="font-bold text-white">MARKET DIRECTION</h3>
+              </div>
+              <div className={`text-3xl font-bold text-center py-3 rounded ${
+                direction === 'bullish' ? 'bg-green-900/30 text-green-400' :
+                direction === 'bearish' ? 'bg-red-900/30 text-red-400' :
+                'bg-slate-700 text-gray-400'
+              }`}>
+                {direction === 'bullish' ? '⬆️ BULLISH' :
+                 direction === 'bearish' ? '⬇️ BEARISH' :
+                 '↔️ NEUTRAL'}
+              </div>
             </div>
-          </div>
 
-          {/* Recommendation */}
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              ⚡ RECOMMENDATION
-            </h3>
-            <div className={`text-2xl font-bold px-4 py-2 rounded mb-3 text-center ${
-              recommendation.action === 'long' ? 'bg-green-600' :
-              recommendation.action === 'short' ? 'bg-red-600' :
-              recommendation.action === 'caution' ? 'bg-yellow-600' :
-              'bg-gray-600'
-            }`}>
-              {recommendation.action.toUpperCase()}
+            {/* Recommended Action */}
+            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">⚡</span>
+                <h3 className="font-bold text-white">RECOMMENDED ACTION</h3>
+              </div>
+              <div className={`text-2xl font-bold text-center py-3 rounded mb-2 ${
+                recommendation.action === 'long' ? 'bg-green-600' :
+                recommendation.action === 'short' ? 'bg-red-600' :
+                recommendation.action === 'caution' ? 'bg-yellow-600' :
+                'bg-gray-600'
+              }`}>
+                {recommendation.action.toUpperCase()}
+              </div>
+              <p className="text-xs text-gray-400 text-center">
+                ⚠️ {recommendation.description.substring(0, 50)}...
+              </p>
             </div>
-            <p className="text-sm text-gray-300 leading-relaxed">
-              {recommendation.description}
-            </p>
-            <div className="mt-3 text-xs text-gray-500">
-              Confidence: {recommendation.confidence.toUpperCase()}
+
+            {/* Entry Zones */}
+            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">🎯</span>
+                <h3 className="font-bold text-white">ENTRY ZONES</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2 rounded border border-green-600 bg-green-900/20">
+                  <span className="text-sm text-white">LONG ENTRY:</span>
+                  <span className="text-sm font-bold text-green-400">${strategy.formatNumber(wholeNumber - 200)}</span>
+                </div>
+                <div className="flex items-center justify-between p-2 rounded border border-red-600 bg-red-900/20">
+                  <span className="text-sm text-white">SHORT ENTRY:</span>
+                  <span className="text-sm font-bold text-red-400">${strategy.formatNumber(wholeNumber + 200)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* The Beams */}
+            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">🔨</span>
+                <h3 className="font-bold text-white">THE BEAMS</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">226 BEAM:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">${strategy.formatNumber(wholeNumber + 226)}</span>
+                    <span className="text-lg">{strategy.beamsBroken.beam226 ? '🔴' : '🟢'}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">113 BEAM:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">${strategy.formatNumber(wholeNumber + 113)}</span>
+                    <span className="text-lg">{strategy.beamsBroken.beam113 ? '🔴' : '🟢'}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">086 BEAM:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">${strategy.formatNumber(wholeNumber + 86)}</span>
+                    <span className="text-lg">{strategy.beamsBroken.beam086 ? '🔴' : '🟢'}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -242,49 +283,6 @@ export default function BattlefieldHome() {
         {/* Market Cycle - NYC Time */}
         <div className="mb-6">
           <MarketCycle />
-        </div>
-
-        {/* Beams Status */}
-        <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
-          <h3 className="text-lg font-bold mb-4">🔨 THE BEAMS</h3>
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className={`p-4 rounded ${strategy.beamsBroken.beam226 ? 'bg-red-900/30' : 'bg-slate-700'}`}>
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">226 BEAM</span>
-                <span className="text-2xl">{strategy.beamsBroken.beam226 ? '🔴' : '🟢'}</span>
-              </div>
-              <div className="text-sm text-gray-400 mt-1">
-                ${strategy.formatNumber(wholeNumber + 226)}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {strategy.beamsBroken.beam226 ? 'BROKEN' : 'INTACT'}
-              </div>
-            </div>
-            <div className={`p-4 rounded ${strategy.beamsBroken.beam113 ? 'bg-red-900/30' : 'bg-slate-700'}`}>
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">113 BEAM</span>
-                <span className="text-2xl">{strategy.beamsBroken.beam113 ? '🔴' : '🟢'}</span>
-              </div>
-              <div className="text-sm text-gray-400 mt-1">
-                ${strategy.formatNumber(wholeNumber + 113)}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {strategy.beamsBroken.beam113 ? 'BROKEN' : 'INTACT'}
-              </div>
-            </div>
-            <div className={`p-4 rounded ${strategy.beamsBroken.beam086 ? 'bg-red-900/30' : 'bg-slate-700'}`}>
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">086 BEAM</span>
-                <span className="text-2xl">{strategy.beamsBroken.beam086 ? '🔴' : '🟢'}</span>
-              </div>
-              <div className="text-sm text-gray-400 mt-1">
-                ${strategy.formatNumber(wholeNumber + 86)}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {strategy.beamsBroken.beam086 ? 'BROKEN' : 'INTACT'}
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* User Stats Bar (if logged in) */}
@@ -403,18 +401,22 @@ export default function BattlefieldHome() {
               <StrategyGuide />
             </div>
 
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Left Column - Claims & Stats */}
-              <div className="space-y-6">
-                <PaperMoneyClaim 
-                  onClaim={handleClaim} 
-                  paperBalance={userData?.paper_balance || 0} 
-                />
-                <UserStats userData={userData} />
+            <div className="grid lg:grid-cols-12 gap-4">
+              {/* Left Column - Claims & Stats (Smaller - 2 columns) */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="scale-90 origin-top">
+                  <PaperMoneyClaim 
+                    onClaim={handleClaim} 
+                    paperBalance={userData?.paper_balance || 0} 
+                  />
+                </div>
+                <div className="scale-90 origin-top">
+                  <UserStats userData={userData} />
+                </div>
               </div>
 
-              {/* Middle Column - Trading Panel */}
-              <div className="space-y-6">
+              {/* Middle Column - Trading Panel + Open Positions (Larger - 7 columns) */}
+              <div className="lg:col-span-7 space-y-4">
                 <TradingPanel
                   btcPrice={btcPrice}
                   paperBalance={userData?.paper_balance || 0}
@@ -422,9 +424,11 @@ export default function BattlefieldHome() {
                 />
               </div>
 
-              {/* Right Column - Trade History */}
-              <div className="space-y-6">
-                <TradeHistory />
+              {/* Right Column - Trade History (Smaller - 3 columns) */}
+              <div className="lg:col-span-3">
+                <div className="scale-90 origin-top">
+                  <TradeHistory />
+                </div>
               </div>
             </div>
           </div>
