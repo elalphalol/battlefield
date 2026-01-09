@@ -71,18 +71,14 @@ export async function getFarcasterUser(): Promise<FarcasterUser | null> {
   }
 }
 
+// Placeholder for future Farcaster transaction support
 export async function sendTransaction(transaction: {
   to: string;
   value: string;
   data?: string;
 }): Promise<{ success: boolean; txHash?: string; error?: unknown }> {
-  try {
-    const result = await sdk.wallet.sendTransaction(transaction);
-    return { success: true, txHash: result };
-  } catch (error) {
-    console.error('Transaction error:', error);
-    return { success: false, error };
-  }
+  // This will be implemented when we're ready for Farcaster Mini App deployment
+  return { success: false, error: 'Not implemented yet' };
 }
 
 export function isInFarcasterFrame(): boolean {
