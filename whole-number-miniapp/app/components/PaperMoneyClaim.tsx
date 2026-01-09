@@ -14,16 +14,18 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
   const [claiming, setClaiming] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [cooldownActive, setCooldownActive] = useState(true);
+  const [hasOpenPositions, setHasOpenPositions] = useState(false);
 
-  // Can claim if balance is below $100 AND cooldown is over
-  const canClaim = Number(paperBalance) < 100 && !cooldownActive;
+  // Can claim if balance is below $100 AND cooldown is over AND no open positions
+  const canClaim = Number(paperBalance) < 100 && !cooldownActive && !hasOpenPositions;
 
   useEffect(() => {
     if (!address) return;
 
-    // Check claim status every second
+    // Check claim status and open positions
     const checkStatus = async () => {
       try {
+        // Check cooldown
         const response = await fetch(getApiUrl('api/claims/status'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -34,6 +36,13 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
         if (data.success) {
           setCooldownActive(!data.canClaim);
           setTimeLeft(data.timeLeft || 0);
+        }
+
+        // Check open positions
+        const positionsResponse = await fetch(getApiUrl(`api/trades/${address}/open`));
+        const positionsData = await positionsResponse.json();
+        if (positionsData.success) {
+          setHasOpenPositions(positionsData.trades.length > 0);
         }
       } catch (error) {
         console.error('Error checking claim status:', error);
@@ -105,10 +114,15 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
             <span className="mr-2">💵</span>
             Claim $1,000 Now!
           </>
+        ) : hasOpenPositions ? (
+          <>
+            <span className="mr-2">📊</span>
+            Close positions first
+          </>
         ) : cooldownActive ? (
           <>
             <span className="mr-2">⏰</span>
-            On Cooldown
+            Cooldown: {formatTime(timeLeft)}
           </>
         ) : (
           <>
@@ -119,7 +133,11 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
       </button>
 
       <div className="mt-3 text-center text-xs leading-relaxed text-gray-400">
-        Claim $1,000 when balance &lt; $100<br/>(10min cooldown)
+        {hasOpenPositions ? (
+          <>Close all positions to claim</>
+        ) : (
+          <>Claim $1,000 when balance &lt; $100<br/>(10min cooldown)</>
+        )}
       </div>
     </div>
   );

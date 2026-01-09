@@ -212,7 +212,7 @@ app.post('/api/claims', async (req: Request, res: Response) => {
   }
 
   try {
-    // Check last claim time
+    // Check last claim time and balance
     const user = await pool.query(
       'SELECT id, last_claim_time, paper_balance FROM users WHERE wallet_address = $1',
       [walletAddress]
@@ -220,6 +220,29 @@ app.post('/api/claims', async (req: Request, res: Response) => {
 
     if (user.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check if user has any open positions
+    const openPositions = await pool.query(
+      'SELECT COUNT(*) as count FROM trades WHERE user_id = $1 AND status = $2',
+      [user.rows[0].id, 'open']
+    );
+
+    if (openPositions.rows[0].count > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot claim while you have open positions. Close all positions first.',
+        hasOpenPositions: true
+      });
+    }
+
+    // Check if balance is too high
+    if (user.rows[0].paper_balance >= 100) {
+      return res.status(400).json({
+        success: false,
+        message: `Balance too high ($${user.rows[0].paper_balance}). Claims only available when balance < $100.`,
+        balance: user.rows[0].paper_balance
+      });
     }
 
     const lastClaim = user.rows[0].last_claim_time;
