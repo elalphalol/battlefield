@@ -277,11 +277,11 @@ SELECT
   u.best_streak,
   u.times_liquidated,
   u.battle_tokens_earned,
-  -- Ranking score formula
-  (u.paper_balance * 0.3) + 
-  (u.total_pnl * 0.4) + 
-  (CASE WHEN u.total_trades > 0 THEN (u.winning_trades::DECIMAL / u.total_trades) * u.total_trades * 0.2 ELSE 0 END) +
-  (u.current_streak * 100 * 0.1) - 
+  -- Ranking score formula (P&L is most important - 70%)
+  (u.total_pnl * 0.7) + 
+  (u.paper_balance * 0.15) + 
+  (CASE WHEN u.total_trades > 0 THEN (u.winning_trades::DECIMAL / u.total_trades) * u.total_trades * 0.1 ELSE 0 END) +
+  (u.current_streak * 100 * 0.05) - 
   (u.times_liquidated * 500) as score,
   u.last_active
 FROM users u

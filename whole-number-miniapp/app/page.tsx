@@ -436,8 +436,8 @@ export default function BattlefieldHome() {
               <h3 className="text-xl font-bold text-yellow-400 mb-4">📚 How to Play</h3>
               <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
                 <div>
-                  <div className="font-bold text-white mb-2">1️⃣ Choose Your Army</div>
-                  <p>Join the Bears 🐻 or Bulls 🐂. Your army affects leaderboard rankings and monthly rewards.</p>
+                  <div className="font-bold text-white mb-2">1️⃣ Your Army is Auto-Assigned</div>
+                  <p>Profit from shorts? You&apos;re Bears 🐻. Profit from longs? You&apos;re Bulls 🐂. Your army dynamically changes based on which positions make you the most profit!</p>
                 </div>
                 <div>
                   <div className="font-bold text-white mb-2">2️⃣ Start Trading</div>
