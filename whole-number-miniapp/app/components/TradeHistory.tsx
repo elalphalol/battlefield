@@ -56,7 +56,7 @@ export function TradeHistory() {
     if (!address) return;
 
     try {
-      const response = await fetch(getApiUrl(`api/trades/${address}/history?limit=10`));
+      const response = await fetch(getApiUrl(`api/trades/${address}/history?limit=5`));
       const data = await response.json();
       if (data.success) {
         setHistory(data.trades);
@@ -92,7 +92,7 @@ export function TradeHistory() {
 
   return (
     <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
-      <h3 className="text-xl font-bold text-yellow-400 mb-4">📜 Trade History (Last 10)</h3>
+      <h3 className="text-xl font-bold text-yellow-400 mb-4">📜 Trade History (Last 5)</h3>
       
       <div className="space-y-2">
         {history.map((trade) => {

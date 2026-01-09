@@ -302,7 +302,7 @@ export default function UserProfilePage() {
         {/* Recent History */}
         <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
           <div className="p-4 border-b border-slate-700">
-            <h2 className="text-xl font-bold text-yellow-400">📜 Recent History (Last 5)</h2>
+            <h2 className="text-xl font-bold text-yellow-400">📜 Recent History (Last 10)</h2>
           </div>
           <div className="p-4">
             {profile.recentHistory.length === 0 ? (
