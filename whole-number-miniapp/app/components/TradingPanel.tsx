@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { getApiUrl } from '../config/api';
 
 interface Trade {
   id: number;
@@ -48,7 +49,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
     if (!address) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/trades/${address}/open`);
+      const response = await fetch(getApiUrl(`api/trades/${address}/open`));
       const data = await response.json();
       if (data.success) {
         setOpenTrades(data.trades);
@@ -66,7 +67,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
 
     setIsOpening(true);
     try {
-      const response = await fetch('http://localhost:3001/api/trades/open', {
+      const response = await fetch(getApiUrl('api/trades/open'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -99,7 +100,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
 
     setClosingTradeId(tradeId);
     try {
-      const response = await fetch('http://localhost:3001/api/trades/close', {
+      const response = await fetch(getApiUrl('api/trades/close'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

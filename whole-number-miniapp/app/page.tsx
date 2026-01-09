@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
+import { getApiUrl } from './config/api';
 import { WalletConnect } from './components/WalletConnect';
 import { PaperMoneyClaim } from './components/PaperMoneyClaim';
 import { TradingPanel } from './components/TradingPanel';
@@ -70,14 +71,14 @@ export default function BattlefieldHome() {
 
     try {
       // Try to get existing user
-      const response = await fetch(`http://localhost:3001/api/users/${address}`);
+      const response = await fetch(getApiUrl(`api/users/${address}`));
       const data = await response.json();
 
       if (data.success) {
         setUserData(data.user);
       } else {
         // Create new user
-        const createResponse = await fetch('http://localhost:3001/api/users', {
+        const createResponse = await fetch(getApiUrl('api/users'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -381,7 +382,7 @@ export default function BattlefieldHome() {
                 <button
                   onClick={async () => {
                     try {
-                      const response = await fetch('http://localhost:3001/api/claims', {
+                      const response = await fetch(getApiUrl('api/claims'), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ walletAddress: address })

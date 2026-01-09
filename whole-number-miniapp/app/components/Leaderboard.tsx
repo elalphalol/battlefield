@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { getApiUrl } from '../config/api';
 
 interface LeaderboardEntry {
   id: number;
@@ -53,8 +54,8 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
   const fetchLeaderboard = async () => {
     try {
       const url = filter === 'all' 
-        ? 'http://localhost:3001/api/leaderboard?limit=100'
-        : `http://localhost:3001/api/leaderboard?army=${filter}&limit=100`;
+        ? getApiUrl('api/leaderboard?limit=100')
+        : getApiUrl(`api/leaderboard?army=${filter}&limit=100`);
       
       const response = await fetch(url);
       const data = await response.json();
@@ -73,7 +74,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
     if (!address) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/leaderboard/rank/${address}`);
+      const response = await fetch(getApiUrl(`api/leaderboard/rank/${address}`));
       const data = await response.json();
       
       if (data.success && data.rank) {

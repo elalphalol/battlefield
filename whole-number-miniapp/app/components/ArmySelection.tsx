@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
+import { getApiUrl } from '../config/api';
 
 interface ArmySelectionProps {
   currentArmy?: 'bears' | 'bulls';
@@ -20,7 +21,7 @@ export function ArmySelection({ currentArmy, onArmyChange }: ArmySelectionProps)
     setSelectedArmy(army);
     
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${address}/army`, {
+      const response = await fetch(getApiUrl(`api/users/${address}/army`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ army })

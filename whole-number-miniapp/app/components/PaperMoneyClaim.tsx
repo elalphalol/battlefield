@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { getApiUrl } from '../config/api';
 
 interface PaperMoneyClaimProps {
   onClaim: (newBalance: number) => void;
@@ -23,7 +24,7 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
     // Check claim status every second
     const checkStatus = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/claims/status', {
+        const response = await fetch(getApiUrl('api/claims/status'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ walletAddress: address })
@@ -56,7 +57,7 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
     
     setClaiming(true);
     try {
-      const response = await fetch('http://localhost:3001/api/claims', {
+      const response = await fetch(getApiUrl('api/claims'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ walletAddress: address })

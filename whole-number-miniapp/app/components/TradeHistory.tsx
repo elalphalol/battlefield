@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { getApiUrl } from '../config/api';
 
 interface ClosedTrade {
   id: number;
@@ -34,7 +35,7 @@ export function TradeHistory() {
     if (!address) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/trades/${address}/history?limit=10`);
+      const response = await fetch(getApiUrl(`api/trades/${address}/history?limit=10`));
       const data = await response.json();
       if (data.success) {
         setHistory(data.trades);
