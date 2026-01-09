@@ -5,7 +5,6 @@ export interface FarcasterUser {
   username?: string;
   displayName?: string;
   pfpUrl?: string;
-  custody?: string; // Custody address (wallet)
 }
 
 export interface FarcasterContext {
@@ -24,7 +23,6 @@ export async function initializeMiniKit(): Promise<FarcasterContext> {
         username: context.user?.username,
         displayName: context.user?.displayName,
         pfpUrl: context.user?.pfpUrl,
-        custody: context.user?.custody,
       } as FarcasterUser,
       isReady: true,
     };
@@ -44,17 +42,9 @@ export async function connectWallet(): Promise<{ address: string | null; error?:
       return { address: null, error: 'Not in Farcaster frame' };
     }
 
-    // Get context which includes wallet info
-    const context = await sdk.context;
-    
-    if (context.user?.custody) {
-      console.log('Farcaster wallet connected:', context.user.custody);
-      return { address: context.user.custody };
-    }
-
-    // Try to prompt wallet connection via MiniKit
+    // Try to get wallet address from MiniKit
     const walletAddress = await sdk.wallet.requestAddress();
-    console.log('Wallet address requested:', walletAddress);
+    console.log('Wallet address from MiniKit:', walletAddress);
     
     return { address: walletAddress || null };
   } catch (error) {
@@ -86,7 +76,6 @@ export async function getFarcasterUser(): Promise<FarcasterUser | null> {
       username: context.user?.username,
       displayName: context.user?.displayName,
       pfpUrl: context.user?.pfpUrl,
-      custody: context.user?.custody,
     } as FarcasterUser;
   } catch (error) {
     console.error('Error getting Farcaster user:', error);

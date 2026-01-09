@@ -71,10 +71,16 @@ export default function BattlefieldHome() {
       getFarcasterUser().then(user => {
         console.log('Farcaster user in main page:', user);
         setFarcasterUser(user);
-        // Use custody address as wallet
-        if (user?.custody) {
-          setUserAddress(user.custody);
-        }
+      });
+      
+      // Request wallet address from Farcaster
+      import('./lib/minikit').then(({ connectWallet }) => {
+        connectWallet().then(result => {
+          if (result.address) {
+            console.log('Farcaster wallet connected:', result.address);
+            setUserAddress(result.address);
+          }
+        });
       });
     }
   }, []);
