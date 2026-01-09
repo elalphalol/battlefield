@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { getApiUrl } from './config/api';
 import { WalletConnect } from './components/WalletConnect';
-import { getFarcasterUser, isInFarcasterFrame } from './lib/minikit';
 import { PaperMoneyClaim } from './components/PaperMoneyClaim';
 import { TradingPanel } from './components/TradingPanel';
 import { Leaderboard } from './components/Leaderboard';
@@ -40,8 +39,6 @@ export default function BattlefieldHome() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard'>('trade');
   const [strategy] = useState(() => new WholeNumberStrategy());
-  const [farcasterUser, setFarcasterUser] = useState<any>(null);
-  const [userAddress, setUserAddress] = useState<string | null>(null);
 
   // Update strategy with new price
   useEffect(() => {
@@ -65,52 +62,30 @@ export default function BattlefieldHome() {
     }
   }, [btcPrice, coordinate, wholeNumber, strategy]);
 
-  // Load Farcaster user info on mount
-  useEffect(() => {
-    if (isInFarcasterFrame()) {
-      getFarcasterUser().then(user => {
-        console.log('Farcaster user in main page:', user);
-        setFarcasterUser(user);
-      });
-      
-      // Request wallet address from Farcaster
-      import('./lib/minikit').then(({ connectWallet }) => {
-        connectWallet().then(result => {
-          if (result.address) {
-            console.log('Farcaster wallet connected:', result.address);
-            setUserAddress(result.address);
-          }
-        });
-      });
-    }
-  }, []);
-
-  // Fetch or create user when wallet connects or Farcaster user loads
+  // Fetch or create user when wallet connects
   const fetchUserData = useCallback(async () => {
-    const effectiveAddress = userAddress || address;
-    
-    if (!effectiveAddress) {
+    if (!address) {
       setUserData(null);
       return;
     }
 
     try {
       // Try to get existing user
-      const response = await fetch(getApiUrl(`api/users/${effectiveAddress}`));
+      const response = await fetch(getApiUrl(`api/users/${address}`));
       const data = await response.json();
 
       if (data.success) {
         setUserData(data.user);
       } else {
-        // Create new user - use Farcaster data if available
+        // Create new user
         const createResponse = await fetch(getApiUrl('api/users'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            fid: farcasterUser?.fid || Math.floor(Math.random() * 1000000),
-            walletAddress: effectiveAddress,
-            username: farcasterUser?.username || farcasterUser?.displayName || `Trader${effectiveAddress.slice(2, 8)}`,
-            pfpUrl: farcasterUser?.pfpUrl || '',
+            fid: Math.floor(Math.random() * 1000000),
+            walletAddress: address,
+            username: `Trader${address.slice(2, 8)}`,
+            pfpUrl: '',
             army: 'bulls' // Default army for backend
           })
         });
@@ -123,13 +98,13 @@ export default function BattlefieldHome() {
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
-  }, [address, userAddress, farcasterUser]);
+  }, [address]);
 
   useEffect(() => {
-    // Data fetching on address or userAddress change is intentional
+    // Data fetching on address change is intentional
     // eslint-disable-next-line
     fetchUserData();
-  }, [address, userAddress, fetchUserData]);
+  }, [address, fetchUserData]);
 
   const handleArmyChange = (army: 'bears' | 'bulls') => {
     if (userData) {
@@ -385,7 +360,7 @@ export default function BattlefieldHome() {
         {activeTab === 'trade' ? (
           <div>
             {/* Demo Mode Warning if no wallet */}
-            {!address && !userAddress && (
+            {!address && (
               <div className="bg-yellow-900/30 border-2 border-yellow-500 rounded-lg p-6 mb-6">
                 <h3 className="text-2xl font-bold text-yellow-400 mb-2">📱 Connect Wallet to Play</h3>
                 <p className="text-gray-300 mb-4">
@@ -398,7 +373,7 @@ export default function BattlefieldHome() {
             )}
 
             {/* If connected but no balance, show get started button */}
-            {(address || userAddress) && userData && userData.paper_balance === 0 && (
+            {address && userData && userData.paper_balance === 0 && (
               <div className="bg-green-900/30 border-2 border-green-500 rounded-lg p-6 mb-6 text-center">
                 <h3 className="text-2xl font-bold text-green-400 mb-3">🎮 Get Started!</h3>
                 <p className="text-gray-300 mb-4">
@@ -407,11 +382,10 @@ export default function BattlefieldHome() {
                 <button
                   onClick={async () => {
                     try {
-                      const effectiveAddress = userAddress || address;
                       const response = await fetch(getApiUrl('api/claims'), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ walletAddress: effectiveAddress })
+                        body: JSON.stringify({ walletAddress: address })
                       });
                       const data = await response.json();
                       if (data.success) {

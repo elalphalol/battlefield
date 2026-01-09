@@ -35,22 +35,10 @@ export async function initializeMiniKit(): Promise<FarcasterContext> {
   }
 }
 
+// Placeholder for future Farcaster wallet integration
 export async function connectWallet(): Promise<{ address: string | null; error?: unknown }> {
-  try {
-    // Check if we're in a Farcaster frame
-    if (!isInFarcasterFrame()) {
-      return { address: null, error: 'Not in Farcaster frame' };
-    }
-
-    // Try to get wallet address from MiniKit
-    const walletAddress = await sdk.wallet.requestAddress();
-    console.log('Wallet address from MiniKit:', walletAddress);
-    
-    return { address: walletAddress || null };
-  } catch (error) {
-    console.error('Wallet connection error:', error);
-    return { address: null, error };
-  }
+  // This will be implemented when we're ready for Farcaster Mini App deployment
+  return { address: null, error: 'Not implemented yet' };
 }
 
 export async function shareToFarcaster(text: string, imageUrl?: string): Promise<{ success: boolean; error?: unknown }> {
