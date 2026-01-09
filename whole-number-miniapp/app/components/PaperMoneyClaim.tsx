@@ -86,13 +86,13 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
   }
 
   return (
-    <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-2 border-green-500/50 rounded-lg p-4 shadow-lg min-w-[180px]">
-      <h3 className="text-lg font-bold text-green-400 mb-3">💰 Claim</h3>
+    <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-2 border-green-500/50 rounded-lg p-5 shadow-lg">
+      <h3 className="text-xl font-bold text-green-400 mb-4">💰 Claim</h3>
       
       <button
         onClick={handleClaim}
         disabled={!canClaim || claiming}
-        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-4 py-3 rounded-lg font-bold text-sm transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-4 py-3 rounded-lg font-bold text-base transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
       >
         {claiming ? (
           <>
@@ -118,13 +118,13 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
       </button>
 
       {!canClaim && cooldownActive && timeLeft > 0 && (
-        <div className="mt-2 text-center text-xs text-yellow-400">
+        <div className="mt-3 text-center text-sm text-yellow-400">
           ⏰ {formatTime(timeLeft)}
         </div>
       )}
 
-      <div className="mt-2 text-center text-[10px] leading-tight text-gray-400">
-        Claim $1,000 when balance &lt; $100 (10min cooldown)
+      <div className="mt-3 text-center text-xs leading-relaxed text-gray-400">
+        Claim $1,000 when balance &lt; $100<br/>(10min cooldown)
       </div>
     </div>
   );

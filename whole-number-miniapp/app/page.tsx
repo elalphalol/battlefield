@@ -178,11 +178,6 @@ export default function BattlefieldHome() {
           </div>
         </div>
 
-        {/* Strategy Guide - Expandable */}
-        <div className="mb-6">
-          <StrategyGuide />
-        </div>
-
         {/* Battlefield Visual */}
         <div className="mb-6">
           <BattlefieldVisual
@@ -286,18 +281,14 @@ export default function BattlefieldHome() {
           </div>
         </div>
 
-        {/* Battle Alerts */}
-        <div className="mb-6">
-          <BattleAlerts 
-            btcPrice={btcPrice}
-            coordinate={coordinate}
-            beamsBroken={strategy.beamsBroken}
-          />
-        </div>
-
         {/* Market Cycle - NYC Time */}
         <div className="mb-6">
           <MarketCycle />
+        </div>
+
+        {/* Strategy Guide - Expandable */}
+        <div className="mb-6">
+          <StrategyGuide />
         </div>
 
         {/* User Stats Bar (if logged in) */}
@@ -412,21 +403,17 @@ export default function BattlefieldHome() {
             )}
 
             <div className="grid lg:grid-cols-12 gap-4">
-              {/* Left Column - Claims & Stats (Smaller - 2 columns) */}
-              <div className="lg:col-span-2 space-y-4">
-                <div className="scale-90 origin-top">
-                  <PaperMoneyClaim 
-                    onClaim={handleClaim} 
-                    paperBalance={userData?.paper_balance || 0} 
-                  />
-                </div>
-                <div className="scale-90 origin-top">
-                  <UserStats userData={userData} />
-                </div>
+              {/* Left Column - Claims & Stats (Slightly larger - 3 columns) */}
+              <div className="lg:col-span-3 space-y-4">
+                <PaperMoneyClaim 
+                  onClaim={handleClaim} 
+                  paperBalance={userData?.paper_balance || 0} 
+                />
+                <UserStats userData={userData} />
               </div>
 
-              {/* Middle Column - Trading Panel + Open Positions (Larger - 7 columns) */}
-              <div className="lg:col-span-7 space-y-4">
+              {/* Middle Column - Trading Panel + Open Positions (6 columns) */}
+              <div className="lg:col-span-6 space-y-4">
                 <TradingPanel
                   btcPrice={btcPrice}
                   paperBalance={userData?.paper_balance || 0}
