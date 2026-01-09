@@ -146,9 +146,6 @@ export default function BattlefieldHome() {
                 <h1 className="text-3xl md:text-4xl font-bold text-yellow-400">
                   BATTLEFIELD
                 </h1>
-                <p className="text-sm text-gray-400">
-                  Bears 🐻 vs Bulls 🐂 | Bitcoin Paper Trading
-                </p>
               </div>
             </div>
             <WalletConnect />
@@ -523,10 +520,32 @@ export default function BattlefieldHome() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-slate-700 mt-12 py-6 text-center text-gray-500 text-sm">
-        <p className="mb-2">⚔️ <strong>BATTLEFIELD</strong> - Bears vs Bulls Paper Trading Game</p>
+      <footer className="border-t border-slate-700 mt-12 py-6 text-center text-gray-500 text-sm space-y-3">
+        <p className="mb-2">⚔️ <strong>BATTLEFIELD</strong> - Bears 🐻 vs Bulls 🐂</p>
         <p className="text-xs">⚠️ Paper money only. No real funds at risk. High leverage trading is educational.</p>
-        <p className="text-xs mt-2">Powered by $BATTLE token • Launching on Clanker.world</p>
+        <p className="text-xs">Powered by $BATTLE token • Launching on Clanker.world</p>
+        <div className="pt-4 border-t border-slate-800 space-y-1">
+          <p className="text-xs">
+            Created by{' '}
+            <a 
+              href="https://elalpha.lol" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-purple-400 hover:text-purple-300 underline"
+            >
+              elalpha.lol
+            </a>
+            {' '}• Follow:{' '}
+            <a 
+              href="https://warpcast.com/elalpha.eth" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-purple-400 hover:text-purple-300"
+            >
+              @elalpha.eth
+            </a>
+          </p>
+        </div>
       </footer>
     </main>
   );
