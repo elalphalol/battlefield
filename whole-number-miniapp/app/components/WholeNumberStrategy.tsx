@@ -108,7 +108,7 @@ export function WholeNumberStrategy() {
               <span className="text-xl">→</span>
             </Link>
             <p className="mt-2 text-xs text-gray-400">
-              Read the full whitepaper on Whole Number Psychology
+              Read the full Whole Number Psychology
             </p>
           </div>
         </div>

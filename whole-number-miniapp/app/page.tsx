@@ -10,6 +10,7 @@ import { BattlefieldVisual } from './components/BattlefieldVisual';
 import { UserStats } from './components/UserStats';
 import { TradeHistory } from './components/TradeHistory';
 import { WholeNumberStrategy as StrategyGuide } from './components/WholeNumberStrategy';
+import { MarketCycle } from './components/MarketCycle';
 import { useBTCPrice } from './hooks/useBTCPrice';
 import { WholeNumberStrategy } from './lib/strategy';
 
@@ -238,6 +239,11 @@ export default function BattlefieldHome() {
           </div>
         </div>
 
+        {/* Market Cycle - NYC Time */}
+        <div className="mb-6">
+          <MarketCycle />
+        </div>
+
         {/* Beams Status */}
         <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
           <h3 className="text-lg font-bold mb-4">🔨 THE BEAMS</h3>
@@ -405,16 +411,20 @@ export default function BattlefieldHome() {
                   paperBalance={userData?.paper_balance || 0} 
                 />
                 <UserStats userData={userData} />
-                <TradeHistory />
               </div>
 
-              {/* Middle/Right Column - Trading */}
-              <div className="lg:col-span-2">
+              {/* Middle Column - Trading Panel */}
+              <div className="space-y-6">
                 <TradingPanel
                   btcPrice={btcPrice}
                   paperBalance={userData?.paper_balance || 0}
                   onTradeComplete={handleTradeComplete}
                 />
+              </div>
+
+              {/* Right Column - Trade History */}
+              <div className="space-y-6">
+                <TradeHistory />
               </div>
             </div>
           </div>
