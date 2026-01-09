@@ -277,16 +277,12 @@ SELECT
   u.best_streak,
   u.times_liquidated,
   u.battle_tokens_earned,
-  -- Ranking score formula (P&L is most important - 70%)
-  (u.total_pnl * 0.7) + 
-  (u.paper_balance * 0.15) + 
-  (CASE WHEN u.total_trades > 0 THEN (u.winning_trades::DECIMAL / u.total_trades) * u.total_trades * 0.1 ELSE 0 END) +
-  (u.current_streak * 100 * 0.05) - 
-  (u.times_liquidated * 500) as score,
+  -- Score is simply total P&L (simple and clear!)
+  u.total_pnl as score,
   u.last_active
 FROM users u
 WHERE u.total_trades > 0
-ORDER BY score DESC;
+ORDER BY u.total_pnl DESC;
 
 -- Active positions view
 CREATE OR REPLACE VIEW active_positions AS
@@ -347,3 +343,4 @@ SELECT 'achievements', COUNT(*) FROM achievements;
 -- ============================================
 -- Database ready for BATTLEFIELD! ⚔️
 -- Bears 🐻 vs Bulls 🐂
+-- ============================================

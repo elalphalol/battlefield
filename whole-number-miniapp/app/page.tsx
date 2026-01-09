@@ -441,28 +441,11 @@ export default function BattlefieldHome() {
                 </div>
                 <div>
                   <div className="font-bold text-white mb-2">2️⃣ Start Trading</div>
-                  <p>Open leveraged positions (10x-100x). Profit from Bitcoin price movements with paper money.</p>
+                  <p>Open leveraged positions (1x-100x). Profit from Bitcoin price movements with paper money.</p>
                 </div>
                 <div>
                   <div className="font-bold text-white mb-2">3️⃣ Compete & Win</div>
                   <p>Climb the leaderboard! Top traders earn $BATTLE tokens and glory for their army.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Score Explanation */}
-            <div className="bg-blue-900/20 border border-blue-500/50 rounded-lg p-4 mb-6">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">💯</span>
-                <div>
-                  <h4 className="font-bold text-blue-400 mb-2">How Leaderboard Score is Calculated</h4>
-                  <div className="text-xs text-gray-300 space-y-1">
-                    <p><strong className="text-white">P&L (70%):</strong> Your total profit/loss is the biggest factor</p>
-                    <p><strong className="text-white">Balance (15%):</strong> Current paper money balance matters less</p>
-                    <p><strong className="text-white">Win Rate (10%):</strong> Consistency bonus based on winning trades</p>
-                    <p><strong className="text-white">Streak (5%):</strong> Small bonus for current win streaks</p>
-                    <p><strong className="text-red-400">Liquidations (-500 each):</strong> Heavy penalty for getting rekt!</p>
-                  </div>
                 </div>
               </div>
             </div>
