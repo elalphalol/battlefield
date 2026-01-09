@@ -42,6 +42,9 @@ export function WalletConnect() {
     );
   }
 
+  const injectedConnector = connectors.find(c => c.id === 'injected');
+  const walletConnectConnector = connectors.find(c => c.id === 'walletConnect');
+
   return (
     <div className="relative">
       <button
@@ -52,26 +55,124 @@ export function WalletConnect() {
       </button>
       
       {showModal && (
-        <div className="absolute right-0 mt-2 w-80 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-50">
+        <div className="absolute right-0 mt-2 w-80 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-50 max-h-[500px] overflow-y-auto">
           <div className="p-4">
             <div className="text-white font-bold mb-3">Select Wallet</div>
             <div className="space-y-2">
-              {connectors.map((connector) => (
-                <button
-                  key={connector.id}
-                  onClick={() => {
-                    connect({ connector });
+              {/* Browser Wallet */}
+              <button
+                onClick={() => {
+                  if (injectedConnector) {
+                    connect({ connector: injectedConnector });
                     setShowModal(false);
-                  }}
-                  className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-bold text-left px-4 flex items-center justify-between"
-                >
-                  <span>
-                    {connector.id === 'injected' ? '🦊 Browser Wallet (Rabby/MetaMask)' : 
-                     connector.id === 'walletConnect' ? '📱 Mobile Wallets' : 
-                     connector.name}
-                  </span>
-                </button>
-              ))}
+                  }
+                }}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-bold text-left px-4 flex items-center gap-3"
+              >
+                <span className="text-2xl">🦊</span>
+                <span>Browser Wallet</span>
+              </button>
+
+              {/* Mobile Wallets via WalletConnect */}
+              <button
+                onClick={() => {
+                  if (walletConnectConnector) {
+                    connect({ connector: walletConnectConnector });
+                    setShowModal(false);
+                  }
+                }}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-bold text-left px-4 flex items-center gap-3"
+              >
+                <span className="text-2xl">📱</span>
+                <span>Mobile Wallets</span>
+              </button>
+
+              <div className="border-t border-slate-600 my-3"></div>
+              <div className="text-xs text-gray-400 mb-2">Popular Wallets:</div>
+
+              {/* Rabby Wallet */}
+              <button
+                onClick={() => {
+                  if (injectedConnector) {
+                    connect({ connector: injectedConnector });
+                    setShowModal(false);
+                  }
+                }}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg font-medium text-left px-4 flex items-center gap-3"
+              >
+                <span className="text-xl">🐰</span>
+                <span>Rabby Wallet</span>
+              </button>
+
+              {/* Phantom */}
+              <button
+                onClick={() => {
+                  if (injectedConnector) {
+                    connect({ connector: injectedConnector });
+                    setShowModal(false);
+                  }
+                }}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg font-medium text-left px-4 flex items-center gap-3"
+              >
+                <span className="text-xl">👻</span>
+                <span>Phantom</span>
+              </button>
+
+              {/* MetaMask */}
+              <button
+                onClick={() => {
+                  if (injectedConnector) {
+                    connect({ connector: injectedConnector });
+                    setShowModal(false);
+                  }
+                }}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg font-medium text-left px-4 flex items-center gap-3"
+              >
+                <span className="text-xl">🦊</span>
+                <span>MetaMask</span>
+              </button>
+
+              {/* Coinbase Wallet */}
+              <button
+                onClick={() => {
+                  if (walletConnectConnector) {
+                    connect({ connector: walletConnectConnector });
+                    setShowModal(false);
+                  }
+                }}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg font-medium text-left px-4 flex items-center gap-3"
+              >
+                <span className="text-xl">💙</span>
+                <span>Coinbase Wallet</span>
+              </button>
+
+              {/* OKX Wallet */}
+              <button
+                onClick={() => {
+                  if (walletConnectConnector) {
+                    connect({ connector: walletConnectConnector });
+                    setShowModal(false);
+                  }
+                }}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg font-medium text-left px-4 flex items-center gap-3"
+              >
+                <span className="text-xl">⭕</span>
+                <span>OKX Wallet</span>
+              </button>
+
+              {/* Trust Wallet */}
+              <button
+                onClick={() => {
+                  if (walletConnectConnector) {
+                    connect({ connector: walletConnectConnector });
+                    setShowModal(false);
+                  }
+                }}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg font-medium text-left px-4 flex items-center gap-3"
+              >
+                <span className="text-xl">💎</span>
+                <span>Trust Wallet</span>
+              </button>
             </div>
           </div>
         </div>
