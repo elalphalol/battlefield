@@ -134,21 +134,23 @@ export default function BattlefieldHome() {
     <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
       {/* Header */}
       <header className="border-b-2 border-yellow-500/50 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
+        <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-4">
+          <div className="flex justify-between items-center gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink min-w-0">
               <img 
                 src="/battlefield-logo.jpg" 
                 alt="BATTLEFIELD Logo" 
-                className="h-12 w-12 md:h-14 md:w-14 rounded-lg object-cover"
+                className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14 rounded-lg object-cover flex-shrink-0"
               />
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-yellow-400">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl md:text-4xl font-bold text-yellow-400 truncate">
                   BATTLEFIELD
                 </h1>
               </div>
             </div>
-            <WalletConnect />
+            <div className="flex-shrink-0">
+              <WalletConnect />
+            </div>
           </div>
         </div>
       </header>
