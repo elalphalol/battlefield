@@ -20,10 +20,10 @@ export default function LandingPage() {
 
         {/* Title */}
         <div className="space-y-4">
-          <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
+          <h1 className="text-4xl sm:text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 break-words">
             BATTLEFIELD
           </h1>
-          <p className="text-2xl md:text-3xl text-gray-300 font-bold">
+          <p className="text-xl sm:text-2xl md:text-3xl text-gray-300 font-bold">
             🐻 Bears vs Bulls 🐂
           </p>
           <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">
@@ -53,9 +53,9 @@ export default function LandingPage() {
         {/* CTA Button */}
         <button
           onClick={() => router.push('/battlefield')}
-          className="group relative inline-flex items-center justify-center px-12 py-6 text-3xl md:text-4xl font-black text-slate-900 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-2xl shadow-2xl hover:shadow-yellow-500/50 transition-all duration-300 transform hover:scale-105"
+          className="group relative inline-flex items-center justify-center px-6 sm:px-12 py-4 sm:py-6 text-xl sm:text-3xl md:text-4xl font-black text-slate-900 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-2xl shadow-2xl hover:shadow-yellow-500/50 transition-all duration-300 transform hover:scale-105"
         >
-          <span className="relative z-10">⚔️ ARE YOU READY? ⚔️</span>
+          <span className="relative z-10 text-center leading-tight">⚔️ ARE YOU READY? ⚔️</span>
           <div className="absolute inset-0 bg-gradient-to-r from-yellow-500 via-orange-600 to-red-600 rounded-2xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
         </button>
 
