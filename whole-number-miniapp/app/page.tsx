@@ -490,16 +490,29 @@ export default function BattlefieldHome() {
         )}
       </div>
 
-      {/* Sticky Scroll to Trade Button */}
+      {/* Sticky Navigation Buttons */}
       {activeTab === 'trade' && (
-        <button
-          onClick={scrollToTrading}
-          className="fixed bottom-8 right-8 z-40 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-slate-900 p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
-          aria-label="Scroll to trading section"
-        >
-          <span className="text-2xl">⚡</span>
-          <span className="hidden sm:inline">Trade Now</span>
-        </button>
+        <div className="fixed bottom-8 right-8 z-40 flex flex-col gap-3">
+          {/* Back to Top Button */}
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
+            aria-label="Scroll to top"
+          >
+            <span className="text-2xl">⬆️</span>
+            <span className="hidden sm:inline">Top</span>
+          </button>
+          
+          {/* Trade Now Button */}
+          <button
+            onClick={scrollToTrading}
+            className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-slate-900 p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
+            aria-label="Scroll to trading section"
+          >
+            <span className="text-2xl">⚡</span>
+            <span className="hidden sm:inline">Trade Now</span>
+          </button>
+        </div>
       )}
 
       {/* Footer */}
