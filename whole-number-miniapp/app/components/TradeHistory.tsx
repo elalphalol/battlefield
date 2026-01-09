@@ -100,32 +100,48 @@ export function TradeHistory() {
           const isProfit = pnl >= 0;
           const isLiquidated = trade.status === 'liquidated';
 
-          const handleShare = () => {
+          const [showShareMenu, setShowShareMenu] = useState(false);
+
+          const generateImageUrl = () => {
             const army = userData?.army || 'bulls';
-            const armyEmoji = army === 'bears' ? '🐻' : '🐂';
-            const armyColor = army === 'bears' ? '#ef4444' : '#22c55e';
-            const positionEmoji = trade.position_type === 'long' ? '📈' : '📉';
             const username = userData?.username || address?.slice(0, 8);
             
-            const shareText = `${armyEmoji} BATTLEFIELD ${armyEmoji}
+            const params = new URLSearchParams({
+              army,
+              type: trade.position_type,
+              leverage: trade.leverage.toString(),
+              pnl: pnl.toFixed(2),
+              pnlPercent: pnlPercentage.toFixed(1),
+              entry: Number(trade.entry_price).toFixed(2),
+              exit: Number(trade.exit_price).toFixed(2),
+              size: Number(trade.position_size).toString(),
+              username: username || 'Trader'
+            });
 
-${username} - ${army.toUpperCase()} ARMY
+            return `${window.location.origin}/api/share-card?${params.toString()}`;
+          };
 
-${positionEmoji} ${trade.position_type.toUpperCase()} ${trade.leverage}x
-${isProfit ? '✅' : '❌'} ${isProfit ? '+' : ''}$${pnl.toFixed(2)} (${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%)
-
-Entry: $${Number(trade.entry_price).toFixed(2)}
-Exit: $${Number(trade.exit_price).toFixed(2)}
-Size: $${Number(trade.position_size)}
-
-⚔️ Bears vs Bulls | battlefield-mini.vercel.app`;
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(shareText);
+          const handleShare = (platform: 'farcaster' | 'twitter' | 'copy') => {
+            const imageUrl = generateImageUrl();
+            const websiteUrl = 'https://battlefield-mini.vercel.app';
+            const army = userData?.army || 'bulls';
+            const armyEmoji = army === 'bears' ? '🐻' : '🐂';
             
-            // Try to open Farcaster composer (Warpcast)
-            const encodedText = encodeURIComponent(shareText);
-            window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
+            const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toFixed(2)} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls`;
+
+            if (platform === 'farcaster') {
+              const encodedText = encodeURIComponent(shareText);
+              const encodedImage = encodeURIComponent(imageUrl);
+              window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
+            } else if (platform === 'twitter') {
+              const encodedText = encodeURIComponent(shareText + `\n\n${websiteUrl}`);
+              window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
+            } else if (platform === 'copy') {
+              navigator.clipboard.writeText(`${shareText}\n\nImage: ${imageUrl}\n${websiteUrl}`);
+              alert('✅ Copied to clipboard! Paste in any social media.');
+            }
+            
+            setShowShareMenu(false);
           };
 
           return (
@@ -177,13 +193,37 @@ Size: $${Number(trade.position_size)}
                 <div className="text-xs text-gray-500">
                   {new Date(trade.closed_at).toLocaleString()}
                 </div>
-                <button
-                  onClick={handleShare}
-                  className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all"
-                  title="Share on Farcaster"
-                >
-                  📤 Share
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowShareMenu(!showShareMenu)}
+                    className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
+                  >
+                    📤 Share
+                  </button>
+                  
+                  {showShareMenu && (
+                    <div className="absolute right-0 bottom-full mb-2 w-48 bg-slate-900 border-2 border-purple-500 rounded-lg shadow-xl z-50 overflow-hidden">
+                      <button
+                        onClick={() => handleShare('farcaster')}
+                        className="w-full text-left px-4 py-3 hover:bg-purple-600 text-white text-sm font-bold transition-all flex items-center gap-2 border-b border-slate-700"
+                      >
+                        <span className="text-lg">🟪</span> Farcaster
+                      </button>
+                      <button
+                        onClick={() => handleShare('twitter')}
+                        className="w-full text-left px-4 py-3 hover:bg-blue-600 text-white text-sm font-bold transition-all flex items-center gap-2 border-b border-slate-700"
+                      >
+                        <span className="text-lg">🐦</span> Twitter
+                      </button>
+                      <button
+                        onClick={() => handleShare('copy')}
+                        className="w-full text-left px-4 py-3 hover:bg-green-600 text-white text-sm font-bold transition-all flex items-center gap-2"
+                      >
+                        <span className="text-lg">📋</span> Copy Link
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );
