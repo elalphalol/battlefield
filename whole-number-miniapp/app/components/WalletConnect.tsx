@@ -42,21 +42,40 @@ export function WalletConnect() {
     );
   }
 
-  // Get only WalletConnect connector
-  const walletConnectConnector = connectors.find(c => c.id === 'walletConnect');
-
   return (
     <div className="relative">
       <button
-        onClick={() => {
-          if (walletConnectConnector) {
-            connect({ connector: walletConnectConnector });
-          }
-        }}
+        onClick={() => setShowModal(!showModal)}
         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg transition-all duration-200 hover:shadow-xl"
       >
         🔗 Connect Wallet
       </button>
+      
+      {showModal && (
+        <div className="absolute right-0 mt-2 w-80 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-50">
+          <div className="p-4">
+            <div className="text-white font-bold mb-3">Select Wallet</div>
+            <div className="space-y-2">
+              {connectors.map((connector) => (
+                <button
+                  key={connector.id}
+                  onClick={() => {
+                    connect({ connector });
+                    setShowModal(false);
+                  }}
+                  className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-bold text-left px-4 flex items-center justify-between"
+                >
+                  <span>
+                    {connector.id === 'injected' ? '🦊 Browser Wallet (Rabby/MetaMask)' : 
+                     connector.id === 'walletConnect' ? '📱 Mobile Wallets' : 
+                     connector.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

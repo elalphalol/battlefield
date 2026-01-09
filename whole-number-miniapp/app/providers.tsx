@@ -12,6 +12,7 @@ const queryClient = new QueryClient();
 const wagmiConfig = createConfig({
   chains: [base],
   connectors: [
+    injected(),
     walletConnect({
       projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
       showQrModal: true,
