@@ -23,10 +23,13 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   const { address } = useAccount();
   const [tradeType, setTradeType] = useState<'long' | 'short'>('long');
   const [leverage, setLeverage] = useState(50);
-  const [positionSize, setPositionSize] = useState(1000);
+  const [positionSizePercent, setPositionSizePercent] = useState(10); // Percentage of balance
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [isOpening, setIsOpening] = useState(false);
   const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
+
+  // Calculate actual position size from percentage
+  const positionSize = Math.floor((positionSizePercent / 100) * Number(paperBalance));
 
   useEffect(() => {
     if (address) {
@@ -227,20 +230,21 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
         {/* Position Size */}
         <div className="mb-4">
           <label className="block text-sm font-semibold text-gray-300 mb-2">
-            Position Size: ${positionSize}
+            Position Size: <span className="text-cyan-400">{positionSizePercent}%</span> <span className="text-gray-500">(${positionSize.toLocaleString()})</span>
           </label>
           <input
             type="range"
-            min="100"
-            max={Math.min(paperBalance, 5000)}
-            step="100"
-            value={positionSize}
-            onChange={(e) => setPositionSize(Number(e.target.value))}
-            className="w-full"
+            min="1"
+            max="100"
+            step="1"
+            value={positionSizePercent}
+            onChange={(e) => setPositionSizePercent(Number(e.target.value))}
+            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
           />
           <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span>$100</span>
-            <span>Max: ${Math.min(paperBalance, 5000)}</span>
+            <span>1%</span>
+            <span className="text-gray-500">{positionSizePercent}% of balance</span>
+            <span>100%</span>
           </div>
         </div>
 

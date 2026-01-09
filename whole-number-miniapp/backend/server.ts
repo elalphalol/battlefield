@@ -407,7 +407,7 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
 - Raw P&L: $${pnl.toFixed(2)} (${(pnlPercentage * 100).toFixed(2)}%)
 - Trading Fee: $${tradingFee.toFixed(2)} (${feePercentage.toFixed(2)}%)
 - P&L After Fee: $${pnlAfterFee.toFixed(2)}
-- Final Amount: $${finalAmount.toFixed(2)}
+- Final Amount: $${Number(finalAmount).toFixed(2)}
 - Status: ${status}
     `);
 
