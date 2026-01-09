@@ -117,16 +117,9 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
         )}
       </button>
 
-      {!canClaim && cooldownActive && timeLeft > 0 && (
-        <div className="mt-3 text-center text-sm text-yellow-400">
-          ⏰ {formatTime(timeLeft)}
-        </div>
-      )}
-
       <div className="mt-3 text-center text-xs leading-relaxed text-gray-400">
         Claim $1,000 when balance &lt; $100<br/>(10min cooldown)
       </div>
     </div>
   );
 }
-
