@@ -211,10 +211,10 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                     </div>
                   </div>
 
-                  {/* Stats */}
+                  {/* P&L */}
                   <div className="hidden md:flex flex-col items-end gap-1">
-                    <div className="text-sm font-bold text-yellow-400">
-                      Score: {Number(entry.score).toFixed(0)}
+                    <div className={`text-2xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {Number(entry.total_pnl) >= 0 ? '+' : ''}${Number(entry.total_pnl).toFixed(2)}
                     </div>
                     <div className="text-xs text-gray-400">
                       {entry.total_trades} trades
