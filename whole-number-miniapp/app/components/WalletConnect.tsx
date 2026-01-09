@@ -42,9 +42,6 @@ export function WalletConnect() {
     );
   }
 
-  const injectedConnector = connectors.find(c => c.id === 'injected');
-  const walletConnectConnector = connectors.find(c => c.id === 'walletConnect');
-
   return (
     <div className="relative">
       <button
@@ -55,49 +52,26 @@ export function WalletConnect() {
       </button>
       
       {showModal && (
-        <div className="absolute right-0 mt-2 w-80 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-50 max-h-[500px] overflow-y-auto">
+        <div className="absolute right-0 mt-2 w-80 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-50">
           <div className="p-4">
             <div className="text-white font-bold mb-3">Select Wallet</div>
-            <div className="space-y-3">
-              {/* Browser Wallet */}
-              <button
-                onClick={() => {
-                  if (injectedConnector) {
-                    connect({ connector: injectedConnector });
+            <div className="space-y-2">
+              {connectors.map((connector) => (
+                <button
+                  key={connector.id}
+                  onClick={() => {
+                    connect({ connector });
                     setShowModal(false);
-                  }
-                }}
-                className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white py-3 rounded-lg font-bold text-left px-4 flex items-center gap-3 shadow-lg"
-              >
-                <span className="text-2xl">🦊</span>
-                <div>
-                  <div>Browser Wallet</div>
-                  <div className="text-xs font-normal opacity-90">MetaMask, Rabby, Phantom</div>
-                </div>
-              </button>
-
-              {/* Mobile Wallets via WalletConnect */}
-              <button
-                onClick={() => {
-                  if (walletConnectConnector) {
-                    connect({ connector: walletConnectConnector });
-                    setShowModal(false);
-                  }
-                }}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white py-3 rounded-lg font-bold text-left px-4 flex items-center gap-3 shadow-lg"
-              >
-                <span className="text-2xl">📱</span>
-                <div>
-                  <div>Mobile Wallets</div>
-                  <div className="text-xs font-normal opacity-90">Trust, Coinbase, OKX & more</div>
-                </div>
-              </button>
-            </div>
-
-            <div className="mt-4 p-3 bg-slate-900 rounded-lg">
-              <div className="text-xs text-gray-400">
-                💡 <strong>Tip:</strong> Browser Wallet connects to your active wallet extension (Rabby, MetaMask, or Phantom)
-              </div>
+                  }}
+                  className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-bold text-left px-4 flex items-center justify-between"
+                >
+                  <span>
+                    {connector.id === 'injected' ? '🦊 Browser Wallet (Rabby/MetaMask)' : 
+                     connector.id === 'walletConnect' ? '📱 Mobile Wallets' : 
+                     connector.name}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
