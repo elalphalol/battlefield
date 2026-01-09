@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { useRouter } from 'next/navigation';
 import { getApiUrl } from '../config/api';
 
 interface LeaderboardEntry {
@@ -29,6 +30,7 @@ interface LeaderboardProps {
 
 export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
   const { address } = useAccount();
+  const router = useRouter();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'bears' | 'bulls'>(filterArmy);
@@ -176,7 +178,8 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
             return (
               <div
                 key={entry.wallet_address}
-                className={`p-4 hover:bg-slate-700/50 transition-colors ${
+                onClick={() => router.push(`/profile/${entry.fid}`)}
+                className={`p-4 hover:bg-slate-700/50 transition-colors cursor-pointer ${
                   isUserEntry ? 'bg-blue-900/20 border-l-4 border-blue-500' : ''
                 }`}
               >

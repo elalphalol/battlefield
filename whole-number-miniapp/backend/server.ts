@@ -526,6 +526,120 @@ app.get('/api/trades/:walletAddress/history', async (req: Request, res: Response
 });
 
 // ============================================
+// USER PROFILE ENDPOINT
+// ============================================
+
+// Get user profile by FID or wallet
+app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
+  const { identifier } = req.params;
+
+  try {
+    // Check if identifier is FID (numeric) or wallet address
+    const isFid = /^\d+$/.test(identifier);
+    
+    // Get user profile with stats
+    const userQuery = isFid
+      ? 'SELECT * FROM users WHERE fid = $1'
+      : 'SELECT * FROM users WHERE wallet_address = $1';
+    
+    const userResult = await pool.query(userQuery, [identifier]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    const user = userResult.rows[0];
+    const userId = user.id;
+
+    // Get last 5 open positions
+    const openPositions = await pool.query(
+      `SELECT * FROM trades 
+       WHERE user_id = $1 AND status = 'open'
+       ORDER BY opened_at DESC
+       LIMIT 5`,
+      [userId]
+    );
+
+    // Get last 5 closed/liquidated positions
+    const closedPositions = await pool.query(
+      `SELECT * FROM trades 
+       WHERE user_id = $1 AND status IN ('closed', 'liquidated')
+       ORDER BY closed_at DESC
+       LIMIT 5`,
+      [userId]
+    );
+
+    // Calculate win rate
+    const winRate = user.total_trades > 0 
+      ? ((user.winning_trades / user.total_trades) * 100).toFixed(2)
+      : '0.00';
+
+    // Get user's rank
+    const rankResult = await pool.query(
+      `SELECT COUNT(*) + 1 as rank
+       FROM users
+       WHERE total_pnl > $1 AND total_trades > 0`,
+      [user.total_pnl]
+    );
+
+    const profile = {
+      user: {
+        fid: user.fid,
+        username: user.username || `Trader ${user.fid}`,
+        pfp_url: user.pfp_url,
+        wallet_address: user.wallet_address,
+        army: user.army
+      },
+      stats: {
+        paper_balance: Number(user.paper_balance),
+        total_pnl: Number(user.total_pnl),
+        total_trades: user.total_trades,
+        winning_trades: user.winning_trades,
+        win_rate: Number(winRate),
+        current_streak: user.current_streak,
+        best_streak: user.best_streak,
+        times_liquidated: user.times_liquidated,
+        battle_tokens_earned: user.battle_tokens_earned,
+        rank: rankResult.rows[0].rank,
+        last_active: user.last_active
+      },
+      openPositions: openPositions.rows.map(trade => ({
+        id: trade.id,
+        position_type: trade.position_type,
+        leverage: trade.leverage,
+        entry_price: Number(trade.entry_price),
+        position_size: Number(trade.position_size),
+        liquidation_price: Number(trade.liquidation_price),
+        opened_at: trade.opened_at
+      })),
+      recentHistory: closedPositions.rows.map(trade => ({
+        id: trade.id,
+        position_type: trade.position_type,
+        leverage: trade.leverage,
+        entry_price: Number(trade.entry_price),
+        exit_price: Number(trade.exit_price),
+        position_size: Number(trade.position_size),
+        pnl: Number(trade.pnl),
+        status: trade.status,
+        opened_at: trade.opened_at,
+        closed_at: trade.closed_at
+      }))
+    };
+
+    res.json({ success: true, profile });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch user profile' 
+    });
+  }
+});
+
+// ============================================
 // LEADERBOARD ENDPOINTS
 // ============================================
 
@@ -666,6 +780,7 @@ app.listen(PORT, () => {
     - POST /api/trades/open
     - POST /api/trades/close
     - GET  /api/trades/:walletAddress/open
+    - GET  /api/profile/:identifier (FID or wallet)
     - GET  /api/leaderboard
     - GET  /api/army/stats
     - GET  /api/config
