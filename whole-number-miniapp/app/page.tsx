@@ -123,6 +123,13 @@ export default function BattlefieldHome() {
     fetchUserData();
   };
 
+  const scrollToTrading = () => {
+    const tradingSection = document.getElementById('trading-section');
+    if (tradingSection) {
+      tradingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
       {/* Header */}
@@ -294,7 +301,7 @@ export default function BattlefieldHome() {
 
         {/* User Stats Bar (if logged in) */}
         {userData && (
-          <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 mb-6">
+          <div id="trading-section" className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 mb-6">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
               <div>
                 <div className="text-xs text-gray-400">Army</div>
@@ -482,6 +489,18 @@ export default function BattlefieldHome() {
           </div>
         )}
       </div>
+
+      {/* Sticky Scroll to Trade Button */}
+      {activeTab === 'trade' && (
+        <button
+          onClick={scrollToTrading}
+          className="fixed bottom-8 right-8 z-40 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-slate-900 p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
+          aria-label="Scroll to trading section"
+        >
+          <span className="text-2xl">⚡</span>
+          <span className="hidden sm:inline">Trade Now</span>
+        </button>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-slate-700 mt-12 py-6 text-center text-gray-500 text-sm">
