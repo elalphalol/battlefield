@@ -140,9 +140,9 @@ export class WholeNumberStrategy {
   // ===========================
   
   getMarketDirection(): 'bullish' | 'bearish' | 'neutral' {
-    if (this.priceHistory.length < 5) return 'neutral';
+    if (this.priceHistory.length < 3) return 'neutral';
     
-    const recentCount = Math.min(15, this.priceHistory.length);
+    const recentCount = Math.min(10, this.priceHistory.length);
     const recentPrices = this.priceHistory.slice(-recentCount);
     
     const firstPrice = recentPrices[0].price;
@@ -157,10 +157,11 @@ export class WholeNumberStrategy {
       else if (recentPrices[i].price < recentPrices[i-1].price) downMoves++;
     }
     
-    const momentum = (upMoves - downMoves) / recentPrices.length;
+    const momentum = (upMoves - downMoves) / (recentPrices.length - 1);
     
-    if (overallChange > 0.05 || momentum > 0.15) return 'bullish';
-    if (overallChange < -0.05 || momentum < -0.15) return 'bearish';
+    // More sensitive thresholds for Bitcoin price movements
+    if (overallChange > 0.01 || momentum > 0.3) return 'bullish';
+    if (overallChange < -0.01 || momentum < -0.3) return 'bearish';
     return 'neutral';
   }
 

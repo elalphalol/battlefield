@@ -233,8 +233,8 @@ export default function BattlefieldHome() {
               }`}>
                 {recommendation.action.toUpperCase()}
               </div>
-              <p className="text-xs text-gray-400 text-center">
-                ⚠️ {recommendation.description.substring(0, 50)}...
+              <p className="text-xs text-gray-400 text-center leading-relaxed">
+                {recommendation.description}
               </p>
             </div>
 
