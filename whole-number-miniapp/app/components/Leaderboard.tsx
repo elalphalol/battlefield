@@ -203,9 +203,6 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                     
                     <div className="flex gap-4 text-xs text-gray-400">
                       <span>💰 ${Number(entry.paper_balance).toFixed(0)}</span>
-                      <span className={Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}>
-                        P&L: {Number(entry.total_pnl) >= 0 ? '+' : ''}${Number(entry.total_pnl).toFixed(2)}
-                      </span>
                       <span>📊 {Number(entry.win_rate).toFixed(1)}% WR</span>
                       <span>🔥 {entry.current_streak} streak</span>
                     </div>
