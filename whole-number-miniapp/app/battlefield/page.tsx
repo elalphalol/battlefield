@@ -2,19 +2,19 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
-import { getApiUrl } from './config/api';
-import { WalletConnect } from './components/WalletConnect';
-import { PaperMoneyClaim } from './components/PaperMoneyClaim';
-import { TradingPanel } from './components/TradingPanel';
-import { Leaderboard } from './components/Leaderboard';
-import { BattlefieldVisual } from './components/BattlefieldVisual';
-import { UserStats } from './components/UserStats';
-import { TradeHistory } from './components/TradeHistory';
-import { WholeNumberStrategy as StrategyGuide } from './components/WholeNumberStrategy';
-import { MarketCycle } from './components/MarketCycle';
-import { BattleAlerts } from './components/BattleAlerts';
-import { useBTCPrice } from './hooks/useBTCPrice';
-import { WholeNumberStrategy } from './lib/strategy';
+import { getApiUrl } from '../config/api';
+import { WalletConnect } from '../components/WalletConnect';
+import { PaperMoneyClaim } from '../components/PaperMoneyClaim';
+import { TradingPanel } from '../components/TradingPanel';
+import { Leaderboard } from '../components/Leaderboard';
+import { BattlefieldVisual } from '../components/BattlefieldVisual';
+import { UserStats } from '../components/UserStats';
+import { TradeHistory } from '../components/TradeHistory';
+import { WholeNumberStrategy as StrategyGuide } from '../components/WholeNumberStrategy';
+import { MarketCycle } from '../components/MarketCycle';
+import { BattleAlerts } from '../components/BattleAlerts';
+import { useBTCPrice } from '../hooks/useBTCPrice';
+import { WholeNumberStrategy } from '../lib/strategy';
 
 interface UserData {
   id: number;
