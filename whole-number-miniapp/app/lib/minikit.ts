@@ -4,6 +4,8 @@ export interface FarcasterUser {
   fid?: number;
   username?: string;
   displayName?: string;
+  pfpUrl?: string;
+  custody?: string; // Custody address (wallet)
 }
 
 export interface FarcasterContext {
@@ -17,7 +19,13 @@ export async function initializeMiniKit(): Promise<FarcasterContext> {
     console.log('Farcaster Context:', context);
     
     return {
-      user: context.user as FarcasterUser,
+      user: {
+        fid: context.user?.fid,
+        username: context.user?.username,
+        displayName: context.user?.displayName,
+        pfpUrl: context.user?.pfpUrl,
+        custody: context.user?.custody,
+      } as FarcasterUser,
       isReady: true,
     };
   } catch (error) {
@@ -26,6 +34,32 @@ export async function initializeMiniKit(): Promise<FarcasterContext> {
       user: null,
       isReady: false,
     };
+  }
+}
+
+export async function connectWallet(): Promise<{ address: string | null; error?: unknown }> {
+  try {
+    // Check if we're in a Farcaster frame
+    if (!isInFarcasterFrame()) {
+      return { address: null, error: 'Not in Farcaster frame' };
+    }
+
+    // Get context which includes wallet info
+    const context = await sdk.context;
+    
+    if (context.user?.custody) {
+      console.log('Farcaster wallet connected:', context.user.custody);
+      return { address: context.user.custody };
+    }
+
+    // Try to prompt wallet connection via MiniKit
+    const walletAddress = await sdk.wallet.requestAddress();
+    console.log('Wallet address requested:', walletAddress);
+    
+    return { address: walletAddress || null };
+  } catch (error) {
+    console.error('Wallet connection error:', error);
+    return { address: null, error };
   }
 }
 
@@ -47,10 +81,30 @@ export async function shareToFarcaster(text: string, imageUrl?: string): Promise
 export async function getFarcasterUser(): Promise<FarcasterUser | null> {
   try {
     const context = await sdk.context;
-    return context.user as FarcasterUser;
+    return {
+      fid: context.user?.fid,
+      username: context.user?.username,
+      displayName: context.user?.displayName,
+      pfpUrl: context.user?.pfpUrl,
+      custody: context.user?.custody,
+    } as FarcasterUser;
   } catch (error) {
     console.error('Error getting Farcaster user:', error);
     return null;
+  }
+}
+
+export async function sendTransaction(transaction: {
+  to: string;
+  value: string;
+  data?: string;
+}): Promise<{ success: boolean; txHash?: string; error?: unknown }> {
+  try {
+    const result = await sdk.wallet.sendTransaction(transaction);
+    return { success: true, txHash: result };
+  } catch (error) {
+    console.error('Transaction error:', error);
+    return { success: false, error };
   }
 }
 
