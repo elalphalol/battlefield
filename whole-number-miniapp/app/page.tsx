@@ -431,10 +431,8 @@ export default function BattlefieldHome() {
           </div>
         ) : (
           <div>
-            <Leaderboard />
-            
             {/* Info Section */}
-            <div className="mt-8 bg-slate-800/50 border border-slate-700 rounded-lg p-6">
+            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 mb-6">
               <h3 className="text-xl font-bold text-yellow-400 mb-4">📚 How to Play</h3>
               <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
                 <div>
@@ -453,7 +451,7 @@ export default function BattlefieldHome() {
             </div>
 
             {/* Rewards Info */}
-            <div className="mt-6 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6">
+            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 mb-6">
               <h3 className="text-xl font-bold text-purple-400 mb-3 text-center">💎 Weekly Rewards</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
                 <div>
@@ -478,6 +476,8 @@ export default function BattlefieldHome() {
                 </div>
               </div>
             </div>
+
+            <Leaderboard />
           </div>
         )}
       </div>
