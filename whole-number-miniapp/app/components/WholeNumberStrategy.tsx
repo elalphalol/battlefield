@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 export function WholeNumberStrategy() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -94,6 +95,20 @@ export function WholeNumberStrategy() {
             <p className="text-sm text-gray-300">
               Choose your army and trade! Profits add to your army's total power. 
               The winning army gets glory and bragging rights!
+            </p>
+          </div>
+
+          {/* Deep Dive Button */}
+          <div className=" mt-6 text-center">
+            <Link 
+              href="/strategy"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl"
+            >
+              <span>📚 Want to go deeper?</span>
+              <span className="text-xl">→</span>
+            </Link>
+            <p className="mt-2 text-xs text-gray-400">
+              Read the full whitepaper on Whole Number Psychology
             </p>
           </div>
         </div>

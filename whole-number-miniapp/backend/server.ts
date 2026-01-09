@@ -400,24 +400,29 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
 
     // Convert all numeric values from database to proper numbers
     const entryPrice = Number(t.entry_price);
-    const positionSize = Number(t.position_size);
+    const collateral = Number(t.position_size); // This is the collateral/margin
     const leverage = Number(t.leverage);
 
-    // Calculate P&L (fee was already paid when opening, so don't deduct again)
+    // Calculate leveraged position size
+    const leveragedPositionSize = collateral * leverage;
+
+    // Calculate P&L based on leveraged position (fee was already paid when opening, so don't deduct again)
     const priceChange = t.position_type === 'long' 
       ? exitPrice - entryPrice 
       : entryPrice - exitPrice;
-    const pnlPercentage = (priceChange / entryPrice) * leverage;
-    let pnl = pnlPercentage * positionSize;
+    
+    // P&L is based on leveraged position size and price change
+    const priceChangePercentage = priceChange / entryPrice;
+    let pnl = priceChangePercentage * leveragedPositionSize;
 
     // Trading fee was already paid upfront when opening position
     const feePercentage = leverage > 1 ? leverage * 0.1 : 0;
-    const tradingFee = (feePercentage / 100) * positionSize;
+    const tradingFee = (feePercentage / 100) * collateral;
 
-    // Determine if liquidated (loss is greater than or equal to 100% of position)
-    const isLiquidated = pnl <= -positionSize;
+    // Determine if liquidated (loss is greater than or equal to 100% of collateral)
+    const isLiquidated = pnl <= -collateral;
     const status = isLiquidated ? 'liquidated' : 'closed';
-    const finalAmount = isLiquidated ? 0 : positionSize + pnl;
+    const finalAmount = isLiquidated ? 0 : collateral + pnl;
 
     console.log(`
 📊 Trade Close Details:
@@ -425,10 +430,11 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
 - Position Type: ${t.position_type}
 - Entry Price: $${t.entry_price}
 - Exit Price: $${exitPrice}
-- Price Change: $${priceChange.toFixed(2)}
+- Price Change: $${priceChange.toFixed(2)} (${(priceChangePercentage * 100).toFixed(2)}%)
 - Leverage: ${t.leverage}x
-- Position Size: $${t.position_size}
-- P&L: $${pnl.toFixed(2)} (${(pnlPercentage * 100).toFixed(2)}%)
+- Collateral: $${t.position_size}
+- Leveraged Position: $${leveragedPositionSize.toLocaleString()}
+- P&L: $${pnl.toFixed(2)} (${((pnl / collateral) * 100).toFixed(2)}% of collateral)
 - Trading Fee: $${tradingFee.toFixed(2)} (paid upfront, ${feePercentage.toFixed(2)}%)
 - Final Amount: $${Number(finalAmount).toFixed(2)}
 - Status: ${status}
@@ -462,7 +468,8 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
       pnl,
       tradingFee,
       feePercentage,
-      pnlPercentage: pnlPercentage * 100,
+      pnlPercentage: (pnl / collateral) * 100,
+      leveragedPositionSize,
       status,
       finalAmount: Math.max(0, finalAmount),
       newBalance: finalAmount > 0 ? (await pool.query('SELECT paper_balance FROM users WHERE id = $1', [t.user_id])).rows[0].paper_balance : null

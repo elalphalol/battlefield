@@ -134,23 +134,32 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
 
   const calculatePnL = (trade: Trade) => {
     const entryPrice = Number(trade.entry_price);
-    const positionSize = Number(trade.position_size);
+    const collateral = Number(trade.position_size); // This is the collateral/margin
     const tradeLeverage = Number(trade.leverage);
     
-    // Calculate price-based P&L
+    // Calculate leveraged position size
+    const leveragedPositionSize = collateral * tradeLeverage;
+    
+    // Calculate price-based P&L on the leveraged position
     const priceChange = trade.position_type === 'long'
       ? btcPrice - entryPrice
       : entryPrice - btcPrice;
-    const pnlPercentage = (priceChange / entryPrice) * tradeLeverage;
-    const pnl = pnlPercentage * positionSize;
+    
+    // P&L is based on leveraged position size and price change
+    const priceChangePercentage = priceChange / entryPrice;
+    const pnl = priceChangePercentage * leveragedPositionSize;
     
     // Subtract the trading fee that was paid upfront (to show true P&L)
     const feePercentage = tradeLeverage > 1 ? tradeLeverage * 0.1 : 0;
-    const tradingFee = (feePercentage / 100) * positionSize;
+    const tradingFee = (feePercentage / 100) * collateral;
     const pnlAfterFee = pnl - tradingFee;
-    const percentageAfterFee = (pnlAfterFee / positionSize) * 100;
+    const percentageAfterFee = (pnlAfterFee / collateral) * 100;
     
-    return { pnl: pnlAfterFee, percentage: percentageAfterFee };
+    return { 
+      pnl: pnlAfterFee, 
+      percentage: percentageAfterFee,
+      leveragedPosition: leveragedPositionSize 
+    };
   };
 
   const isNearLiquidation = (trade: Trade) => {
@@ -329,8 +338,9 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 mb-3">
                     <div>Entry: ${Number(trade.entry_price).toFixed(2)}</div>
                     <div>Current: ${btcPrice.toFixed(2)}</div>
-                    <div>Size: ${trade.position_size}</div>
-                    <div>Liq: ${Number(trade.liquidation_price).toFixed(2)}</div>
+                    <div>Collateral: ${trade.position_size}</div>
+                    <div>Position: ${(trade.position_size * trade.leverage).toLocaleString()}</div>
+                    <div className="col-span-2">Liq: ${Number(trade.liquidation_price).toFixed(2)}</div>
                   </div>
 
                   {isLiquidationWarning && (
