@@ -92,8 +92,8 @@ export function Achievements({ stats }: AchievementsProps) {
   const getPlayerTitle = (): { title: string; badge: string; color: string } => {
     const rank = Number(stats.rank);
     if (rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400' };
-    if (rank <= 3) return { title: 'Legendary Conqueror', badge: '🥇', color: 'text-orange-400' };
-    if (rank <= 10) return { title: 'Top 10 Elite', badge: '🥈', color: 'text-gray-300' };
+    if (rank <= 3) return { title: 'Legendary Conqueror', badge: '🏆', color: 'text-orange-400' };
+    if (rank <= 10) return { title: 'Top 10 Elite', badge: '⭐', color: 'text-gray-300' };
     if (stats.total_pnl >= 100000) return { title: 'Legendary Profit King', badge: '🏆', color: 'text-purple-400' };
     if (stats.total_pnl >= 50000) return { title: 'Whale Trader', badge: '🐋', color: 'text-blue-400' };
     if (stats.win_rate >= 80 && stats.total_trades >= 200) return { title: 'Precision Expert', badge: '💫', color: 'text-cyan-400' };
