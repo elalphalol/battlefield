@@ -338,16 +338,15 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
       });
     }
 
-    // Calculate trading fee (paid upfront when opening position)
+    // Calculate trading fee (will be deducted from P&L when closing, not upfront)
     const feePercentage = leverage > 1 ? leverage * 0.1 : 0; // 2x = 0.2%, 10x = 1%, 50x = 5%, 100x = 10%
     const tradingFee = (feePercentage / 100) * size;
-    const totalCost = size + tradingFee; // Position size + fee
     
-    // Check if user has enough for position + fee
-    if (user.rows[0].paper_balance < totalCost) {
+    // Check if user has enough for position size only (fee comes from P&L later)
+    if (user.rows[0].paper_balance < size) {
       return res.status(400).json({ 
         success: false, 
-        message: `Insufficient balance.  Available: $${user.rows[0].paper_balance}, Required: $${totalCost.toFixed(2)} (position + ${feePercentage.toFixed(2)}% fee)` 
+        message: `Insufficient balance. Available: $${user.rows[0].paper_balance}, Required: $${size.toFixed(2)}` 
       });
     }
 
@@ -358,10 +357,10 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
 
     await pool.query('BEGIN');
 
-    // Deduct position size + fee from balance
+    // Deduct ONLY position size from balance (fee will be deducted from P&L when closing)
     await pool.query(
       'UPDATE users SET paper_balance = paper_balance - $1, last_active = NOW() WHERE wallet_address = $2',
-      [totalCost, walletAddress]
+      [size, walletAddress]
     );
 
     // Create trade
@@ -375,10 +374,10 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
     console.log(`
 🚀 Trade Opened:
 - Position: ${type.toUpperCase()} ${leverage}x
-- Size: $${size}
+- Collateral: $${size}
 - Entry: $${entryPrice}
-- Fee: $${tradingFee.toFixed(2)} (${feePercentage.toFixed(2)}%)
-- Total Cost: $${totalCost.toFixed(2)}
+- Fee (deducted from P&L when closing): $${tradingFee.toFixed(2)} (${feePercentage.toFixed(2)}%)
+- Balance Deducted: $${size.toFixed(2)} (collateral only)
     `);
 
     await pool.query('COMMIT');
@@ -468,7 +467,7 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
     // Calculate leveraged position size
     const leveragedPositionSize = collateral * leverage;
 
-    // Calculate P&L based on leveraged position (fee was already paid when opening, so don't deduct again)
+    // Calculate P&L based on leveraged position
     const priceChange = t.position_type === 'long' 
       ? exitPrice - entryPrice 
       : entryPrice - exitPrice;
@@ -477,14 +476,17 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
     const priceChangePercentage = priceChange / entryPrice;
     let pnl = priceChangePercentage * leveragedPositionSize;
 
-    // Trading fee was already paid upfront when opening position
+    // Calculate trading fee (deducted from P&L when closing)
     const feePercentage = leverage > 1 ? leverage * 0.1 : 0;
     const tradingFee = (feePercentage / 100) * collateral;
+    
+    // Deduct fee from P&L (this is where fee is actually paid)
+    const pnlAfterFee = pnl - tradingFee;
 
-    // Determine if liquidated (loss is greater than or equal to 100% of collateral)
-    const isLiquidated = pnl <= -collateral;
+    // Determine if liquidated (loss + fee is greater than or equal to 100% of collateral)
+    const isLiquidated = pnlAfterFee <= -collateral;
     const status = isLiquidated ? 'liquidated' : 'closed';
-    const finalAmount = isLiquidated ? 0 : collateral + pnl;
+    const finalAmount = isLiquidated ? 0 : collateral + pnlAfterFee;
 
     console.log(`
 📊 Trade Close Details:
@@ -502,10 +504,10 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
 - Status: ${status}
     `);
 
-    // Update trade
+    // Update trade (store P&L AFTER fees - this is what user actually gets/loses)
     await pool.query(
       'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_at = NOW() WHERE id = $4',
-      [exitPrice, pnl, status, tradeId]
+      [exitPrice, pnlAfterFee, status, tradeId]
     );
 
     // Update user balance (triggers will update stats)
@@ -991,10 +993,11 @@ app.post('/api/admin/recalculate-armies', async (req: Request, res: Response) =>
   }
 });
 
-// Fix all user balances based on actual trade history
+// Fix all user balances based on actual trade history  
 app.post('/api/admin/fix-balances', async (req: Request, res: Response) => {
   try {
     // Recalculate balances for all users
+    // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
     await pool.query(`
       UPDATE users u
       SET paper_balance = (
@@ -1008,7 +1011,7 @@ app.post('/api/admin/fix-balances', async (req: Request, res: Response) => {
           WHERE user_id = u.id
         ), 0) +
         
-        -- Add net P&L from all closed/liquidated trades
+        -- Add net P&L from all closed/liquidated trades (fees already deducted from P&L)
         COALESCE((
           SELECT SUM(pnl) 
           FROM trades 
@@ -1016,9 +1019,9 @@ app.post('/api/admin/fix-balances', async (req: Request, res: Response) => {
           AND status IN ('closed', 'liquidated')
         ), 0) -
         
-        -- Subtract collateral + fees locked in open positions
+        -- Subtract ONLY collateral locked in open positions (fees NOT deducted upfront anymore)
         COALESCE((
-          SELECT SUM(position_size * (1 + (CASE WHEN leverage > 1 THEN leverage * 0.1 ELSE 0 END) / 100))
+          SELECT SUM(position_size)
           FROM trades 
           WHERE user_id = u.id 
           AND status = 'open'
@@ -1133,4 +1136,4 @@ process.on('SIGTERM', () => {
 });
 
 export default app;
-
+    console.log('Database pool closed');
