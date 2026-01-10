@@ -369,7 +369,7 @@ export default function UserProfilePage() {
             <div className="p-4 border-b border-slate-700">
               <h2 className="text-xl font-bold text-yellow-400">📜 Recent Trades</h2>
             </div>
-            <div className="p-4 max-h-[600px] overflow-y-auto">
+            <div className="p-4 max-h-[600px] overflow-y-auto scrollbar-hide">
               {profile.recentHistory.length === 0 ? (
                 <p className="text-gray-400 text-center py-4">No trading history yet</p>
               ) : (
