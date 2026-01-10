@@ -238,16 +238,18 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
       </div>
       
       {/* Battlefield Glossary Button */}
-      <button
-        onClick={() => router.push('/glossary')}
-        className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-lg p-6 hover:border-yellow-400 transition-all w-full"
-      >
-        <div className="text-center">
-          <div className="text-4xl mb-2">📚</div>
-          <h3 className="text-xl font-bold text-yellow-400 mb-1">Battlefield Glossary</h3>
-          <p className="text-sm text-gray-400">View all player titles, achievements, and their requirements</p>
-        </div>
-      </button>
+      <div className="flex justify-center">
+        <button
+          onClick={() => router.push('/glossary')}
+          className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-lg p-6 hover:border-yellow-400 hover:scale-105 transition-all cursor-pointer max-w-md"
+        >
+          <div className="text-center">
+            <div className="text-4xl mb-2">📚</div>
+            <h3 className="text-xl font-bold text-yellow-400 mb-1">Battlefield Glossary</h3>
+            <p className="text-sm text-gray-400">View all player titles, achievements, and their requirements →</p>
+          </div>
+        </button>
+      </div>
     </div>
   );
 }
