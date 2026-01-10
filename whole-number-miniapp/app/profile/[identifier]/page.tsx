@@ -65,17 +65,39 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+
+  // Fetch BTC price
+  useEffect(() => {
+    const fetchPrice = async () => {
+      try {
+        const response = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=BTC');
+        const data = await response.json();
+        const btcPrice = parseFloat(data.data.rates.USD);
+        setCurrentPrice(btcPrice);
+      } catch (error) {
+        console.error('Error fetching BTC price:', error);
+      }
+    };
+
+    fetchPrice();
+    const interval = setInterval(fetchPrice, 10000); // Update every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
-    fetchProfile(currentPage);
-  }, [identifier, currentPage]);
+    if (currentPrice) {
+      fetchProfile(currentPage);
+    }
+  }, [identifier, currentPage, currentPrice]);
 
   const fetchProfile = async (page: number = 1) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(getApiUrl(`api/profile/${identifier}?page=${page}`));
+      const priceParam = currentPrice ? `&currentPrice=${currentPrice}` : '';
+      const response = await fetch(getApiUrl(`api/profile/${identifier}?page=${page}${priceParam}`));
       const data = await response.json();
 
       if (data.success) {
