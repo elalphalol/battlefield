@@ -313,10 +313,10 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
     });
   }
 
-  if (leverage < 1 || leverage > 100) {
+  if (leverage < 1 || leverage > 200) {
     return res.status(400).json({ 
       success: false, 
-      message: 'Leverage must be between 1x and 100x' 
+      message: 'Leverage must be between 1x and 200x' 
     });
   }
 
