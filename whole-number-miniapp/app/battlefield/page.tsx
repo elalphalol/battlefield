@@ -444,31 +444,37 @@ export default function BattlefieldHome() {
               </div>
             )}
 
-            <div className="grid lg:grid-cols-12 gap-4">
-              {/* Left Column - Claims & Stats (Slightly larger - 3 columns) */}
-              <div className="lg:col-span-3 space-y-4">
-                <PaperMoneyClaim 
-                  onClaim={handleClaim} 
-                  paperBalance={userData?.paper_balance || 0} 
-                />
-                <UserStats userData={userData} />
-              </div>
+            <div className="space-y-4">
+              {/* Top Row: Claims, Trading Form, Trade History */}
+              <div className="grid lg:grid-cols-12 gap-4">
+                {/* Left Column - Claims & Stats */}
+                <div className="lg:col-span-3 space-y-4">
+                  <PaperMoneyClaim 
+                    onClaim={handleClaim} 
+                    paperBalance={userData?.paper_balance || 0} 
+                  />
+                  <UserStats userData={userData} />
+                </div>
 
-              {/* Middle Column - Trading Panel + Open Positions (6 columns) */}
-              <div className="lg:col-span-6 space-y-4">
-                <TradingPanel
-                  btcPrice={btcPrice}
-                  paperBalance={userData?.paper_balance || 0}
-                  onTradeComplete={handleTradeComplete}
-                />
-              </div>
+                {/* Middle Column - Trading Panel (Form Only) */}
+                <div className="lg:col-span-6 space-y-4">
+                  <TradingPanel
+                    btcPrice={btcPrice}
+                    paperBalance={userData?.paper_balance || 0}
+                    onTradeComplete={handleTradeComplete}
+                  />
+                </div>
 
-              {/* Right Column - Trade History (Smaller - 3 columns) */}
-              <div className="lg:col-span-3">
-                <div className="scale-90 origin-top">
-                  <TradeHistory />
+                {/* Right Column - Trade History */}
+                <div className="lg:col-span-3">
+                  <div className="scale-90 origin-top">
+                    <TradeHistory />
+                  </div>
                 </div>
               </div>
+              
+              {/* Bottom Row: Open Positions - Full Width */}
+              {/* Note: Open positions are now included in TradingPanel and will expand within its container */}
             </div>
           </div>
         ) : activeTab === 'leaderboard' ? (

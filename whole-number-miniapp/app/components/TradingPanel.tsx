@@ -271,15 +271,28 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
               type="number"
               min="1"
               max={Math.floor(Number(paperBalance))}
+              step="1"
               value={positionSize}
               onChange={(e) => {
-                const value = Number(e.target.value);
-                if (value >= 0 && value <= Number(paperBalance)) {
-                  setPositionSizePercent(Math.round((value / Number(paperBalance)) * 100));
+                const value = Math.floor(Number(e.target.value) || 0);
+                const maxBalance = Math.floor(Number(paperBalance));
+                if (value >= 0 && value <= maxBalance) {
+                  const newPercent = Math.max(1, Math.min(100, Math.round((value / maxBalance) * 100)));
+                  setPositionSizePercent(newPercent);
+                }
+              }}
+              onBlur={(e) => {
+                // Ensure value stays within bounds on blur
+                const value = Math.floor(Number(e.target.value) || 0);
+                const maxBalance = Math.floor(Number(paperBalance));
+                if (value < 1) {
+                  setPositionSizePercent(1);
+                } else if (value > maxBalance) {
+                  setPositionSizePercent(100);
                 }
               }}
               className="w-full bg-slate-700 text-white px-4 py-2 rounded border border-slate-600 focus:border-cyan-500 focus:outline-none"
-              placeholder="Enter amount in $"
+              placeholder="Enter amount in $ (whole numbers)"
             />
           </div>
           
