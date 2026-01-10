@@ -61,6 +61,12 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   };
 
   const handleOpenTrade = async () => {
+    // Check position limit
+    if (openTrades.length >= 10) {
+      alert('❌ Maximum 10 open positions allowed. Please close some positions first.');
+      return;
+    }
+
     if (!address || positionSize > Number(paperBalance)) {
       alert(`Insufficient balance. Available: $${Number(paperBalance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
       return;
@@ -256,8 +262,28 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
         {/* Position Size */}
         <div className="mb-4">
           <label className="block text-sm font-semibold text-gray-300 mb-2">
-            Position Size: <span className="text-cyan-400">{positionSizePercent}%</span> <span className="text-gray-500">(${positionSize.toLocaleString()})</span>
+            Position Size: <span className="text-cyan-400">${positionSize.toLocaleString()}</span>
           </label>
+          
+          {/* Direct Dollar Input */}
+          <div className="mb-3">
+            <input
+              type="number"
+              min="1"
+              max={Math.floor(Number(paperBalance))}
+              value={positionSize}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                if (value >= 0 && value <= Number(paperBalance)) {
+                  setPositionSizePercent(Math.round((value / Number(paperBalance)) * 100));
+                }
+              }}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded border border-slate-600 focus:border-cyan-500 focus:outline-none"
+              placeholder="Enter amount in $"
+            />
+          </div>
+          
+          {/* Percentage Slider */}
           <input
             type="range"
             min="1"
@@ -269,7 +295,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
           />
           <div className="flex justify-between text-xs text-gray-400 mt-1">
             <span>1%</span>
-            <span className="text-gray-500">{positionSizePercent}% of balance</span>
+            <span className="text-gray-500">{positionSizePercent}%</span>
             <span>100%</span>
           </div>
         </div>
@@ -306,10 +332,10 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
 
       {/* Open Positions */}
       {openTrades.length > 0 && (
-        <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-yellow-400 mb-4">📊 Open Positions</h3>
+        <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
+          <h3 className="text-lg font-bold text-yellow-400 mb-3">📊 Open Positions ({openTrades.length}/10)</h3>
           
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {openTrades.map((trade) => {
               const { pnl, percentage } = calculatePnL(trade);
               const isLiquidationWarning = isNearLiquidation(trade);
@@ -317,49 +343,47 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
               return (
                 <div
                   key={trade.id}
-                  className={`border-2 rounded-lg p-4 ${
+                  className={`border rounded p-2 text-xs ${
                     isLiquidationWarning
                       ? 'border-red-500 bg-red-900/20 animate-pulse'
                       : pnl >= 0
-                      ? 'border-green-500 bg-green-900/30'
-                      : 'border-red-500 bg-red-900/30'
+                      ? 'border-green-500 bg-green-900/20'
+                      : 'border-red-500 bg-red-900/20'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-lg ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1">
+                      <span className={`text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                         {trade.position_type === 'long' ? '📈' : '📉'}
                       </span>
-                      <span className={`font-bold ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`font-bold text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                         {trade.position_type.toUpperCase()} {trade.leverage}x
                       </span>
                     </div>
-                    <div className={`text-lg font-bold ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {pnl >= 0 ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      <span className="text-sm ml-1">({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)</span>
+                    <div className={`font-bold text-sm ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 mb-3">
-                    <div>Entry: ${Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                    <div>Current: ${btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                    <div>Collateral: ${Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                    <div>Position: ${(trade.position_size * trade.leverage).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                    <div className="col-span-2">Liq: ${Number(trade.liquidation_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                  <div className="grid grid-cols-2 gap-1 text-[10px] text-gray-400 mb-2">
+                    <div>Entry: ${Number(trade.entry_price).toFixed(2)}</div>
+                    <div>Now: ${btcPrice.toFixed(2)}</div>
+                    <div>Coll: ${Number(trade.position_size).toFixed(2)}</div>
+                    <div>Liq: ${Number(trade.liquidation_price).toFixed(2)}</div>
                   </div>
 
                   {isLiquidationWarning && (
-                    <div className="bg-red-500/20 border border-red-500 rounded p-2 mb-3 text-xs text-red-300 text-center font-bold">
-                      ⚠️ LIQUIDATION WARNING! Close position now!
+                    <div className="bg-red-500/20 border border-red-500 rounded px-1 py-0.5 mb-1 text-[10px] text-red-300 text-center font-bold">
+                      ⚠️ LIQUIDATION WARNING!
                     </div>
                   )}
 
                   <button
                     onClick={() => handleCloseTrade(trade.id)}
                     disabled={closingTradeId === trade.id}
-                    className="w-full bg-slate-600 hover:bg-slate-500 text-white py-2 rounded font-semibold transition-all disabled:opacity-50"
+                    className="w-full bg-slate-600 hover:bg-slate-500 text-white py-1 rounded text-xs font-semibold transition-all disabled:opacity-50"
                   >
-                    {closingTradeId === trade.id ? '⏳ Closing...' : 'Close Position'}
+                    {closingTradeId === trade.id ? 'Closing...' : 'Close'}
                   </button>
                 </div>
               );
