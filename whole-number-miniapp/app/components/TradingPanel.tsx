@@ -330,7 +330,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                       <span className={`text-lg ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                         {trade.position_type === 'long' ? '📈' : '📉'}
                       </span>
-                      <span className="font-bold text-white">
+                      <span className={`font-bold ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                         {trade.position_type.toUpperCase()} {trade.leverage}x
                       </span>
                     </div>

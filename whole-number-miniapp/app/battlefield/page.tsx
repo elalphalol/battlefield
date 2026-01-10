@@ -627,10 +627,22 @@ export default function BattlefieldHome() {
       {/* Sticky Navigation Buttons */}
       {activeTab === 'trade' && (
         <div className="fixed bottom-8 right-8 z-40 flex flex-col gap-3">
+          {/* Profile Button */}
+          {address && (
+            <button
+              onClick={() => window.location.href = `/profile/${address}`}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
+              aria-label="My Profile"
+            >
+              <span className="text-2xl">👤</span>
+              <span className="hidden sm:inline">Profile</span>
+            </button>
+          )}
+          
           {/* Back to Battlefield Button */}
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
+            className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
             aria-label="Scroll to top"
           >
             <span className="text-2xl">⚔️</span>
