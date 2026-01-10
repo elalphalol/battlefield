@@ -668,28 +668,15 @@ app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
       [userId]
     );
 
-    // Get pagination parameters
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = 10;
-    const offset = (page - 1) * limit;
-
-    // Get total count of closed positions
-    const countResult = await pool.query(
-      `SELECT COUNT(*) as total FROM trades 
-       WHERE user_id = $1 AND status IN ('closed', 'liquidated')`,
-      [userId]
-    );
-    const totalClosedTrades = parseInt(countResult.rows[0].total);
-    const totalPages = Math.ceil(totalClosedTrades / limit);
-
-    // Get paginated closed/liquidated positions
+    // Get ALL closed/liquidated positions (no pagination for recent history)
     const closedPositions = await pool.query(
       `SELECT * FROM trades 
        WHERE user_id = $1 AND status IN ('closed', 'liquidated')
-       ORDER BY closed_at DESC
-       LIMIT $2 OFFSET $3`,
-      [userId, limit, offset]
+       ORDER BY closed_at DESC`,
+      [userId]
     );
+
+    const totalClosedTrades = closedPositions.rows.length;
 
     // Calculate win rate
     const winRate = user.total_trades > 0 
@@ -747,10 +734,10 @@ app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
         closed_at: trade.closed_at
       })),
       pagination: {
-        currentPage: page,
-        totalPages: totalPages,
+        currentPage: 1,
+        totalPages: 1,
         totalRecords: totalClosedTrades,
-        recordsPerPage: limit
+        recordsPerPage: totalClosedTrades
       }
     };
 
