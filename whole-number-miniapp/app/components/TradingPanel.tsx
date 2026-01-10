@@ -219,7 +219,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
           
           {/* Quick Buttons */}
           <div className="grid grid-cols-4 gap-2 mb-3">
-            {[10, 25, 50, 86].map((lev) => (
+            {[10, 50, 100, 200].map((lev) => (
               <button
                 key={lev}
                 onClick={() => setLeverage(lev)}

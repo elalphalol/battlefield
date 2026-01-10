@@ -19,14 +19,51 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined
 });
 
-// Test database connection
-pool.connect((err, client, release) => {
+// Test database connection and run migration
+pool.connect(async (err, client, release) => {
   if (err) {
     console.error('❌ Error connecting to database:', err.stack);
-  } else {
-    console.log('✅ Connected to PostgreSQL database');
-    release();
+    return;
   }
+  
+  if (!client) {
+    console.error('❌ Database client is undefined');
+    return;
+  }
+  
+  console.log('✅ Connected to PostgreSQL database');
+  
+  // Auto-upgrade leverage constraint to 200x if needed
+  try {
+    console.log('🔧 Checking leverage constraint...');
+    
+    // Check current constraint
+    const constraintCheck = await client.query(`
+      SELECT pg_get_constraintdef(oid) as def
+      FROM pg_constraint 
+      WHERE conname = 'trades_leverage_check'
+    `);
+    
+    if (constraintCheck.rows.length > 0) {
+      const currentDef = constraintCheck.rows[0].def;
+      
+      // If constraint exists and is limiting to 100x, upgrade it
+      if (currentDef.includes('<= 100') || currentDef.includes('<=100')) {
+        console.log('🚀 Upgrading leverage limit from 100x to 200x...');
+        
+        await client.query('ALTER TABLE trades DROP CONSTRAINT IF EXISTS trades_leverage_check');
+        await client.query('ALTER TABLE trades ADD CONSTRAINT trades_leverage_check CHECK (leverage >= 1 AND leverage <= 200)');
+        
+        console.log('✅ Leverage upgraded to 200x successfully!');
+      } else if (currentDef.includes('<= 200') || currentDef.includes('<=200')) {
+        console.log('✅ Leverage already set to 200x');
+      }
+    }
+  } catch (migrationError) {
+    console.error('⚠️  Migration check failed (non-critical):', migrationError);
+  }
+  
+  release();
 });
 
 // Middleware
