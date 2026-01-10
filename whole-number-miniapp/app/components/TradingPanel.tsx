@@ -61,7 +61,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
 
   const handleOpenTrade = async () => {
     if (!address || positionSize > Number(paperBalance)) {
-      alert(`Insufficient balance. Available: $${Number(paperBalance).toFixed(2)}`);
+      alert(`Insufficient balance. Available: $${Number(paperBalance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
       return;
     }
 
@@ -277,15 +277,15 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
         <div className="bg-slate-700/50 rounded-lg p-4 mb-4 space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-400">Entry Price:</span>
-            <span className="text-white font-bold">${btcPrice.toFixed(2)}</span>
+            <span className="text-white font-bold">${btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Liquidation Price:</span>
-            <span className="text-red-400 font-bold">${calculateLiquidationPrice().toFixed(2)}</span>
+            <span className="text-red-400 font-bold">${calculateLiquidationPrice().toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Available Balance:</span>
-            <span className="text-green-400 font-bold">${Number(paperBalance).toFixed(2)}</span>
+            <span className="text-green-400 font-bold">${Number(paperBalance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
           </div>
         </div>
 
@@ -334,17 +334,17 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                       </span>
                     </div>
                     <div className={`text-lg font-bold ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}
+                      {pnl >= 0 ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       <span className="text-sm ml-1">({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)</span>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 mb-3">
-                    <div>Entry: ${Number(trade.entry_price).toFixed(2)}</div>
-                    <div>Current: ${btcPrice.toFixed(2)}</div>
-                    <div>Collateral: ${trade.position_size}</div>
-                    <div>Position: ${(trade.position_size * trade.leverage).toLocaleString()}</div>
-                    <div className="col-span-2">Liq: ${Number(trade.liquidation_price).toFixed(2)}</div>
+                    <div>Entry: ${Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div>Current: ${btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div>Collateral: ${Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div>Position: ${(trade.position_size * trade.leverage).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div className="col-span-2">Liq: ${Number(trade.liquidation_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                   </div>
 
                   {isLiquidationWarning && (

@@ -109,11 +109,11 @@ export function TradeHistory() {
               army,
               type: trade.position_type,
               leverage: trade.leverage.toString(),
-              pnl: pnl.toFixed(2),
+              pnl: pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
               pnlPercent: pnlPercentage.toFixed(1),
-              entry: Number(trade.entry_price).toFixed(2),
-              exit: Number(trade.exit_price).toFixed(2),
-              size: Number(trade.position_size).toString(),
+              entry: Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+              exit: Number(trade.exit_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+              size: Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
               username: username || 'Trader'
             });
 
@@ -126,7 +126,7 @@ export function TradeHistory() {
             const army = userData?.army || 'bulls';
             const armyEmoji = army === 'bears' ? '🐻' : '🐂';
             
-            const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toFixed(2)} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls`;
+            const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls`;
 
             if (platform === 'farcaster') {
               const encodedText = encodeURIComponent(shareText);
@@ -169,7 +169,7 @@ export function TradeHistory() {
                   )}
                 </div>
                 <div className={`text-sm font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                  {isProfit ? '+' : ''}${pnl.toFixed(2)}
+                  {isProfit ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   <span className="text-xs ml-1">
                     ({isProfit ? '+' : ''}{pnlPercentage.toFixed(1)}%)
                   </span>
@@ -178,13 +178,13 @@ export function TradeHistory() {
 
               <div className="grid grid-cols-3 gap-2 text-xs text-gray-400">
                 <div>
-                  <span className="text-gray-500">Entry:</span> ${Number(trade.entry_price).toFixed(2)}
+                  <span className="text-gray-500">Entry:</span> ${Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </div>
                 <div>
-                  <span className="text-gray-500">Exit:</span> ${Number(trade.exit_price).toFixed(2)}
+                  <span className="text-gray-500">Exit:</span> ${Number(trade.exit_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </div>
                 <div>
-                  <span className="text-gray-500">Size:</span> ${Number(trade.position_size)}
+                  <span className="text-gray-500">Size:</span> ${Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </div>
               </div>
 
