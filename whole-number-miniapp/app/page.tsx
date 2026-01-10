@@ -24,11 +24,10 @@ export default function LandingPage() {
             BATTLEFIELD
           </h1>
           <p className="text-xl sm:text-2xl md:text-3xl text-gray-300 font-bold">
-            🐻 Bears vs Bulls 🐂
           </p>
           <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">
             Paper trade Bitcoin with 100x leverage. Master the Whole Number Strategy. 
-            Compete for glory and $BATTLE tokens!
+            Compete for glory and earn $BATTLE tokens!
           </p>
         </div>
 
