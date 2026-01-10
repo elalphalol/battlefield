@@ -46,6 +46,12 @@ interface UserProfile {
     opened_at: string;
     closed_at: string;
   }>;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalRecords: number;
+    recordsPerPage: number;
+  };
 }
 
 export default function UserProfilePage() {
@@ -56,17 +62,18 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    fetchProfile();
-  }, [identifier]);
+    fetchProfile(currentPage);
+  }, [identifier, currentPage]);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (page: number = 1) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(getApiUrl(`api/profile/${identifier}`));
+      const response = await fetch(getApiUrl(`api/profile/${identifier}?page=${page}`));
       const data = await response.json();
 
       if (data.success) {
@@ -80,6 +87,11 @@ export default function UserProfilePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const getArmyEmoji = (army: 'bears' | 'bulls') => {
@@ -302,14 +314,20 @@ export default function UserProfilePage() {
 
         {/* Recent History */}
         <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
-          <div className="p-4 border-b border-slate-700">
-            <h2 className="text-xl font-bold text-yellow-400">📜 Recent History (Last 10)</h2>
+          <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-yellow-400">
+              📜 Trading History ({profile.pagination.totalRecords} total)
+            </h2>
+            <p className="text-sm text-gray-400">
+              Page {profile.pagination.currentPage} of {profile.pagination.totalPages}
+            </p>
           </div>
           <div className="p-4">
             {profile.recentHistory.length === 0 ? (
               <p className="text-gray-400 text-center py-4">No trading history yet</p>
             ) : (
-              <div className="space-y-3">
+              <>
+                <div className="space-y-3">
                 {profile.recentHistory.map((trade) => (
                   <div key={trade.id} className="bg-slate-700/50 rounded-lg p-4">
                     <div className="flex items-center justify-between">
@@ -342,7 +360,54 @@ export default function UserProfilePage() {
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+
+                {/* Pagination Controls */}
+                {profile.pagination.totalPages > 1 && (
+                  <div className="mt-6 flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className={`px-4 py-2 rounded-lg font-bold transition ${
+                        currentPage === 1
+                          ? 'bg-slate-700 text-gray-500 cursor-not-allowed'
+                          : 'bg-slate-700 text-white hover:bg-slate-600'
+                      }`}
+                    >
+                      ← Prev
+                    </button>
+
+                    {/* Page Numbers */}
+                    <div className="flex gap-2">
+                      {Array.from({ length: profile.pagination.totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`px-4 py-2 rounded-lg font-bold transition ${
+                            page === currentPage
+                              ? 'bg-yellow-500 text-slate-900'
+                              : 'bg-slate-700 text-white hover:bg-slate-600'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === profile.pagination.totalPages}
+                      className={`px-4 py-2 rounded-lg font-bold transition ${
+                        currentPage === profile.pagination.totalPages
+                          ? 'bg-slate-700 text-gray-500 cursor-not-allowed'
+                          : 'bg-slate-700 text-white hover:bg-slate-600'
+                      }`}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
