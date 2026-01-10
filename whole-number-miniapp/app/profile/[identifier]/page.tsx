@@ -191,8 +191,8 @@ export default function UserProfilePage() {
     const rank = Number(stats.rank);
     
     if (rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400', rarity: 'Mythic' };
-    if (rank <= 3) return { title: 'Legendary Conqueror', badge: '🥇', color: 'text-orange-400', rarity: 'Legendary' };
-    if (rank <= 10) return { title: 'Top 10 Elite', badge: '🥈', color: 'text-gray-300', rarity: 'Legendary' };
+    if (rank <= 3) return { title: 'Legendary Conqueror', badge: '🏆', color: 'text-orange-400', rarity: 'Legendary' };
+    if (rank <= 10) return { title: 'Top 10 Elite', badge: '⭐', color: 'text-gray-300', rarity: 'Legendary' };
     if (stats.total_pnl >= 100000) return { title: 'Legendary Profit King', badge: '🏆', color: 'text-purple-400', rarity: 'Legendary' };
     if (stats.total_pnl >= 50000) return { title: 'Whale Trader', badge: '🐋', color: 'text-blue-400', rarity: 'Epic' };
     if (stats.win_rate >= 80 && stats.total_trades >= 200) return { title: 'Precision Expert', badge: '💫', color: 'text-cyan-400', rarity: 'Epic' };
@@ -296,15 +296,14 @@ export default function UserProfilePage() {
             </div>
 
             {/* Player Title - Moved here */}
-            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-4 text-center min-w-[200px]">
-              <p className="text-gray-400 text-xs mb-1">Player Title</p>
-              <div className="flex items-center justify-center gap-2 mb-1">
+            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-4 text-center">
+              <p className="text-gray-400 text-xs mb-2">Player Title</p>
+              <div className="flex items-center justify-center gap-2">
                 <span className="text-2xl">{getPlayerTitle(profile.stats).badge}</span>
-                <p className={`text-sm font-bold ${getPlayerTitle(profile.stats).color}`}>
+                <p className={`text-md font-bold ${getPlayerTitle(profile.stats).color}`}>
                   {getPlayerTitle(profile.stats).title}
                 </p>
               </div>
-              <p className="text-xs text-gray-500">{getPlayerTitle(profile.stats).rarity}</p>
             </div>
 
             {/* Rank Badge */}
