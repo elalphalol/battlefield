@@ -34,8 +34,9 @@ export default function LandingPage() {
 
         {/* Token Info */}
         <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-2xl p-8 space-y-4">
-          <div className="text-3xl md:text-4xl font-bold text-purple-400">
-            🪙 $BATTLE TOKEN
+          <div className="text-3xl md:text-4xl font-bold text-purple-400 flex items-center justify-center gap-3">
+            <img src="/battlefield-logo.jpg" alt="$BATTLE" className="w-10 h-10 md:w-12 md:h-12 rounded-full" />
+            $BATTLE TOKEN
           </div>
           <div className="space-y-2">
             <p className="text-gray-300 text-sm md:text-base">
