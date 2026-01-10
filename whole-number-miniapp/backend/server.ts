@@ -839,33 +839,84 @@ app.get('/api/army/stats', async (req: Request, res: Response) => {
     const weekStart = getLastMonday();
     const weekEnd = getNextMonday();
 
-    // For Bulls Army: Sum ONLY POSITIVE P&L from LONG positions closed this week
+    // Calculate army membership dynamically based on ALL closed positions (not just this week)
+    // Then sum only THIS WEEK's positive P&L for each army
+    
+    // For Bulls Army: Users where long P&L > short P&L
     const bullsStats = await pool.query(
-      `SELECT 
-        COUNT(DISTINCT u.id) as player_count,
+      `WITH user_armies AS (
+        SELECT 
+          u.id,
+          COALESCE(long_pnl.total, 0) as long_total,
+          COALESCE(short_pnl.total, 0) as short_total,
+          CASE 
+            WHEN COALESCE(long_pnl.total, 0) > COALESCE(short_pnl.total, 0) THEN 'bulls'
+            ELSE 'bears'
+          END as calculated_army
+        FROM users u
+        LEFT JOIN (
+          SELECT user_id, SUM(pnl) as total 
+          FROM trades 
+          WHERE position_type = 'long' AND status IN ('closed', 'liquidated')
+          GROUP BY user_id
+        ) long_pnl ON u.id = long_pnl.user_id
+        LEFT JOIN (
+          SELECT user_id, SUM(pnl) as total 
+          FROM trades 
+          WHERE position_type = 'short' AND status IN ('closed', 'liquidated')
+          GROUP BY user_id
+        ) short_pnl ON u.id = short_pnl.user_id
+        WHERE u.total_trades > 0
+      )
+      SELECT 
+        COUNT(DISTINCT ua.id) as player_count,
         COALESCE(SUM(CASE WHEN t.pnl > 0 THEN t.pnl ELSE 0 END), 0) as total_pnl
-       FROM users u
-       LEFT JOIN trades t ON u.id = t.user_id 
-         AND t.position_type = 'long' 
-         AND t.status IN ('closed', 'liquidated')
-         AND t.closed_at >= $1
-         AND t.closed_at < $2
-       WHERE u.army = 'bulls'`,
+      FROM user_armies ua
+      LEFT JOIN trades t ON ua.id = t.user_id 
+        AND t.position_type = 'long' 
+        AND t.status IN ('closed', 'liquidated')
+        AND t.closed_at >= $1
+        AND t.closed_at < $2
+      WHERE ua.calculated_army = 'bulls'`,
       [weekStart, weekEnd]
     );
 
-    // For Bears Army: Sum ONLY POSITIVE P&L from SHORT positions closed this week
+    // For Bears Army: Users where short P&L >= long P&L
     const bearsStats = await pool.query(
-      `SELECT 
-        COUNT(DISTINCT u.id) as player_count,
+      `WITH user_armies AS (
+        SELECT 
+          u.id,
+          COALESCE(long_pnl.total, 0) as long_total,
+          COALESCE(short_pnl.total, 0) as short_total,
+          CASE 
+            WHEN COALESCE(long_pnl.total, 0) > COALESCE(short_pnl.total, 0) THEN 'bulls'
+            ELSE 'bears'
+          END as calculated_army
+        FROM users u
+        LEFT JOIN (
+          SELECT user_id, SUM(pnl) as total 
+          FROM trades 
+          WHERE position_type = 'long' AND status IN ('closed', 'liquidated')
+          GROUP BY user_id
+        ) long_pnl ON u.id = long_pnl.user_id
+        LEFT JOIN (
+          SELECT user_id, SUM(pnl) as total 
+          FROM trades 
+          WHERE position_type = 'short' AND status IN ('closed', 'liquidated')
+          GROUP BY user_id
+        ) short_pnl ON u.id = short_pnl.user_id
+        WHERE u.total_trades > 0
+      )
+      SELECT 
+        COUNT(DISTINCT ua.id) as player_count,
         COALESCE(SUM(CASE WHEN t.pnl > 0 THEN t.pnl ELSE 0 END), 0) as total_pnl
-       FROM users u
-       LEFT JOIN trades t ON u.id = t.user_id 
-         AND t.position_type = 'short' 
-         AND t.status IN ('closed', 'liquidated')
-         AND t.closed_at >= $1
-         AND t.closed_at < $2
-       WHERE u.army = 'bears'`,
+      FROM user_armies ua
+      LEFT JOIN trades t ON ua.id = t.user_id 
+        AND t.position_type = 'short' 
+        AND t.status IN ('closed', 'liquidated')
+        AND t.closed_at >= $1
+        AND t.closed_at < $2
+      WHERE ua.calculated_army = 'bears'`,
       [weekStart, weekEnd]
     );
 
