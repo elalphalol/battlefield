@@ -295,8 +295,8 @@ export default function UserProfilePage() {
               </p>
             </div>
 
-            {/* Player Title - Moved here */}
-            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-4 text-center">
+            {/* Player Title - Centered better */}
+            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-4 text-center mx-auto">
               <p className="text-gray-400 text-xs mb-2">Player Title</p>
               <div className="flex items-center justify-center gap-2">
                 <span className="text-2xl">{getPlayerTitle(profile.stats).badge}</span>
@@ -306,10 +306,10 @@ export default function UserProfilePage() {
               </div>
             </div>
 
-            {/* Rank Badge */}
-            <div className="text-center">
-              <div className="text-4xl mb-2">{getRankBadge(profile.stats.rank)}</div>
-              <p className="text-gray-400 text-sm">Rank</p>
+            {/* Rank Badge - Improved design */}
+            <div className="bg-slate-700 border-2 border-yellow-500 rounded-lg p-4 text-center min-w-[100px]">
+              <p className="text-gray-400 text-xs mb-1">Rank</p>
+              <div className="text-3xl font-bold text-yellow-400">{getRankBadge(profile.stats.rank)}</div>
             </div>
           </div>
         </div>
