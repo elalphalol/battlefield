@@ -715,15 +715,53 @@ app.get('/api/leaderboard', async (req: Request, res: Response) => {
   const army = req.query.army as string;
 
   try {
-    let query = 'SELECT * FROM current_leaderboard';
+    // Calculate army dynamically based on closed positions only
+    let query = `
+      SELECT 
+        u.id,
+        u.fid,
+        u.wallet_address,
+        u.username,
+        u.pfp_url,
+        u.total_pnl,
+        u.winning_trades,
+        u.total_trades,
+        u.current_streak,
+        u.best_streak,
+        u.battle_tokens_earned,
+        COALESCE(long_pnl.total, 0) as long_total,
+        COALESCE(short_pnl.total, 0) as short_total,
+        CASE 
+          WHEN COALESCE(long_pnl.total, 0) > COALESCE(short_pnl.total, 0) THEN 'bulls'
+          ELSE 'bears'
+        END as army
+      FROM users u
+      LEFT JOIN (
+        SELECT user_id, SUM(pnl) as total 
+        FROM trades 
+        WHERE position_type = 'long' AND status IN ('closed', 'liquidated')
+        GROUP BY user_id
+      ) long_pnl ON u.id = long_pnl.user_id
+      LEFT JOIN (
+        SELECT user_id, SUM(pnl) as total 
+        FROM trades 
+        WHERE position_type = 'short' AND status IN ('closed', 'liquidated')
+        GROUP BY user_id
+      ) short_pnl ON u.id = short_pnl.user_id
+      WHERE u.total_trades > 0
+    `;
+    
     const params: any[] = [];
 
     if (army && ['bears', 'bulls'].includes(army)) {
-      query += ' WHERE army = $1';
+      query += ` AND (CASE 
+        WHEN COALESCE(long_pnl.total, 0) > COALESCE(short_pnl.total, 0) THEN 'bulls'
+        ELSE 'bears'
+      END) = $1`;
       params.push(army);
     }
 
-    query += ' LIMIT $' + (params.length + 1);
+    query += ' ORDER BY u.total_pnl DESC LIMIT $' + (params.length + 1);
     params.push(limit);
 
     const result = await pool.query(query, params);
@@ -847,6 +885,32 @@ app.get('/api/army/stats', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching army stats:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch army stats' });
+  }
+});
+
+// ============================================
+// ADMIN ENDPOINTS
+// ============================================
+
+// Recalculate all user armies based on closed positions
+app.post('/api/admin/recalculate-armies', async (req: Request, res: Response) => {
+  try {
+    // Get all users
+    const users = await pool.query('SELECT id FROM users');
+    
+    let updated = 0;
+    for (const user of users.rows) {
+      await updateUserArmy(user.id);
+      updated++;
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Successfully recalculated armies for ${updated} users` 
+    });
+  } catch (error) {
+    console.error('Error recalculating armies:', error);
+    res.status(500).json({ success: false, message: 'Failed to recalculate armies' });
   }
 });
 
