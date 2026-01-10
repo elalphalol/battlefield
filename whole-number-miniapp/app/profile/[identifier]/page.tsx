@@ -256,8 +256,9 @@ export default function UserProfilePage() {
 
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 text-center">
             <p className="text-gray-400 text-sm mb-1">$BATTLE Earned</p>
-            <p className="text-xl font-bold text-purple-400">
-              🪙 {(profile.stats.battle_tokens_earned / 1000000).toFixed(1)}M
+            <p className="text-xl font-bold text-purple-400 flex items-center justify-center gap-2">
+              <img src="/battlefield-logo.jpg" alt="$BATTLE" className="w-5 h-5 rounded-full" />
+              {(profile.stats.battle_tokens_earned / 1000000).toFixed(1)}M
             </p>
           </div>
         </div>
