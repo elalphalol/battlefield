@@ -321,8 +321,8 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                     isLiquidationWarning
                       ? 'border-red-500 bg-red-900/20 animate-pulse'
                       : pnl >= 0
-                      ? 'border-green-500 bg-green-900/20'
-                      : 'border-slate-600 bg-slate-700/30'
+                      ? 'border-green-500 bg-green-900/30'
+                      : 'border-red-500 bg-red-900/30'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-3">
