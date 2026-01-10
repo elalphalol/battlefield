@@ -6,11 +6,11 @@ export function StickyNav() {
   const router = useRouter();
 
   const goToBattlefield = () => {
-    router.push('/battlefield');
+    router.push('/battlefield?tab=trade');
   };
 
   const goToLeaderboard = () => {
-    router.push('/?view=leaderboard');
+    router.push('/battlefield?tab=leaderboard');
   };
 
   return (

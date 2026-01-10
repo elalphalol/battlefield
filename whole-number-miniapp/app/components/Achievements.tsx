@@ -65,9 +65,9 @@ export function Achievements({ stats }: AchievementsProps) {
 
     // Rankings
     { id: 'rank_top100', title: '🏅 Top 100', description: 'Reached Top 100 on the leaderboard', icon: '🏅', category: 'rank', rarity: 'Rare', points: 25, unlocked: Number(stats.rank) <= 100 && Number(stats.rank) > 0 },
-    { id: 'rank_top50', title: '🥉 Top 50', description: 'Reached Top 50 on the leaderboard', icon: '🥉', category: 'rank', rarity: 'Epic', points: 50, unlocked: Number(stats.rank) <= 50 && Number(stats.rank) > 0 },
-    { id: 'rank_top10', title: '🥈 Top 10 Elite', description: 'Reached Top 10 on the leaderboard', icon: '🥈', category: 'rank', rarity: 'Legendary', points: 100, unlocked: Number(stats.rank) <= 10 && Number(stats.rank) > 0 },
-    { id: 'rank_top3', title: '🥇 Legendary Conqueror', description: 'Reached Top 3 on the leaderboard', icon: '🥇', category: 'rank', rarity: 'Legendary', points: 100, unlocked: Number(stats.rank) <= 3 && Number(stats.rank) > 0 },
+    { id: 'rank_top50', title: '🌟 Top 50', description: 'Reached Top 50 on the leaderboard', icon: '🌟', category: 'rank', rarity: 'Epic', points: 50, unlocked: Number(stats.rank) <= 50 && Number(stats.rank) > 0 },
+    { id: 'rank_top10', title: '⭐ Top 10 Elite', description: 'Reached Top 10 on the leaderboard', icon: '⭐', category: 'rank', rarity: 'Legendary', points: 100, unlocked: Number(stats.rank) <= 10 && Number(stats.rank) > 0 },
+    { id: 'rank_top3', title: '🏆 Legendary Conqueror', description: 'Reached Top 3 on the leaderboard', icon: '🏆', category: 'rank', rarity: 'Legendary', points: 100, unlocked: Number(stats.rank) <= 3 && Number(stats.rank) > 0 },
     { id: 'rank_1', title: '👑 Battlefield Champion', description: 'Reached #1 on the leaderboard', icon: '👑', category: 'rank', rarity: 'Mythic', points: 200, unlocked: Number(stats.rank) === 1 },
 
     // Survival
