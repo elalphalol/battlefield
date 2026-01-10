@@ -238,7 +238,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
             <input
               type="range"
               min="1"
-              max="100"
+              max="200"
               step="1"
               value={leverage}
               onChange={(e) => setLeverage(Number(e.target.value))}
@@ -247,7 +247,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
             <div className="flex justify-between text-xs text-gray-400 mt-1">
               <span>1x</span>
               <span className="text-gray-500">Custom: {leverage}x</span>
-              <span>100x</span>
+              <span>200x</span>
             </div>
           </div>
         </div>
