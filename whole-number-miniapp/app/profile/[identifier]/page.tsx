@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getApiUrl } from '../../config/api';
+import { Achievements } from '../../components/Achievements';
 
 interface UserProfile {
   user: {
@@ -309,6 +310,16 @@ export default function UserProfilePage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Achievements & Milestones */}
+        <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
+          <div className="p-4 border-b border-slate-700">
+            <h2 className="text-xl font-bold text-yellow-400">🏆 Achievements & Milestones</h2>
+          </div>
+          <div className="p-4">
+            <Achievements stats={profile.stats} />
           </div>
         </div>
 

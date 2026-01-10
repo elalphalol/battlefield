@@ -1,0 +1,489 @@
+'use client';
+
+interface AchievementsProps {
+  stats: {
+    total_trades: number;
+    total_pnl: number;
+    winning_trades: number;
+    win_rate: number;
+    current_streak: number;
+    best_streak: number;
+    times_liquidated: number;
+    rank: number;
+  };
+}
+
+interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  category: 'trading' | 'pnl' | 'winrate' | 'streak' | 'rank' | 'survival' | 'special';
+  unlocked: boolean;
+  progress?: number;
+  target?: number;
+}
+
+export function Achievements({ stats }: AchievementsProps) {
+  // Define all achievements
+  const allAchievements: Achievement[] = [
+    // Trading Volume Milestones
+    {
+      id: 'first_trade',
+      title: '🎖️ First Blood',
+      description: 'Completed your first trade',
+      icon: '⚔️',
+      category: 'trading',
+      unlocked: stats.total_trades >= 1,
+      progress: Math.min(stats.total_trades, 1),
+      target: 1,
+    },
+    {
+      id: 'trader_10',
+      title: '📊 Apprentice Trader',
+      description: 'Completed 10 trades',
+      icon: '📈',
+      category: 'trading',
+      unlocked: stats.total_trades >= 10,
+      progress: Math.min(stats.total_trades, 10),
+      target: 10,
+    },
+    {
+      id: 'trader_50',
+      title: '💼 Skilled Trader',
+      description: 'Completed 50 trades',
+      icon: '💹',
+      category: 'trading',
+      unlocked: stats.total_trades >= 50,
+      progress: Math.min(stats.total_trades, 50),
+      target: 50,
+    },
+    {
+      id: 'trader_100',
+      title: '🎯 Veteran Trader',
+      description: 'Completed 100 trades',
+      icon: '🏅',
+      category: 'trading',
+      unlocked: stats.total_trades >= 100,
+      progress: Math.min(stats.total_trades, 100),
+      target: 100,
+    },
+    {
+      id: 'trader_500',
+      title: '👑 Elite Trader',
+      description: 'Completed 500 trades',
+      icon: '👑',
+      category: 'trading',
+      unlocked: stats.total_trades >= 500,
+      progress: Math.min(stats.total_trades, 500),
+      target: 500,
+    },
+    {
+      id: 'trader_1000',
+      title: '🌟 Master Trader',
+      description: 'Completed 1,000 trades',
+      icon: '🌟',
+      category: 'trading',
+      unlocked: stats.total_trades >= 1000,
+      progress: Math.min(stats.total_trades, 1000),
+      target: 1000,
+    },
+
+    // P&L Milestones
+    {
+      id: 'profit_100',
+      title: '💵 First Profit',
+      description: 'Reached $100 total P&L',
+      icon: '💰',
+      category: 'pnl',
+      unlocked: stats.total_pnl >= 100,
+      progress: Math.min(stats.total_pnl, 100),
+      target: 100,
+    },
+    {
+      id: 'profit_1000',
+      title: '💎 Profitable Trader',
+      description: 'Reached $1,000 total P&L',
+      icon: '💎',
+      category: 'pnl',
+      unlocked: stats.total_pnl >= 1000,
+      progress: Math.min(stats.total_pnl, 1000),
+      target: 1000,
+    },
+    {
+      id: 'profit_5000',
+      title: '🔥 Hot Streak',
+      description: 'Reached $5,000 total P&L',
+      icon: '🔥',
+      category: 'pnl',
+      unlocked: stats.total_pnl >= 5000,
+      progress: Math.min(stats.total_pnl, 5000),
+      target: 5000,
+    },
+    {
+      id: 'profit_10000',
+      title: '🚀 To The Moon',
+      description: 'Reached $10,000 total P&L',
+      icon: '🚀',
+      category: 'pnl',
+      unlocked: stats.total_pnl >= 10000,
+      progress: Math.min(stats.total_pnl, 10000),
+      target: 10000,
+    },
+    {
+      id: 'profit_50000',
+      title: '💰 Whale Status',
+      description: 'Reached $50,000 total P&L',
+      icon: '🐋',
+      category: 'pnl',
+      unlocked: stats.total_pnl >= 50000,
+      progress: Math.min(stats.total_pnl, 50000),
+      target: 50000,
+    },
+    {
+      id: 'profit_100000',
+      title: '👑 Legendary Profit',
+      description: 'Reached $100,000 total P&L',
+      icon: '🏆',
+      category: 'pnl',
+      unlocked: stats.total_pnl >= 100000,
+      progress: Math.min(stats.total_pnl, 100000),
+      target: 100000,
+    },
+
+    // Win Rate Achievements
+    {
+      id: 'winrate_50',
+      title: '⚖️ Balanced',
+      description: 'Maintained 50%+ win rate (min 20 trades)',
+      icon: '⚖️',
+      category: 'winrate',
+      unlocked: stats.win_rate >= 50 && stats.total_trades >= 20,
+    },
+    {
+      id: 'winrate_60',
+      title: '📈 Consistent Winner',
+      description: 'Maintained 60%+ win rate (min 50 trades)',
+      icon: '✨',
+      category: 'winrate',
+      unlocked: stats.win_rate >= 60 && stats.total_trades >= 50,
+    },
+    {
+      id: 'winrate_70',
+      title: '🎯 Sharpshooter',
+      description: 'Maintained 70%+ win rate (min 100 trades)',
+      icon: '🎯',
+      category: 'winrate',
+      unlocked: stats.win_rate >= 70 && stats.total_trades >= 100,
+    },
+    {
+      id: 'winrate_80',
+      title: '🌟 Elite Precision',
+      description: 'Maintained 80%+ win rate (min 200 trades)',
+      icon: '💫',
+      category: 'winrate',
+      unlocked: stats.win_rate >= 80 && stats.total_trades >= 200,
+    },
+
+    // Streak Achievements
+    {
+      id: 'streak_3',
+      title: '🔥 On Fire',
+      description: 'Achieved a 3-win streak',
+      icon: '🔥',
+      category: 'streak',
+      unlocked: stats.best_streak >= 3,
+      progress: Math.min(stats.best_streak, 3),
+      target: 3,
+    },
+    {
+      id: 'streak_5',
+      title: '🌡️ Heating Up',
+      description: 'Achieved a 5-win streak',
+      icon: '🌡️',
+      category: 'streak',
+      unlocked: stats.best_streak >= 5,
+      progress: Math.min(stats.best_streak, 5),
+      target: 5,
+    },
+    {
+      id: 'streak_10',
+      title: '💥 Unstoppable',
+      description: 'Achieved a 10-win streak',
+      icon: '💥',
+      category: 'streak',
+      unlocked: stats.best_streak >= 10,
+      progress: Math.min(stats.best_streak, 10),
+      target: 10,
+    },
+    {
+      id: 'streak_20',
+      title: '⚡ Lightning',
+      description: 'Achieved a 20-win streak',
+      icon: '⚡',
+      category: 'streak',
+      unlocked: stats.best_streak >= 20,
+      progress: Math.min(stats.best_streak, 20),
+      target: 20,
+    },
+    {
+      id: 'streak_50',
+      title: '🌪️ Legendary Streak',
+      description: 'Achieved a 50-win streak',
+      icon: '🌪️',
+      category: 'streak',
+      unlocked: stats.best_streak >= 50,
+      progress: Math.min(stats.best_streak, 50),
+      target: 50,
+    },
+
+    // Ranking Achievements
+    {
+      id: 'rank_top100',
+      title: '🏅 Top 100',
+      description: 'Reached Top 100 on the leaderboard',
+      icon: '🏅',
+      category: 'rank',
+      unlocked: stats.rank <= 100 && stats.rank > 0,
+    },
+    {
+      id: 'rank_top50',
+      title: '🥉 Top 50',
+      description: 'Reached Top 50 on the leaderboard',
+      icon: '🥉',
+      category: 'rank',
+      unlocked: stats.rank <= 50 && stats.rank > 0,
+    },
+    {
+      id: 'rank_top10',
+      title: '🥈 Top 10 Elite',
+      description: 'Reached Top 10 on the leaderboard',
+      icon: '🥈',
+      category: 'rank',
+      unlocked: stats.rank <= 10 && stats.rank > 0,
+    },
+    {
+      id: 'rank_top3',
+      title: '🥇 Podium Finisher',
+      description: 'Reached Top 3 on the leaderboard',
+      icon: '🥇',
+      category: 'rank',
+      unlocked: stats.rank <= 3 && stats.rank > 0,
+    },
+    {
+      id: 'rank_1',
+      title: '👑 #1 Champion',
+      description: 'Reached #1 on the leaderboard',
+      icon: '👑',
+      category: 'rank',
+      unlocked: stats.rank === 1,
+    },
+
+    // Survival Achievements
+    {
+      id: 'no_liq_50',
+      title: '🛡️ Survivor',
+      description: 'Completed 50 trades without liquidation',
+      icon: '🛡️',
+      category: 'survival',
+      unlocked: stats.total_trades >= 50 && stats.times_liquidated === 0,
+    },
+    {
+      id: 'no_liq_100',
+      title: '🏰 Fortress',
+      description: 'Completed 100 trades without liquidation',
+      icon: '🏰',
+      category: 'survival',
+      unlocked: stats.total_trades >= 100 && stats.times_liquidated === 0,
+    },
+    {
+      id: 'no_liq_500',
+      title: '💎 Diamond Hands',
+      description: 'Completed 500 trades without liquidation',
+      icon: '💎',
+      category: 'survival',
+      unlocked: stats.total_trades >= 500 && stats.times_liquidated === 0,
+    },
+
+    // Special Achievements
+    {
+      id: 'comeback',
+      title: '🎭 The Comeback',
+      description: 'Recovered from negative P&L to reach $1,000 profit',
+      icon: '🎭',
+      category: 'special',
+      unlocked: stats.total_pnl >= 1000 && stats.times_liquidated > 0,
+    },
+    {
+      id: 'risk_taker',
+      title: '🎲 High Roller',
+      description: 'Survived 10+ liquidations and still profitable',
+      icon: '🎲',
+      category: 'special',
+      unlocked: stats.times_liquidated >= 10 && stats.total_pnl > 0,
+    },
+    {
+      id: 'perfect_trader',
+      title: '💯 Perfect Score',
+      description: 'Maintained 100% win rate with 10+ trades',
+      icon: '💯',
+      category: 'special',
+      unlocked: stats.win_rate === 100 && stats.total_trades >= 10,
+    },
+  ];
+
+  // Get unlocked achievements
+  const unlockedAchievements = allAchievements.filter(a => a.unlocked);
+  const lockedAchievements = allAchievements.filter(a => !a.unlocked);
+
+  // Calculate completion percentage
+  const completionRate = ((unlockedAchievements.length / allAchievements.length) * 100).toFixed(1);
+
+  // Get title based on achievements
+  const getPlayerTitle = (): { title: string; badge: string; color: string } => {
+    if (stats.rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400' };
+    if (stats.rank <= 3) return { title: 'Elite Warrior', badge: '🥇', color: 'text-orange-400' };
+    if (stats.rank <= 10) return { title: 'Master Trader', badge: '🥈', color: 'text-gray-300' };
+    if (stats.total_pnl >= 100000) return { title: 'Legendary Profit King', badge: '🏆', color: 'text-purple-400' };
+    if (stats.total_pnl >= 50000) return { title: 'Whale Trader', badge: '🐋', color: 'text-blue-400' };
+    if (stats.win_rate >= 80 && stats.total_trades >= 200) return { title: 'Precision Expert', badge: '💫', color: 'text-cyan-400' };
+    if (stats.best_streak >= 50) return { title: 'Streak Legend', badge: '🌪️', color: 'text-red-400' };
+    if (stats.total_trades >= 1000) return { title: 'Trading Veteran', badge: '🌟', color: 'text-yellow-300' };
+    if (stats.total_trades >= 500) return { title: 'Elite Trader', badge: '👑', color: 'text-purple-300' };
+    if (stats.total_pnl >= 10000) return { title: 'Moon Walker', badge: '🚀', color: 'text-green-400' };
+    if (stats.total_pnl >= 5000) return { title: 'Hot Trader', badge: '🔥', color: 'text-orange-300' };
+    if (stats.win_rate >= 70 && stats.total_trades >= 100) return { title: 'Sharpshooter', badge: '🎯', color: 'text-blue-300' };
+    if (stats.total_trades >= 100) return { title: 'Veteran Warrior', badge: '🏅', color: 'text-gray-400' };
+    if (stats.total_pnl >= 1000) return { title: 'Profitable Trader', badge: '💎', color: 'text-cyan-300' };
+    if (stats.best_streak >= 10) return { title: 'Unstoppable', badge: '💥', color: 'text-red-300' };
+    if (stats.total_trades >= 50) return { title: 'Skilled Trader', badge: '💹', color: 'text-green-300' };
+    if (stats.total_trades >= 10) return { title: 'Apprentice Trader', badge: '📈', color: 'text-blue-200' };
+    return { title: 'Battlefield Recruit', badge: '⚔️', color: 'text-gray-300' };
+  };
+
+  const playerTitle = getPlayerTitle();
+
+  const categoryColors = {
+    trading: 'border-blue-500',
+    pnl: 'border-green-500',
+    winrate: 'border-purple-500',
+    streak: 'border-orange-500',
+    rank: 'border-yellow-500',
+    survival: 'border-cyan-500',
+    special: 'border-pink-500',
+  };
+
+  const categoryNames = {
+    trading: 'Trading Volume',
+    pnl: 'Profit & Loss',
+    winrate: 'Win Rate',
+    streak: 'Win Streaks',
+    rank: 'Rankings',
+    survival: 'Survival',
+    special: 'Special',
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Player Title */}
+      <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 text-center">
+        <h3 className="text-sm text-gray-400 mb-2">Current Title</h3>
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <span className="text-4xl">{playerTitle.badge}</span>
+          <h2 className={`text-3xl font-bold ${playerTitle.color}`}>{playerTitle.title}</h2>
+        </div>
+        <p className="text-gray-400 text-sm">
+          {unlockedAchievements.length} / {allAchievements.length} Achievements ({completionRate}%)
+        </p>
+        {/* Progress Bar */}
+        <div className="w-full bg-slate-700 rounded-full h-3 mt-3">
+          <div 
+            className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500"
+            style={{ width: `${completionRate}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Unlocked Achievements */}
+      <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
+        <div className="p-4 border-b border-slate-700">
+          <h3 className="text-xl font-bold text-yellow-400">
+            🏆 Unlocked Achievements ({unlockedAchievements.length})
+          </h3>
+        </div>
+        <div className="p-4">
+          {unlockedAchievements.length === 0 ? (
+            <p className="text-gray-400 text-center py-4">Start trading to unlock achievements!</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {unlockedAchievements.map((achievement) => (
+                <div
+                  key={achievement.id}
+                  className={`bg-slate-700/50 border-l-4 ${categoryColors[achievement.category]} rounded-lg p-4 relative overflow-hidden`}
+                >
+                  <div className="absolute top-2 right-2 text-xs bg-green-500 text-white px-2 py-1 rounded">
+                    ✓ Unlocked
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="text-3xl">{achievement.icon}</div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-white mb-1">{achievement.title}</h4>
+                      <p className="text-sm text-gray-400">{achievement.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {categoryNames[achievement.category]}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Locked Achievements */}
+      <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
+        <div className="p-4 border-b border-slate-700">
+          <h3 className="text-xl font-bold text-gray-400">
+            🔒 Locked Achievements ({lockedAchievements.length})
+          </h3>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {lockedAchievements.map((achievement) => (
+              <div
+                key={achievement.id}
+                className={`bg-slate-700/30 border-l-4 ${categoryColors[achievement.category]} rounded-lg p-4 opacity-60`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="text-3xl grayscale">{achievement.icon}</div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-gray-300 mb-1">{achievement.title}</h4>
+                    <p className="text-sm text-gray-500">{achievement.description}</p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {categoryNames[achievement.category]}
+                    </p>
+                    {achievement.progress !== undefined && achievement.target && (
+                      <div className="mt-2">
+                        <div className="flex justify-between text-xs text-gray-500 mb-1">
+                          <span>Progress</span>
+                          <span>{achievement.progress} / {achievement.target}</span>
+                        </div>
+                        <div className="w-full bg-slate-600 rounded-full h-2">
+                          <div 
+                            className="bg-blue-500 h-2 rounded-full transition-all"
+                            style={{ width: `${(achievement.progress / achievement.target) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
