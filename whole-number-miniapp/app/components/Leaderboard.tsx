@@ -222,8 +222,9 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                       {entry.total_trades} trades
                     </div>
                     {entry.battle_tokens_earned > 0 && (
-                      <div className="text-xs text-purple-400">
-                        🪙 {(entry.battle_tokens_earned / 1000000).toFixed(1)}M $BATTLE
+                      <div className="text-xs text-purple-400 flex items-center gap-1">
+                        <img src="/battlefield-logo.jpg" alt="$BATTLE" className="w-3 h-3 rounded-full" />
+                        {(entry.battle_tokens_earned / 1000000).toFixed(1)}M $BATTLE
                       </div>
                     )}
                   </div>
