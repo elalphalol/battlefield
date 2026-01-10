@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getApiUrl } from '../../config/api';
 import { Achievements } from '../../components/Achievements';
+import { StickyNav } from '../../components/StickyNav';
 
 interface UserProfile {
   user: {
@@ -470,6 +471,9 @@ export default function UserProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Sticky Navigation */}
+      <StickyNav />
     </div>
   );
 }
