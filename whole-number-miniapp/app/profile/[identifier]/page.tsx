@@ -64,8 +64,6 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showAchievements, setShowAchievements] = useState(false);
-  const [showTitleGlossary, setShowTitleGlossary] = useState(false);
 
   useEffect(() => {
     fetchProfile(currentPage);
@@ -409,184 +407,15 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* Achievements & Title Glossary Buttons */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <button
-            onClick={() => setShowAchievements(!showAchievements)}
-            className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 hover:border-purple-400 transition-all"
-          >
-            <div className="text-center">
-              <div className="text-4xl mb-2">🏆</div>
-              <h3 className="text-xl font-bold text-purple-400 mb-1">Achievements & Milestones</h3>
-              <p className="text-sm text-gray-400">View your progress and unlocked achievements</p>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setShowTitleGlossary(!showTitleGlossary)}
-            className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-lg p-6 hover:border-yellow-400 transition-all"
-          >
-            <div className="text-center">
-              <div className="text-4xl mb-2">👑</div>
-              <h3 className="text-xl font-bold text-yellow-400 mb-1">Title Glossary</h3>
-              <p className="text-sm text-gray-400">See all player titles and their rarity</p>
-            </div>
-          </button>
+        {/* Achievements & Milestones - Always Visible */}
+        <div className="bg-slate-800 border-2 border-purple-500 rounded-lg">
+          <div className="p-4 border-b border-slate-700">
+            <h2 className="text-xl font-bold text-yellow-400">🏆 Achievements & Milestones</h2>
+          </div>
+          <div className="p-4">
+            <Achievements stats={profile.stats} />
+          </div>
         </div>
-
-        {/* Achievements Modal */}
-        {showAchievements && (
-          <div className="bg-slate-800 border-2 border-purple-500 rounded-lg">
-            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-yellow-400">🏆 Achievements & Milestones</h2>
-              <button
-                onClick={() => setShowAchievements(false)}
-                className="text-gray-400 hover:text-white text-2xl"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-4">
-              <Achievements stats={profile.stats} />
-            </div>
-          </div>
-        )}
-
-        {/* Title Glossary Modal */}
-        {showTitleGlossary && (
-          <div className="bg-slate-800 border-2 border-yellow-500 rounded-lg">
-            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-yellow-400">📚 Complete Achievement & Title Glossary</h2>
-              <button
-                onClick={() => setShowTitleGlossary(false)}
-                className="text-gray-400 hover:text-white text-2xl"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              <p className="text-gray-300 text-sm mb-4">
-                Player titles are automatically assigned based on your best achievement. Higher rarity titles are rarer and more prestigious!
-              </p>
-              
-              {/* Title Rarity Rankings */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-bold text-yellow-400 mb-3">🏆 Player Title Rankings by Rarity</h3>
-                {titleRankings.map((tier) => (
-                  <div key={tier.rarity} className={`${tier.color} rounded-lg p-4`}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <h3 className="text-lg font-bold text-white">{tier.rarity}</h3>
-                      <div className="flex-1 h-1 bg-white/30 rounded"></div>
-                    </div>
-                    <ul className="space-y-1">
-                      {tier.titles.map((title, idx) => (
-                        <li key={idx} className="text-sm text-white/90 flex items-center gap-2">
-                          <span className="text-white">•</span>
-                          {title}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-
-              {/* Complete Achievement List */}
-              <div className="bg-slate-700 rounded-lg p-6 mt-6">
-                <h3 className="text-lg font-bold text-purple-400 mb-4">📋 Complete Achievement List</h3>
-                <p className="text-xs text-gray-400 mb-4">All 40+ achievements and their exact unlock requirements:</p>
-                
-                <div className="space-y-4">
-                  {/* Trading Volume */}
-                  <div>
-                    <h4 className="font-bold text-blue-400 mb-2">📊 Trading Volume Achievements</h4>
-                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
-                      <li>⚔️ First Blood - Complete 1 trade</li>
-                      <li>📈 Apprentice Trader - Complete 10 trades</li>
-                      <li>💹 Skilled Trader - Complete 50 trades</li>
-                      <li>🏅 Veteran Trader - Complete 100 trades</li>
-                      <li>👑 Elite Trader - Complete 500 trades</li>
-                      <li>🌟 Master Trader - Complete 1,000 trades</li>
-                    </ul>
-                  </div>
-
-                  {/* P&L */}
-                  <div>
-                    <h4 className="font-bold text-green-400 mb-2">💰 Profit & Loss Achievements</h4>
-                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
-                      <li>💰 First Profit - Reach $100 total P&L</li>
-                      <li>💎 Profitable Trader - Reach $1,000 total P&L</li>
-                      <li>🔥 Hot Streak - Reach $5,000 total P&L</li>
-                      <li>🚀 To The Moon - Reach $10,000 total P&L</li>
-                      <li>🐋 Whale Status - Reach $50,000 total P&L</li>
-                      <li>🏆 Legendary Profit - Reach $100,000 total P&L</li>
-                    </ul>
-                  </div>
-
-                  {/* Win Rate */}
-                  <div>
-                    <h4 className="font-bold text-purple-400 mb-2">🎯 Win Rate Achievements</h4>
-                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
-                      <li>⚖️ Balanced - Maintain 50%+ win rate (min 20 trades)</li>
-                      <li>✨ Consistent Winner - Maintain 60%+ win rate (min 50 trades)</li>
-                      <li>🎯 Sharpshooter - Maintain 70%+ win rate (min 100 trades)</li>
-                      <li>💫 Elite Precision - Maintain 80%+ win rate (min 200 trades)</li>
-                    </ul>
-                  </div>
-
-                  {/* Streaks */}
-                  <div>
-                    <h4 className="font-bold text-orange-400 mb-2">🔥 Win Streak Achievements</h4>
-                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
-                      <li>🔥 On Fire - Achieve 3-win streak</li>
-                      <li>🌡️ Heating Up - Achieve 5-win streak</li>
-                      <li>💥 Unstoppable - Achieve 10-win streak</li>
-                      <li>⚡ Lightning - Achieve 20-win streak</li>
-                      <li>🌪️ Legendary Streak - Achieve 50-win streak</li>
-                    </ul>
-                  </div>
-
-                  {/* Rankings */}
-                  <div>
-                    <h4 className="font-bold text-yellow-400 mb-2">🏅 Ranking Achievements</h4>
-                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
-                      <li>🏅 Top 100 - Reach Top 100 on leaderboard</li>
-                      <li>🥉 Top 50 - Reach Top 50 on leaderboard</li>
-                      <li>🥈 Top 10 Elite - Reach Top 10 on leaderboard</li>
-                      <li>🥇 Legendary Conqueror - Reach Top 3 on leaderboard</li>
-                      <li>👑 Battlefield Champion - Reach #1 on leaderboard</li>
-                    </ul>
-                  </div>
-
-                  {/* Survival */}
-                  <div>
-                    <h4 className="font-bold text-cyan-400 mb-2">🛡️ Survival Achievements</h4>
-                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
-                      <li>🛡️ Survivor - Complete 50 trades without liquidation</li>
-                      <li>🏰 Fortress - Complete 100 trades without liquidation</li>
-                      <li>💎 Diamond Hands - Complete 500 trades without liquidation</li>
-                    </ul>
-                  </div>
-
-                  {/* Special */}
-                  <div>
-                    <h4 className="font-bold text-pink-400 mb-2">✨ Special Achievements</h4>
-                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
-                      <li>🎭 The Comeback - Recover from negative P&L to reach $1,000 profit (requires at least 1 liquidation)</li>
-                      <li>🎲 High Roller - Survive 10+ liquidations and still be profitable</li>
-                      <li>💯 Perfect Score - Maintain 100% win rate with 10+ trades</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-700 rounded-lg p-4 mt-4">
-                <p className="text-xs text-gray-400 text-center">
-                  💡 Your highest rarity title is automatically displayed. Achievements unlock exactly as described above!
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Full Trading History with Pagination - Button to expand */}
         {profile.pagination.totalPages > 1 && (
