@@ -637,6 +637,7 @@ app.get('/api/trades/:walletAddress/history', async (req: Request, res: Response
 // Get user profile by FID or wallet
 app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
   const { identifier } = req.params;
+  const currentPrice = req.query.currentPrice ? Number(req.query.currentPrice) : null;
 
   try {
     // Check if identifier is FID (numeric) or wallet address
@@ -712,15 +713,38 @@ app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
         rank: rankResult.rows[0].rank,
         last_active: user.last_active
       },
-      openPositions: openPositions.rows.map(trade => ({
-        id: trade.id,
-        position_type: trade.position_type,
-        leverage: trade.leverage,
-        entry_price: Number(trade.entry_price),
-        position_size: Number(trade.position_size),
-        liquidation_price: Number(trade.liquidation_price),
-        opened_at: trade.opened_at
-      })),
+      openPositions: openPositions.rows.map(trade => {
+        const entryPrice = Number(trade.entry_price);
+        const collateral = Number(trade.position_size);
+        const leverage = Number(trade.leverage);
+        
+        // Calculate current P&L if currentPrice is provided
+        let current_pnl = null;
+        if (currentPrice) {
+          const leveragedPositionSize = collateral * leverage;
+          const priceChange = trade.position_type === 'long'
+            ? currentPrice - entryPrice
+            : entryPrice - currentPrice;
+          const priceChangePercentage = priceChange / entryPrice;
+          const pnl = priceChangePercentage * leveragedPositionSize;
+          
+          // Deduct trading fee from P&L
+          const feePercentage = leverage > 1 ? leverage * 0.1 : 0;
+          const tradingFee = (feePercentage / 100) * collateral;
+          current_pnl = pnl - tradingFee;
+        }
+        
+        return {
+          id: trade.id,
+          position_type: trade.position_type,
+          leverage: trade.leverage,
+          entry_price: entryPrice,
+          position_size: collateral,
+          liquidation_price: Number(trade.liquidation_price),
+          opened_at: trade.opened_at,
+          current_pnl: current_pnl
+        };
+      }),
       recentHistory: closedPositions.rows.map(trade => ({
         id: trade.id,
         position_type: trade.position_type,
