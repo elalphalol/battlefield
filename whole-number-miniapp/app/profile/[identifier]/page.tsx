@@ -364,17 +364,17 @@ export default function UserProfilePage() {
             </div>
           </div>
 
-          {/* Recent Trades Preview */}
+          {/* Recent Trades */}
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
             <div className="p-4 border-b border-slate-700">
               <h2 className="text-xl font-bold text-yellow-400">📜 Recent Trades</h2>
             </div>
-            <div className="p-4 max-h-[600px] overflow-y-auto scrollbar-hide">
+            <div className="p-4 max-h-[600px] overflow-y-auto">
               {profile.recentHistory.length === 0 ? (
                 <p className="text-gray-400 text-center py-4">No trading history yet</p>
               ) : (
                 <div className="space-y-3">
-                  {profile.recentHistory.slice(0, 10).map((trade) => (
+                  {profile.recentHistory.map((trade) => (
                     <div key={trade.id} className="bg-slate-700/50 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div>

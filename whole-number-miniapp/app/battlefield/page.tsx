@@ -651,7 +651,7 @@ export default function BattlefieldHome() {
 
       {/* Footer */}
       <footer className="border-t border-slate-700 mt-12 py-6 text-center text-gray-500 text-sm space-y-3">
-        <p className="mb-2">⚔️ <strong>BATTLEFIELD</strong>⚔️ </p>
+        <p className="mb-2">⚔️ <strong>BATTLEFIELD</strong> ⚔️</p>
         <p className="text-xs">⚠️ Paper money only. No real funds at risk. High leverage trading is educational.</p>
         <p className="text-xs">Powered by $BATTLE token • Launching on Clanker.world</p>
         <div className="pt-4 border-t border-slate-800 space-y-1">
