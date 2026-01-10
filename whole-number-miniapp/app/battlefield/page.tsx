@@ -38,7 +38,7 @@ export default function BattlefieldHome() {
   const { address } = useAccount();
   const { price: btcPrice, isLoading } = useBTCPrice(5000);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard'>('trade');
+  const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'ranking'>('trade');
   const [strategy] = useState(() => new WholeNumberStrategy());
 
   // Update strategy with new price
@@ -363,7 +363,7 @@ export default function BattlefieldHome() {
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
             }`}
           >
-            ⚔️ Trade
+            ⚔️ TRADE
           </button>
           <button
             onClick={() => setActiveTab('leaderboard')}
@@ -373,7 +373,17 @@ export default function BattlefieldHome() {
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
             }`}
           >
-            🏆 Leaderboard
+            🏆 LEADERBOARD
+          </button>
+          <button
+            onClick={() => setActiveTab('ranking')}
+            className={`flex-1 py-3 rounded-lg font-bold transition-all ${
+              activeTab === 'ranking'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+            }`}
+          >
+            📊 RANKING INFO
           </button>
         </div>
 
@@ -450,6 +460,38 @@ export default function BattlefieldHome() {
                 </div>
               </div>
             </div>
+          </div>
+        ) : activeTab === 'leaderboard' ? (
+          <div>
+            {/* Top Trader Rewards - Moved to the very top */}
+            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 mb-6">
+              <h3 className="text-2xl font-bold text-purple-400 mb-4 text-center">🏆 Top Trader Rewards (Individual)</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                  <div className="text-3xl mb-2">🥇</div>
+                  <div className="font-bold text-yellow-400 text-lg">1st Place</div>
+                  <div className="text-purple-300 font-semibold">5M $BATTLE</div>
+                </div>
+                <div>
+                  <div className="text-3xl mb-2">🥈</div>
+                  <div className="font-bold text-gray-300 text-lg">2nd Place</div>
+                  <div className="text-purple-300 font-semibold">3M $BATTLE</div>
+                </div>
+                <div>
+                  <div className="text-3xl mb-2">🥉</div>
+                  <div className="font-bold text-orange-400 text-lg">3rd Place</div>
+                  <div className="text-purple-300 font-semibold">2M $BATTLE</div>
+                </div>
+                <div>
+                  <div className="text-3xl mb-2">🎯</div>
+                  <div className="font-bold text-blue-400 text-lg">4th-10th</div>
+                  <div className="text-purple-300 font-semibold">1M each</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Leaderboard */}
+            <Leaderboard />
           </div>
         ) : (
           <div>
@@ -541,32 +583,30 @@ export default function BattlefieldHome() {
 
             {/* Individual Rewards Info */}
             <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-purple-400 mb-3 text-center">🏆 Top Trader Rewards (Individual)</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
+              <h3 className="text-2xl font-bold text-purple-400 mb-4 text-center">🏆 Top Trader Rewards (Individual)</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div>
-                  <div className="text-2xl mb-1">🥇</div>
-                  <div className="font-bold text-yellow-400">1st Place</div>
-                  <div className="text-purple-300">5M $BATTLE</div>
+                  <div className="text-3xl mb-2">🥇</div>
+                  <div className="font-bold text-yellow-400 text-lg">1st Place</div>
+                  <div className="text-purple-300 font-semibold">5M $BATTLE</div>
                 </div>
                 <div>
-                  <div className="text-2xl mb-1">🥈</div>
-                  <div className="font-bold text-gray-300">2nd Place</div>
-                  <div className="text-purple-300">3M $BATTLE</div>
+                  <div className="text-3xl mb-2">🥈</div>
+                  <div className="font-bold text-gray-300 text-lg">2nd Place</div>
+                  <div className="text-purple-300 font-semibold">3M $BATTLE</div>
                 </div>
                 <div>
-                  <div className="text-2xl mb-1">🥉</div>
-                  <div className="font-bold text-orange-400">3rd Place</div>
-                  <div className="text-purple-300">2M $BATTLE</div>
+                  <div className="text-3xl mb-2">🥉</div>
+                  <div className="font-bold text-orange-400 text-lg">3rd Place</div>
+                  <div className="text-purple-300 font-semibold">2M $BATTLE</div>
                 </div>
                 <div>
-                  <div className="text-2xl mb-1">🎯</div>
-                  <div className="font-bold text-blue-400">4th-10th</div>
-                  <div className="text-purple-300">1M each</div>
+                  <div className="text-3xl mb-2">🎯</div>
+                  <div className="font-bold text-blue-400 text-lg">4th-10th</div>
+                  <div className="text-purple-300 font-semibold">1M each</div>
                 </div>
               </div>
             </div>
-
-            <Leaderboard />
           </div>
         )}
       </div>
