@@ -147,8 +147,10 @@ export function PaperTrading({ currentPrice, coordinate, formatNumber }: PaperTr
             {positions.map((position) => (
               <div
                 key={position.id}
-                className={`bg-slate-900 rounded-lg p-4 border-l-4 ${
-                  position.type === 'long' ? 'border-green-500' : 'border-red-500'
+                className={`rounded-lg p-4 border-l-4 ${
+                  position.currentPnl >= 0 
+                    ? 'bg-green-900/30 border-green-500' 
+                    : 'bg-red-900/30 border-red-500'
                 }`}
               >
                 <div className="flex justify-between items-start mb-3">
