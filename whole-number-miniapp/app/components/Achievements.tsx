@@ -27,321 +27,63 @@ interface Achievement {
 }
 
 export function Achievements({ stats }: AchievementsProps) {
-  // Define all achievements
+  // Point values: Common=5, Uncommon=10, Rare=25, Epic=50, Legendary=100, Mythic=200
   const allAchievements: Achievement[] = [
-    // Trading Volume Milestones
-    {
-      id: 'first_trade',
-      title: '🎖️ First Blood',
-      description: 'Completed your first trade',
-      icon: '⚔️',
-      category: 'trading',
-      unlocked: stats.total_trades >= 1,
-      progress: Math.min(stats.total_trades, 1),
-      target: 1,
-    },
-    {
-      id: 'trader_10',
-      title: '📊 Apprentice Trader',
-      description: 'Completed 10 trades',
-      icon: '📈',
-      category: 'trading',
-      unlocked: stats.total_trades >= 10,
-      progress: Math.min(stats.total_trades, 10),
-      target: 10,
-    },
-    {
-      id: 'trader_50',
-      title: '💼 Skilled Trader',
-      description: 'Completed 50 trades',
-      icon: '💹',
-      category: 'trading',
-      unlocked: stats.total_trades >= 50,
-      progress: Math.min(stats.total_trades, 50),
-      target: 50,
-    },
-    {
-      id: 'trader_100',
-      title: '🎯 Veteran Trader',
-      description: 'Completed 100 trades',
-      icon: '🏅',
-      category: 'trading',
-      unlocked: stats.total_trades >= 100,
-      progress: Math.min(stats.total_trades, 100),
-      target: 100,
-    },
-    {
-      id: 'trader_500',
-      title: '👑 Elite Trader',
-      description: 'Completed 500 trades',
-      icon: '👑',
-      category: 'trading',
-      unlocked: stats.total_trades >= 500,
-      progress: Math.min(stats.total_trades, 500),
-      target: 500,
-    },
-    {
-      id: 'trader_1000',
-      title: '🌟 Master Trader',
-      description: 'Completed 1,000 trades',
-      icon: '🌟',
-      category: 'trading',
-      unlocked: stats.total_trades >= 1000,
-      progress: Math.min(stats.total_trades, 1000),
-      target: 1000,
-    },
+    // Trading Volume
+    { id: 'first_trade', title: '🎖️ First Blood', description: 'Completed your first trade', icon: '⚔️', category: 'trading', rarity: 'Common', points: 5, unlocked: stats.total_trades >= 1, progress: Math.min(stats.total_trades, 1), target: 1 },
+    { id: 'trader_10', title: '📊 Apprentice Trader', description: 'Completed 10 trades', icon: '📈', category: 'trading', rarity: 'Common', points: 5, unlocked: stats.total_trades >= 10, progress: Math.min(stats.total_trades, 10), target: 10 },
+    { id: 'trader_50', title: '💼 Skilled Trader', description: 'Completed 50 trades', icon: '💹', category: 'trading', rarity: 'Common', points: 5, unlocked: stats.total_trades >= 50, progress: Math.min(stats.total_trades, 50), target: 50 },
+    { id: 'trader_100', title: '🎯 Veteran Trader', description: 'Completed 100 trades', icon: '🏅', category: 'trading', rarity: 'Uncommon', points: 10, unlocked: stats.total_trades >= 100, progress: Math.min(stats.total_trades, 100), target: 100 },
+    { id: 'trader_500', title: '👑 Elite Trader', description: 'Completed 500 trades', icon: '👑', category: 'trading', rarity: 'Rare', points: 25, unlocked: stats.total_trades >= 500, progress: Math.min(stats.total_trades, 500), target: 500 },
+    { id: 'trader_1000', title: '🌟 Master Trader', description: 'Completed 1,000 trades', icon: '🌟', category: 'trading', rarity: 'Rare', points: 25, unlocked: stats.total_trades >= 1000, progress: Math.min(stats.total_trades, 1000), target: 1000 },
 
     // P&L Milestones
-    {
-      id: 'profit_100',
-      title: '💵 First Profit',
-      description: 'Reached $100 total P&L',
-      icon: '💰',
-      category: 'pnl',
-      unlocked: stats.total_pnl >= 100,
-      progress: Math.min(stats.total_pnl, 100),
-      target: 100,
-    },
-    {
-      id: 'profit_1000',
-      title: '💎 Profitable Trader',
-      description: 'Reached $1,000 total P&L',
-      icon: '💎',
-      category: 'pnl',
-      unlocked: stats.total_pnl >= 1000,
-      progress: Math.min(stats.total_pnl, 1000),
-      target: 1000,
-    },
-    {
-      id: 'profit_5000',
-      title: '🔥 Hot Streak',
-      description: 'Reached $5,000 total P&L',
-      icon: '🔥',
-      category: 'pnl',
-      unlocked: stats.total_pnl >= 5000,
-      progress: Math.min(stats.total_pnl, 5000),
-      target: 5000,
-    },
-    {
-      id: 'profit_10000',
-      title: '🚀 To The Moon',
-      description: 'Reached $10,000 total P&L',
-      icon: '🚀',
-      category: 'pnl',
-      unlocked: stats.total_pnl >= 10000,
-      progress: Math.min(stats.total_pnl, 10000),
-      target: 10000,
-    },
-    {
-      id: 'profit_50000',
-      title: '💰 Whale Status',
-      description: 'Reached $50,000 total P&L',
-      icon: '🐋',
-      category: 'pnl',
-      unlocked: stats.total_pnl >= 50000,
-      progress: Math.min(stats.total_pnl, 50000),
-      target: 50000,
-    },
-    {
-      id: 'profit_100000',
-      title: '👑 Legendary Profit',
-      description: 'Reached $100,000 total P&L',
-      icon: '🏆',
-      category: 'pnl',
-      unlocked: stats.total_pnl >= 100000,
-      progress: Math.min(stats.total_pnl, 100000),
-      target: 100000,
-    },
+    { id: 'profit_100', title: '💵 First Profit', description: 'Reached $100 total P&L', icon: '💰', category: 'pnl', rarity: 'Common', points: 5, unlocked: stats.total_pnl >= 100, progress: Math.min(stats.total_pnl, 100), target: 100 },
+    { id: 'profit_1000', title: '💎 Profitable Trader', description: 'Reached $1,000 total P&L', icon: '💎', category: 'pnl', rarity: 'Uncommon', points: 10, unlocked: stats.total_pnl >= 1000, progress: Math.min(stats.total_pnl, 1000), target: 1000 },
+    { id: 'profit_5000', title: '🔥 Hot Streak', description: 'Reached $5,000 total P&L', icon: '🔥', category: 'pnl', rarity: 'Uncommon', points: 10, unlocked: stats.total_pnl >= 5000, progress: Math.min(stats.total_pnl, 5000), target: 5000 },
+    { id: 'profit_10000', title: '🚀 To The Moon', description: 'Reached $10,000 total P&L', icon: '🚀', category: 'pnl', rarity: 'Rare', points: 25, unlocked: stats.total_pnl >= 10000, progress: Math.min(stats.total_pnl, 10000), target: 10000 },
+    { id: 'profit_50000', title: '💰 Whale Status', description: 'Reached $50,000 total P&L', icon: '🐋', category: 'pnl', rarity: 'Epic', points: 50, unlocked: stats.total_pnl >= 50000, progress: Math.min(stats.total_pnl, 50000), target: 50000 },
+    { id: 'profit_100000', title: '👑 Legendary Profit', description: 'Reached $100,000 total P&L', icon: '🏆', category: 'pnl', rarity: 'Legendary', points: 100, unlocked: stats.total_pnl >= 100000, progress: Math.min(stats.total_pnl, 100000), target: 100000 },
 
-    // Win Rate Achievements
-    {
-      id: 'winrate_50',
-      title: '⚖️ Balanced',
-      description: 'Maintained 50%+ win rate (min 20 trades)',
-      icon: '⚖️',
-      category: 'winrate',
-      unlocked: stats.win_rate >= 50 && stats.total_trades >= 20,
-    },
-    {
-      id: 'winrate_60',
-      title: '📈 Consistent Winner',
-      description: 'Maintained 60%+ win rate (min 50 trades)',
-      icon: '✨',
-      category: 'winrate',
-      unlocked: stats.win_rate >= 60 && stats.total_trades >= 50,
-    },
-    {
-      id: 'winrate_70',
-      title: '🎯 Sharpshooter',
-      description: 'Maintained 70%+ win rate (min 100 trades)',
-      icon: '🎯',
-      category: 'winrate',
-      unlocked: stats.win_rate >= 70 && stats.total_trades >= 100,
-    },
-    {
-      id: 'winrate_80',
-      title: '🌟 Elite Precision',
-      description: 'Maintained 80%+ win rate (min 200 trades)',
-      icon: '💫',
-      category: 'winrate',
-      unlocked: stats.win_rate >= 80 && stats.total_trades >= 200,
-    },
+    // Win Rate
+    { id: 'winrate_50', title: '⚖️ Balanced', description: 'Maintained 50%+ win rate (min 20 trades)', icon: '⚖️', category: 'winrate', rarity: 'Uncommon', points: 10, unlocked: stats.win_rate >= 50 && stats.total_trades >= 20 },
+    { id: 'winrate_60', title: '📈 Consistent Winner', description: 'Maintained 60%+ win rate (min 50 trades)', icon: '✨', category: 'winrate', rarity: 'Rare', points: 25, unlocked: stats.win_rate >= 60 && stats.total_trades >= 50 },
+    { id: 'winrate_70', title: '🎯 Sharpshooter', description: 'Maintained 70%+ win rate (min 100 trades)', icon: '🎯', category: 'winrate', rarity: 'Epic', points: 50, unlocked: stats.win_rate >= 70 && stats.total_trades >= 100 },
+    { id: 'winrate_80', title: '🌟 Elite Precision', description: 'Maintained 80%+ win rate (min 200 trades)', icon: '💫', category: 'winrate', rarity: 'Epic', points: 50, unlocked: stats.win_rate >= 80 && stats.total_trades >= 200 },
 
-    // Streak Achievements
-    {
-      id: 'streak_3',
-      title: '🔥 On Fire',
-      description: 'Achieved a 3-win streak',
-      icon: '🔥',
-      category: 'streak',
-      unlocked: stats.best_streak >= 3,
-      progress: Math.min(stats.best_streak, 3),
-      target: 3,
-    },
-    {
-      id: 'streak_5',
-      title: '🌡️ Heating Up',
-      description: 'Achieved a 5-win streak',
-      icon: '🌡️',
-      category: 'streak',
-      unlocked: stats.best_streak >= 5,
-      progress: Math.min(stats.best_streak, 5),
-      target: 5,
-    },
-    {
-      id: 'streak_10',
-      title: '💥 Unstoppable',
-      description: 'Achieved a 10-win streak',
-      icon: '💥',
-      category: 'streak',
-      unlocked: stats.best_streak >= 10,
-      progress: Math.min(stats.best_streak, 10),
-      target: 10,
-    },
-    {
-      id: 'streak_20',
-      title: '⚡ Lightning',
-      description: 'Achieved a 20-win streak',
-      icon: '⚡',
-      category: 'streak',
-      unlocked: stats.best_streak >= 20,
-      progress: Math.min(stats.best_streak, 20),
-      target: 20,
-    },
-    {
-      id: 'streak_50',
-      title: '🌪️ Legendary Streak',
-      description: 'Achieved a 50-win streak',
-      icon: '🌪️',
-      category: 'streak',
-      unlocked: stats.best_streak >= 50,
-      progress: Math.min(stats.best_streak, 50),
-      target: 50,
-    },
+    // Streak
+    { id: 'streak_3', title: '🔥 On Fire', description: 'Achieved a 3-win streak', icon: '🔥', category: 'streak', rarity: 'Common', points: 5, unlocked: stats.best_streak >= 3, progress: Math.min(stats.best_streak, 3), target: 3 },
+    { id: 'streak_5', title: '🌡️ Heating Up', description: 'Achieved a 5-win streak', icon: '🌡️', category: 'streak', rarity: 'Uncommon', points: 10, unlocked: stats.best_streak >= 5, progress: Math.min(stats.best_streak, 5), target: 5 },
+    { id: 'streak_10', title: '💥 Unstoppable', description: 'Achieved a 10-win streak', icon: '💥', category: 'streak', rarity: 'Uncommon', points: 10, unlocked: stats.best_streak >= 10, progress: Math.min(stats.best_streak, 10), target: 10 },
+    { id: 'streak_20', title: '⚡ Lightning', description: 'Achieved a 20-win streak', icon: '⚡', category: 'streak', rarity: 'Rare', points: 25, unlocked: stats.best_streak >= 20, progress: Math.min(stats.best_streak, 20), target: 20 },
+    { id: 'streak_50', title: '🌪️ Legendary Streak', description: 'Achieved a 50-win streak', icon: '🌪️', category: 'streak', rarity: 'Epic', points: 50, unlocked: stats.best_streak >= 50, progress: Math.min(stats.best_streak, 50), target: 50 },
 
-    // Ranking Achievements - Fix: Convert rank to number to handle string/number types
-    {
-      id: 'rank_top100',
-      title: '🏅 Top 100',
-      description: 'Reached Top 100 on the leaderboard',
-      icon: '🏅',
-      category: 'rank',
-      unlocked: Number(stats.rank) <= 100 && Number(stats.rank) > 0,
-    },
-    {
-      id: 'rank_top50',
-      title: '🥉 Top 50',
-      description: 'Reached Top 50 on the leaderboard',
-      icon: '🥉',
-      category: 'rank',
-      unlocked: Number(stats.rank) <= 50 && Number(stats.rank) > 0,
-    },
-    {
-      id: 'rank_top10',
-      title: '🥈 Top 10 Elite',
-      description: 'Reached Top 10 on the leaderboard',
-      icon: '🥈',
-      category: 'rank',
-      unlocked: Number(stats.rank) <= 10 && Number(stats.rank) > 0,
-    },
-    {
-      id: 'rank_top3',
-      title: '🥇 Legendary Conqueror',
-      description: 'Reached Top 3 on the leaderboard',
-      icon: '🥇',
-      category: 'rank',
-      unlocked: Number(stats.rank) <= 3 && Number(stats.rank) > 0,
-    },
-    {
-      id: 'rank_1',
-      title: '👑 Battlefield Champion',
-      description: 'Reached #1 on the leaderboard',
-      icon: '👑',
-      category: 'rank',
-      unlocked: Number(stats.rank) === 1,
-    },
+    // Rankings
+    { id: 'rank_top100', title: '🏅 Top 100', description: 'Reached Top 100 on the leaderboard', icon: '🏅', category: 'rank', rarity: 'Rare', points: 25, unlocked: Number(stats.rank) <= 100 && Number(stats.rank) > 0 },
+    { id: 'rank_top50', title: '🥉 Top 50', description: 'Reached Top 50 on the leaderboard', icon: '🥉', category: 'rank', rarity: 'Epic', points: 50, unlocked: Number(stats.rank) <= 50 && Number(stats.rank) > 0 },
+    { id: 'rank_top10', title: '🥈 Top 10 Elite', description: 'Reached Top 10 on the leaderboard', icon: '🥈', category: 'rank', rarity: 'Legendary', points: 100, unlocked: Number(stats.rank) <= 10 && Number(stats.rank) > 0 },
+    { id: 'rank_top3', title: '🥇 Legendary Conqueror', description: 'Reached Top 3 on the leaderboard', icon: '🥇', category: 'rank', rarity: 'Legendary', points: 100, unlocked: Number(stats.rank) <= 3 && Number(stats.rank) > 0 },
+    { id: 'rank_1', title: '👑 Battlefield Champion', description: 'Reached #1 on the leaderboard', icon: '👑', category: 'rank', rarity: 'Mythic', points: 200, unlocked: Number(stats.rank) === 1 },
 
-    // Survival Achievements
-    {
-      id: 'no_liq_50',
-      title: '🛡️ Survivor',
-      description: 'Completed 50 trades without liquidation',
-      icon: '🛡️',
-      category: 'survival',
-      unlocked: stats.total_trades >= 50 && stats.times_liquidated === 0,
-    },
-    {
-      id: 'no_liq_100',
-      title: '🏰 Fortress',
-      description: 'Completed 100 trades without liquidation',
-      icon: '🏰',
-      category: 'survival',
-      unlocked: stats.total_trades >= 100 && stats.times_liquidated === 0,
-    },
-    {
-      id: 'no_liq_500',
-      title: '💎 Diamond Hands',
-      description: 'Completed 500 trades without liquidation',
-      icon: '💎',
-      category: 'survival',
-      unlocked: stats.total_trades >= 500 && stats.times_liquidated === 0,
-    },
+    // Survival
+    { id: 'no_liq_50', title: '🛡️ Survivor', description: 'Completed 50 trades without liquidation', icon: '🛡️', category: 'survival', rarity: 'Epic', points: 50, unlocked: stats.total_trades >= 50 && stats.times_liquidated === 0 },
+    { id: 'no_liq_100', title: '🏰 Fortress', description: 'Completed 100 trades without liquidation', icon: '🏰', category: 'survival', rarity: 'Epic', points: 50, unlocked: stats.total_trades >= 100 && stats.times_liquidated === 0 },
+    { id: 'no_liq_500', title: '💎 Diamond Hands', description: 'Completed 500 trades without liquidation', icon: '💎', category: 'survival', rarity: 'Legendary', points: 100, unlocked: stats.total_trades >= 500 && stats.times_liquidated === 0 },
 
-    // Special Achievements
-    {
-      id: 'comeback',
-      title: '🎭 The Comeback',
-      description: 'Recovered from negative P&L to reach $1,000 profit',
-      icon: '🎭',
-      category: 'special',
-      unlocked: stats.total_pnl >= 1000 && stats.times_liquidated > 0,
-    },
-    {
-      id: 'risk_taker',
-      title: '🎲 High Roller',
-      description: 'Survived 10+ liquidations and still profitable',
-      icon: '🎲',
-      category: 'special',
-      unlocked: stats.times_liquidated >= 10 && stats.total_pnl > 0,
-    },
-    {
-      id: 'perfect_trader',
-      title: '💯 Perfect Score',
-      description: 'Maintained 100% win rate with 10+ trades',
-      icon: '💯',
-      category: 'special',
-      unlocked: stats.win_rate === 100 && stats.total_trades >= 10,
-    },
+    // Special
+    { id: 'comeback', title: '🎭 The Comeback', description: 'Recovered from negative P&L to reach $1,000 profit', icon: '🎭', category: 'special', rarity: 'Legendary', points: 100, unlocked: stats.total_pnl >= 1000 && stats.times_liquidated > 0 },
+    { id: 'risk_taker', title: '🎲 High Roller', description: 'Survived 10+ liquidations and still profitable', icon: '🎲', category: 'special', rarity: 'Legendary', points: 100, unlocked: stats.times_liquidated >= 10 && stats.total_pnl > 0 },
+    { id: 'perfect_trader', title: '💯 Perfect Score', description: 'Maintained 100% win rate with 10+ trades', icon: '💯', category: 'special', rarity: 'Legendary', points: 100, unlocked: stats.win_rate === 100 && stats.total_trades >= 10 },
   ];
 
-  // Get unlocked achievements
   const unlockedAchievements = allAchievements.filter(a => a.unlocked);
   const lockedAchievements = allAchievements.filter(a => !a.unlocked);
-
-  // Calculate completion percentage
   const completionRate = ((unlockedAchievements.length / allAchievements.length) * 100).toFixed(1);
+  
+  // Calculate total points
+  const totalPoints = unlockedAchievements.reduce((sum, a) => sum + a.points, 0);
+  const maxPoints = allAchievements.reduce((sum, a) => sum + a.points, 0);
 
-  // Get title based on achievements - Fix: Convert rank to number
   const getPlayerTitle = (): { title: string; badge: string; color: string } => {
     const rank = Number(stats.rank);
     if (rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400' };
@@ -386,20 +128,33 @@ export function Achievements({ stats }: AchievementsProps) {
     special: 'Special',
   };
 
+  const rarityColors = {
+    Common: 'text-gray-400',
+    Uncommon: 'text-green-400',
+    Rare: 'text-blue-400',
+    Epic: 'text-purple-400',
+    Legendary: 'text-orange-400',
+    Mythic: 'text-yellow-400',
+  };
+
   return (
     <div className="space-y-6">
-      {/* Player Title */}
+      {/* Player Title & Points */}
       <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 text-center">
         <h3 className="text-sm text-gray-400 mb-2">Current Title</h3>
         <div className="flex items-center justify-center gap-3 mb-2">
           <span className="text-4xl">{playerTitle.badge}</span>
           <h2 className={`text-3xl font-bold ${playerTitle.color}`}>{playerTitle.title}</h2>
         </div>
-        <p className="text-gray-400 text-sm">
-          {unlockedAchievements.length} / {allAchievements.length} Achievements ({completionRate}%)
-        </p>
-        {/* Progress Bar */}
-        <div className="w-full bg-slate-700 rounded-full h-3 mt-3">
+        <div className="flex items-center justify-center gap-4 text-sm mb-3">
+          <p className="text-gray-400">
+            {unlockedAchievements.length} / {allAchievements.length} Achievements ({completionRate}%)
+          </p>
+          <p className="text-yellow-400 font-bold">
+            ⭐ {totalPoints} / {maxPoints} Points
+          </p>
+        </div>
+        <div className="w-full bg-slate-700 rounded-full h-3">
           <div 
             className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500"
             style={{ width: `${completionRate}%` }}
@@ -432,9 +187,13 @@ export function Achievements({ stats }: AchievementsProps) {
                     <div className="flex-1">
                       <h4 className="font-bold text-white mb-1">{achievement.title}</h4>
                       <p className="text-sm text-gray-400">{achievement.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {categoryNames[achievement.category]}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-gray-500">{categoryNames[achievement.category]}</p>
+                        <span className="text-xs">•</span>
+                        <p className={`text-xs font-bold ${rarityColors[achievement.rarity]}`}>{achievement.rarity}</p>
+                        <span className="text-xs">•</span>
+                        <p className="text-xs text-yellow-400 font-bold">+{achievement.points} pts</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -463,9 +222,13 @@ export function Achievements({ stats }: AchievementsProps) {
                   <div className="flex-1">
                     <h4 className="font-bold text-gray-300 mb-1">{achievement.title}</h4>
                     <p className="text-sm text-gray-500">{achievement.description}</p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      {categoryNames[achievement.category]}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-gray-600">{categoryNames[achievement.category]}</p>
+                      <span className="text-xs text-gray-600">•</span>
+                      <p className={`text-xs font-bold ${rarityColors[achievement.rarity]} opacity-60`}>{achievement.rarity}</p>
+                      <span className="text-xs text-gray-600">•</span>
+                      <p className="text-xs text-yellow-400/60 font-bold">+{achievement.points} pts</p>
+                    </div>
                     {achievement.progress !== undefined && achievement.target && (
                       <div className="mt-2">
                         <div className="flex justify-between text-xs text-gray-500 mb-1">
