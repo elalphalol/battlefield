@@ -743,12 +743,18 @@ app.get('/api/leaderboard', async (req: Request, res: Response) => {
         u.wallet_address,
         u.username,
         u.pfp_url,
+        u.paper_balance,
         u.total_pnl,
         u.winning_trades,
         u.total_trades,
         u.current_streak,
         u.best_streak,
+        u.times_liquidated,
         u.battle_tokens_earned,
+        CASE 
+          WHEN u.total_trades > 0 THEN (u.winning_trades::DECIMAL / u.total_trades::DECIMAL * 100)
+          ELSE 0
+        END as win_rate,
         COALESCE(long_pnl.total, 0) as long_total,
         COALESCE(short_pnl.total, 0) as short_total,
         CASE 
