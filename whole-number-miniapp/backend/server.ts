@@ -620,21 +620,21 @@ app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
     const user = userResult.rows[0];
     const userId = user.id;
 
-    // Get last 5 open positions
+    // Get last 10 open positions
     const openPositions = await pool.query(
       `SELECT * FROM trades 
        WHERE user_id = $1 AND status = 'open'
        ORDER BY opened_at DESC
-       LIMIT 5`,
+       LIMIT 10`,
       [userId]
     );
 
-    // Get last 5 closed/liquidated positions
+    // Get last 10 closed/liquidated positions
     const closedPositions = await pool.query(
       `SELECT * FROM trades 
        WHERE user_id = $1 AND status IN ('closed', 'liquidated')
        ORDER BY closed_at DESC
-       LIMIT 5`,
+       LIMIT 10`,
       [userId]
     );
 
