@@ -38,7 +38,7 @@ export default function BattlefieldHome() {
   const { address } = useAccount();
   const { price: btcPrice, isLoading } = useBTCPrice(5000);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'ranking'>('trade');
+  const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'ranking'>('trade');
   const [strategy] = useState(() => new WholeNumberStrategy());
 
   // Update strategy with new price
@@ -376,6 +376,16 @@ export default function BattlefieldHome() {
             🏆 LEADERBOARD
           </button>
           <button
+            onClick={() => setActiveTab('battle')}
+            className={`flex-1 py-3 rounded-lg font-bold transition-all ${
+              activeTab === 'battle'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+            }`}
+          >
+            ⚔️ BATTLE STATUS
+          </button>
+          <button
             onClick={() => setActiveTab('ranking')}
             className={`flex-1 py-3 rounded-lg font-bold transition-all ${
               activeTab === 'ranking'
@@ -383,7 +393,7 @@ export default function BattlefieldHome() {
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
             }`}
           >
-            📊 RANKING INFO
+            📊 RANKING SYSTEM
           </button>
         </div>
 
@@ -493,11 +503,13 @@ export default function BattlefieldHome() {
             {/* Leaderboard */}
             <Leaderboard />
           </div>
-        ) : (
+        ) : activeTab === 'battle' ? (
           <div>
             {/* Army Battle Status */}
             <ArmyBattleStatus />
-
+          </div>
+        ) : (
+          <div>
             {/* How the Ranking System Works */}
             <div className="bg-slate-800/50 border-2 border-yellow-500/50 rounded-lg p-6 mb-6">
               <h3 className="text-2xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
