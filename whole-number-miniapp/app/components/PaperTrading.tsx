@@ -39,7 +39,7 @@ export function PaperTrading({ currentPrice, coordinate, formatNumber }: PaperTr
           <input
             type="range"
             min="1"
-            max="100"
+            max="200"
             value={leverage}
             onChange={(e) => setLeverage(parseInt(e.target.value))}
             className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"

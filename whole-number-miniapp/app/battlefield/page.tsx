@@ -318,7 +318,7 @@ export default function BattlefieldHome() {
               <div>
                 <div className="text-xs text-gray-400">Paper Balance</div>
                 <div className="text-lg font-bold text-green-400">
-                  ${userData.paper_balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  ${Number(userData.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </div>
               </div>
               <div>
