@@ -93,8 +93,8 @@ export function WholeNumberStrategy() {
               ⚔️ Bears vs Bulls ⚔️
             </p>
             <p className="text-sm text-gray-300">
-              Choose your army and trade! Profits add to your army's total power. 
-              The winning army gets glory and bragging rights!
+              Your army claims YOU! Bears 🐻 claim you if your shorts dominate. Bulls 🐂 claim you if your longs win. 
+              Trade smart, climb the ranks, and bring glory to your army!
             </p>
           </div>
 

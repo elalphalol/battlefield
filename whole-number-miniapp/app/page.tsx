@@ -14,7 +14,7 @@ export default function LandingPage() {
           <img 
             src="/battlefield-logo.jpg" 
             alt="BATTLEFIELD" 
-            className="w-48 h-48 md:w-64 md:h-64 rounded-3xl shadow-2xl border-4 border-yellow-500/50 animate-pulse"
+            className="w-48 h-48 md:w-64 md:h-64 rounded-3xl shadow-2xl border-4 border-yellow-500/50"
           />
         </div>
 
@@ -60,7 +60,7 @@ export default function LandingPage() {
         </button>
 
         <p className="text-sm text-gray-500 italic">
-          Join the war. Pick your side. Claim your rewards.
+          Join the war. Claim your army. Dominate the leaderboard.
         </p>
 
         {/* Credits */}

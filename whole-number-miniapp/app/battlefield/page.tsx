@@ -450,8 +450,8 @@ export default function BattlefieldHome() {
               <h3 className="text-xl font-bold text-yellow-400 mb-4">📚 How to Play</h3>
               <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
                 <div>
-                  <div className="font-bold text-white mb-2">1️⃣ Your Army is Auto-Assigned</div>
-                  <p>Your army depends on your profitable positions. Bears 🐻 if shorts win, Bulls 🐂 if longs win!</p>
+                  <div className="font-bold text-white mb-2">1️⃣ Your Army Claims You</div>
+                  <p>You don't choose your army - your army chooses YOU! Bears 🐻 claim you if your shorts dominate. Bulls 🐂 claim you if your longs win!</p>
                 </div>
                 <div>
                   <div className="font-bold text-white mb-2">2️⃣ Start Trading</div>
