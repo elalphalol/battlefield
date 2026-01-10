@@ -29,12 +29,13 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   const [isOpening, setIsOpening] = useState(false);
   const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
 
-  // Calculate actual position size from percentage, accounting for fee
-  // Fee = leverage × 0.1%, so total cost = position × (1 + fee%)
-  // Therefore: position = (percent × balance) / (1 + fee%)
+  // Calculate actual position size from percentage
+  // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
+  // So we just use the percentage of balance directly
+  const positionSize = Math.floor((positionSizePercent / 100) * Number(paperBalance));
+  
+  // Calculate fee for display purposes only (will be deducted from P&L later)
   const feePercentage = leverage > 1 ? leverage * 0.1 : 0;
-  const feeMultiplier = 1 + (feePercentage / 100);
-  const positionSize = Math.floor((positionSizePercent / 100) * Number(paperBalance) / feeMultiplier);
 
   useEffect(() => {
     if (address) {
