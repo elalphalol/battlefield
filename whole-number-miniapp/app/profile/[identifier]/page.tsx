@@ -64,6 +64,8 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [showTitleGlossary, setShowTitleGlossary] = useState(false);
 
   useEffect(() => {
     fetchProfile(currentPage);
@@ -129,6 +131,37 @@ export default function UserProfilePage() {
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${diffDays}d ago`;
   };
+
+  // Get player title based on stats (automatically selects rarest/best)
+  const getPlayerTitle = (stats: UserProfile['stats']) => {
+    if (stats.rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400', rarity: 'Mythic' };
+    if (stats.rank <= 3) return { title: 'Elite Warrior', badge: '🥇', color: 'text-orange-400', rarity: 'Legendary' };
+    if (stats.rank <= 10) return { title: 'Master Trader', badge: '🥈', color: 'text-gray-300', rarity: 'Legendary' };
+    if (stats.total_pnl >= 100000) return { title: 'Legendary Profit King', badge: '🏆', color: 'text-purple-400', rarity: 'Legendary' };
+    if (stats.total_pnl >= 50000) return { title: 'Whale Trader', badge: '🐋', color: 'text-blue-400', rarity: 'Epic' };
+    if (stats.win_rate >= 80 && stats.total_trades >= 200) return { title: 'Precision Expert', badge: '💫', color: 'text-cyan-400', rarity: 'Epic' };
+    if (stats.best_streak >= 50) return { title: 'Streak Legend', badge: '🌪️', color: 'text-red-400', rarity: 'Epic' };
+    if (stats.total_trades >= 1000) return { title: 'Trading Veteran', badge: '🌟', color: 'text-yellow-300', rarity: 'Rare' };
+    if (stats.total_trades >= 500) return { title: 'Elite Trader', badge: '👑', color: 'text-purple-300', rarity: 'Rare' };
+    if (stats.total_pnl >= 10000) return { title: 'Moon Walker', badge: '🚀', color: 'text-green-400', rarity: 'Rare' };
+    if (stats.total_pnl >= 5000) return { title: 'Hot Trader', badge: '🔥', color: 'text-orange-300', rarity: 'Uncommon' };
+    if (stats.win_rate >= 70 && stats.total_trades >= 100) return { title: 'Sharpshooter', badge: '🎯', color: 'text-blue-300', rarity: 'Uncommon' };
+    if (stats.total_trades >= 100) return { title: 'Veteran Warrior', badge: '🏅', color: 'text-gray-400', rarity: 'Uncommon' };
+    if (stats.total_pnl >= 1000) return { title: 'Profitable Trader', badge: '💎', color: 'text-cyan-300', rarity: 'Uncommon' };
+    if (stats.best_streak >= 10) return { title: 'Unstoppable', badge: '💥', color: 'text-red-300', rarity: 'Common' };
+    if (stats.total_trades >= 50) return { title: 'Skilled Trader', badge: '💹', color: 'text-green-300', rarity: 'Common' };
+    if (stats.total_trades >= 10) return { title: 'Apprentice Trader', badge: '📈', color: 'text-blue-200', rarity: 'Common' };
+    return { title: 'Battlefield Recruit', badge: '⚔️', color: 'text-gray-300', rarity: 'Common' };
+  };
+
+  const titleRankings = [
+    { rarity: 'Mythic', color: 'bg-gradient-to-r from-yellow-500 to-orange-500', textColor: 'text-yellow-400', titles: ['Battlefield Champion (#1)'] },
+    { rarity: 'Legendary', color: 'bg-gradient-to-r from-purple-500 to-pink-500', textColor: 'text-purple-400', titles: ['Elite Warrior (Top 3)', 'Master Trader (Top 10)', 'Legendary Profit King ($100K+ P&L)'] },
+    { rarity: 'Epic', color: 'bg-gradient-to-r from-blue-500 to-cyan-500', textColor: 'text-blue-400', titles: ['Whale Trader ($50K+ P&L)', 'Precision Expert (80%+ WR, 200+ trades)', 'Streak Legend (50+ streak)'] },
+    { rarity: 'Rare', color: 'bg-gradient-to-r from-green-500 to-emerald-500', textColor: 'text-green-400', titles: ['Trading Veteran (1000+ trades)', 'Elite Trader (500+ trades)', 'Moon Walker ($10K+ P&L)'] },
+    { rarity: 'Uncommon', color: 'bg-gradient-to-r from-gray-500 to-slate-500', textColor: 'text-gray-300', titles: ['Hot Trader ($5K+ P&L)', 'Sharpshooter (70%+ WR, 100+ trades)', 'Veteran Warrior (100+ trades)', 'Profitable Trader ($1K+ P&L)'] },
+    { rarity: 'Common', color: 'bg-gradient-to-r from-slate-600 to-slate-700', textColor: 'text-gray-400', titles: ['Unstoppable (10+ streak)', 'Skilled Trader (50+ trades)', 'Apprentice Trader (10+ trades)', 'Battlefield Recruit (Starter)'] },
+  ];
 
   if (loading) {
     return (
@@ -256,7 +289,7 @@ export default function UserProfilePage() {
         </div>
 
         {/* Additional Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 text-center">
             <p className="text-gray-400 text-sm mb-1">Total Trades</p>
             <p className="text-xl font-bold text-white">{profile.stats.total_trades}</p>
@@ -265,6 +298,18 @@ export default function UserProfilePage() {
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 text-center">
             <p className="text-gray-400 text-sm mb-1">Liquidations</p>
             <p className="text-xl font-bold text-red-400">💥 {profile.stats.times_liquidated}</p>
+          </div>
+
+          {/* Player Title */}
+          <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-4 text-center">
+            <p className="text-gray-400 text-sm mb-1">Player Title</p>
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-2xl">{getPlayerTitle(profile.stats).badge}</span>
+              <p className={`text-sm font-bold ${getPlayerTitle(profile.stats).color}`}>
+                {getPlayerTitle(profile.stats).title}
+              </p>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">{getPlayerTitle(profile.stats).rarity}</p>
           </div>
 
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 text-center">
@@ -313,15 +358,89 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* Achievements & Milestones */}
-        <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
-          <div className="p-4 border-b border-slate-700">
-            <h2 className="text-xl font-bold text-yellow-400">🏆 Achievements & Milestones</h2>
-          </div>
-          <div className="p-4">
-            <Achievements stats={profile.stats} />
-          </div>
+        {/* Achievements & Title Glossary Buttons */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <button
+            onClick={() => setShowAchievements(!showAchievements)}
+            className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 hover:border-purple-400 transition-all"
+          >
+            <div className="text-center">
+              <div className="text-4xl mb-2">🏆</div>
+              <h3 className="text-xl font-bold text-purple-400 mb-1">Achievements & Milestones</h3>
+              <p className="text-sm text-gray-400">View your progress and unlocked achievements</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setShowTitleGlossary(!showTitleGlossary)}
+            className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-lg p-6 hover:border-yellow-400 transition-all"
+          >
+            <div className="text-center">
+              <div className="text-4xl mb-2">👑</div>
+              <h3 className="text-xl font-bold text-yellow-400 mb-1">Title Glossary</h3>
+              <p className="text-sm text-gray-400">See all player titles and their rarity</p>
+            </div>
+          </button>
         </div>
+
+        {/* Achievements Modal */}
+        {showAchievements && (
+          <div className="bg-slate-800 border-2 border-purple-500 rounded-lg">
+            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-yellow-400">🏆 Achievements & Milestones</h2>
+              <button
+                onClick={() => setShowAchievements(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4">
+              <Achievements stats={profile.stats} />
+            </div>
+          </div>
+        )}
+
+        {/* Title Glossary Modal */}
+        {showTitleGlossary && (
+          <div className="bg-slate-800 border-2 border-yellow-500 rounded-lg">
+            <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-yellow-400">👑 Player Title Rankings</h2>
+              <button
+                onClick={() => setShowTitleGlossary(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-gray-300 text-sm mb-4">
+                Player titles are automatically assigned based on your best achievement. Higher rarity titles are rarer and more prestigious!
+              </p>
+              {titleRankings.map((tier) => (
+                <div key={tier.rarity} className={`${tier.color} rounded-lg p-4`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className="text-lg font-bold text-white">{tier.rarity}</h3>
+                    <div className="flex-1 h-1 bg-white/30 rounded"></div>
+                  </div>
+                  <ul className="space-y-1">
+                    {tier.titles.map((title, idx) => (
+                      <li key={idx} className="text-sm text-white/90 flex items-center gap-2">
+                        <span className="text-white">•</span>
+                        {title}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              <div className="bg-slate-700 rounded-lg p-4 mt-4">
+                <p className="text-xs text-gray-400 text-center">
+                  💡 Your highest rarity title is automatically displayed. Complete more achievements to unlock rarer titles!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Recent History */}
         <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
