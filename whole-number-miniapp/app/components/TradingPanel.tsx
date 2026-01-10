@@ -26,6 +26,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   const [leverage, setLeverage] = useState(50);
   const [positionSizePercent, setPositionSizePercent] = useState(10); // Percentage of balance
   const [inputValue, setInputValue] = useState(''); // Separate state for input
+  const [isTyping, setIsTyping] = useState(false); // Track if user is actively typing
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [isOpening, setIsOpening] = useState(false);
   const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
@@ -35,10 +36,12 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   // So we just use the percentage of balance directly
   const positionSize = Math.floor((positionSizePercent / 100) * Number(paperBalance));
   
-  // Update input value when position size changes from slider
+  // Update input value when position size changes from slider (but not when typing)
   useEffect(() => {
-    setInputValue(positionSize.toString());
-  }, [positionSize]);
+    if (!isTyping) {
+      setInputValue(positionSize.toString());
+    }
+  }, [positionSize, isTyping]);
   
   // Calculate fee for display purposes only (will be deducted from P&L later)
   const feePercentage = leverage > 1 ? leverage * 0.1 : 0;
@@ -276,6 +279,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
             <input
               type="text"
               value={inputValue}
+              onFocus={() => setIsTyping(true)}
               onChange={(e) => {
                 const value = e.target.value;
                 // Allow only digits
@@ -290,8 +294,9 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                 }
               }}
               onBlur={() => {
+                setIsTyping(false);
                 // Ensure value is valid on blur
-               const numValue = parseInt(inputValue) || 0;
+                const numValue = parseInt(inputValue) || 0;
                 const maxBalance = Math.floor(Number(paperBalance));
                 if (numValue < 1) {
                   setPositionSizePercent(1);
