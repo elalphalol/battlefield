@@ -396,27 +396,34 @@ export default function UserProfilePage() {
                 <p className="text-gray-400 text-center py-4">No open positions</p>
               ) : (
                 <div className="space-y-3">
-                  {profile.openPositions.map((pos) => (
+                  {profile.openPositions.map((pos: any) => (
                     <div key={pos.id} className="bg-slate-700/50 rounded-lg p-4">
                       <div className="flex items-center justify-between">
-                        <div>
+                        <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className={`font-bold ${pos.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                               {pos.position_type === 'long' ? '📈 LONG' : '📉 SHORT'} {pos.leverage}x
                             </span>
                           </div>
                           <p className="text-sm text-gray-400">
-                            Entry: ${pos.entry_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            Entry: ${pos.entry_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Size: ${pos.position_size.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            Size: ${pos.position_size.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Liq: ${pos.liquidation_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            Liq: ${pos.liquidation_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                           </p>
+                          <p className="text-xs text-gray-500">{formatShortDate(pos.opened_at)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-gray-500">{formatShortDate(pos.opened_at)}</p>
+                          {pos.current_pnl !== undefined ? (
+                            <p className={`text-xl font-bold ${pos.current_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {pos.current_pnl >= 0 ? '+' : ''}${pos.current_pnl.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-gray-500">P&L: N/A</p>
+                          )}
                         </div>
                       </div>
                     </div>
