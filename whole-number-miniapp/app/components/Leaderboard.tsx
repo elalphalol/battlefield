@@ -76,6 +76,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
     if (!address) return;
     
     try {
+      // Always fetch overall rank (not army-specific rank)
       const response = await fetch(getApiUrl(`api/leaderboard/rank/${address}`));
       const data = await response.json();
       
@@ -206,7 +207,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                     </div>
                     
                     <div className="flex gap-4 text-xs text-gray-400">
-                      <span>💰 ${Number(entry.paper_balance).toFixed(0)}</span>
+                      <span>💰 ${Number(entry.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>
                       <span>📊 {Number(entry.win_rate).toFixed(1)}% WR</span>
                       <span>🔥 {entry.current_streak} streak</span>
                     </div>
@@ -215,7 +216,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                   {/* P&L */}
                   <div className="hidden md:flex flex-col items-end gap-1">
                     <div className={`text-2xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {Number(entry.total_pnl) >= 0 ? '+' : ''}${Number(entry.total_pnl).toFixed(2)}
+                      {Number(entry.total_pnl) >= 0 ? '+' : ''}${Number(entry.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                     </div>
                     <div className="text-xs text-gray-400">
                       {entry.total_trades} trades

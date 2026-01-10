@@ -127,7 +127,7 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
         ) : (
           <>
             <span className="mr-2">💰</span>
-            Balance too high: ${Number(paperBalance).toFixed(0)}
+            Balance too high: ${Number(paperBalance).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
           </>
         )}
       </button>

@@ -35,7 +35,7 @@ export function UserStats({ userData }: UserStatsProps) {
         <div className="bg-slate-700/50 rounded-lg p-3">
           <div className="text-xs text-gray-400 mb-1">Total P&L</div>
           <div className={`text-xl font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toFixed(1)}
+            {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
           </div>
         </div>
 
