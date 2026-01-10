@@ -25,6 +25,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   const [tradeType, setTradeType] = useState<'long' | 'short'>('long');
   const [leverage, setLeverage] = useState(50);
   const [positionSizePercent, setPositionSizePercent] = useState(10); // Percentage of balance
+  const [inputValue, setInputValue] = useState(''); // Separate state for input
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [isOpening, setIsOpening] = useState(false);
   const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
@@ -33,6 +34,11 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
   // So we just use the percentage of balance directly
   const positionSize = Math.floor((positionSizePercent / 100) * Number(paperBalance));
+  
+  // Update input value when position size changes from slider
+  useEffect(() => {
+    setInputValue(positionSize.toString());
+  }, [positionSize]);
   
   // Calculate fee for display purposes only (will be deducted from P&L later)
   const feePercentage = leverage > 1 ? leverage * 0.1 : 0;
@@ -268,27 +274,31 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
           {/* Direct Dollar Input */}
           <div className="mb-3">
             <input
-              type="number"
-              min="1"
-              max={Math.floor(Number(paperBalance))}
-              step="1"
-              value={positionSize}
+              type="text"
+              value={inputValue}
               onChange={(e) => {
-                const value = Math.floor(Number(e.target.value) || 0);
-                const maxBalance = Math.floor(Number(paperBalance));
-                if (value >= 0 && value <= maxBalance) {
-                  const newPercent = Math.max(1, Math.min(100, Math.round((value / maxBalance) * 100)));
-                  setPositionSizePercent(newPercent);
+                const value = e.target.value;
+                // Allow only digits
+                if (value === '' || /^\d+$/.test(value)) {
+                  setInputValue(value);
+                  const numValue = parseInt(value) || 0;
+                  const maxBalance = Math.floor(Number(paperBalance));
+                  if (numValue > 0 && numValue <= maxBalance) {
+                    const newPercent = Math.max(1, Math.min(100, Math.round((numValue / maxBalance) * 100)));
+                    setPositionSizePercent(newPercent);
+                  }
                 }
               }}
-              onBlur={(e) => {
-                // Ensure value stays within bounds on blur
-                const value = Math.floor(Number(e.target.value) || 0);
+              onBlur={() => {
+                // Ensure value is valid on blur
+               const numValue = parseInt(inputValue) || 0;
                 const maxBalance = Math.floor(Number(paperBalance));
-                if (value < 1) {
+                if (numValue < 1) {
                   setPositionSizePercent(1);
-                } else if (value > maxBalance) {
+                  setInputValue(Math.floor((1 / 100) * maxBalance).toString());
+                } else if (numValue > maxBalance) {
                   setPositionSizePercent(100);
+                  setInputValue(maxBalance.toString());
                 }
               }}
               className="w-full bg-slate-700 text-white px-4 py-2 rounded border border-slate-600 focus:border-cyan-500 focus:outline-none"
