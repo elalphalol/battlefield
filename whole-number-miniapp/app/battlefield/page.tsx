@@ -572,8 +572,9 @@ export default function BattlefieldHome() {
                     <div className="bg-yellow-900/20 rounded p-3 border border-yellow-500/30">
                       <strong className="text-yellow-400">⚡ Pro Tip:</strong>
                       <p className="mt-1">
-                        Watch the army standings closely in the final days. You can join the winning army without opening new 
-                        positions by closing your current ones, or strategically close losing positions to help your army's total P&L!
+                        Watch the army standings closely in the final days. You can strategically switch to the winning army 
+                        by closing profitable positions in the opposite direction - since only winning trades count toward 
+                        army assignment, this is the only way to change your army affiliation before the weekly snapshot!
                       </p>
                     </div>
                   </div>
@@ -650,7 +651,7 @@ export default function BattlefieldHome() {
 
       {/* Footer */}
       <footer className="border-t border-slate-700 mt-12 py-6 text-center text-gray-500 text-sm space-y-3">
-        <p className="mb-2">⚔️ <strong>BATTLEFIELD</strong></p>
+        <p className="mb-2">⚔️ <strong>BATTLEFIELD</strong>⚔️ </p>
         <p className="text-xs">⚠️ Paper money only. No real funds at risk. High leverage trading is educational.</p>
         <p className="text-xs">Powered by $BATTLE token • Launching on Clanker.world</p>
         <div className="pt-4 border-t border-slate-800 space-y-1">
