@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 interface AchievementsProps {
   stats: {
     total_trades: number;
@@ -27,6 +29,9 @@ interface Achievement {
 }
 
 export function Achievements({ stats }: AchievementsProps) {
+  const [showUnlocked, setShowUnlocked] = useState(true);
+  const [showLocked, setShowLocked] = useState(false);
+
   // Point values: Common=5, Uncommon=10, Rare=25, Epic=50, Legendary=100, Mythic=200
   const allAchievements: Achievement[] = [
     // Trading Volume
@@ -162,14 +167,18 @@ export function Achievements({ stats }: AchievementsProps) {
         </div>
       </div>
 
-      {/* Unlocked Achievements */}
+      {/* Unlocked Achievements - Collapsible */}
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
-        <div className="p-4 border-b border-slate-700">
+        <button 
+          onClick={() => setShowUnlocked(!showUnlocked)}
+          className="w-full p-4 border-b border-slate-700 flex items-center justify-between hover:bg-slate-700/50 transition"
+        >
           <h3 className="text-xl font-bold text-yellow-400">
             🏆 Unlocked Achievements ({unlockedAchievements.length})
           </h3>
-        </div>
-        <div className="p-4">
+          <span className="text-2xl text-yellow-400">{showUnlocked ? '▼' : '▶'}</span>
+        </button>
+        {showUnlocked && (<div className="p-4">
           {unlockedAchievements.length === 0 ? (
             <p className="text-gray-400 text-center py-4">Start trading to unlock achievements!</p>
           ) : (
@@ -200,17 +209,21 @@ export function Achievements({ stats }: AchievementsProps) {
               ))}
             </div>
           )}
-        </div>
+        </div>)}
       </div>
 
-      {/* Locked Achievements */}
+      {/* Locked Achievements - Collapsible */}
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
-        <div className="p-4 border-b border-slate-700">
+        <button 
+          onClick={() => setShowLocked(!showLocked)}
+          className="w-full p-4 border-b border-slate-700 flex items-center justify-between hover:bg-slate-700/50 transition"
+        >
           <h3 className="text-xl font-bold text-gray-400">
             🔒 Locked Achievements ({lockedAchievements.length})
           </h3>
-        </div>
-        <div className="p-4">
+          <span className="text-2xl text-gray-400">{showLocked ? '▼' : '▶'}</span>
+        </button>
+        {showLocked && (<div className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {lockedAchievements.map((achievement) => (
               <div
@@ -248,7 +261,7 @@ export function Achievements({ stats }: AchievementsProps) {
               </div>
             ))}
           </div>
-        </div>
+        </div>)}
       </div>
     </div>
   );
