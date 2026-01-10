@@ -308,7 +308,7 @@ export default function BattlefieldHome() {
         {/* User Stats Bar (if logged in) */}
         {userData && (
           <div id="trading-section" className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
               <div>
                 <div className="text-xs text-gray-400">Army</div>
                 <div className="text-lg font-bold">
@@ -339,6 +339,13 @@ export default function BattlefieldHome() {
                 <div className="text-xs text-gray-400">Streak</div>
                 <div className="text-lg font-bold text-yellow-400">
                   🔥 {userData.current_streak}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">$BATTLE Tokens</div>
+                <div className="text-lg font-bold text-purple-400 flex items-center justify-center gap-1">
+                  <img src="/battlefield-logo.jpg" alt="$BATTLE" className="w-5 h-5 rounded-full" />
+                  {Number(userData.battle_tokens_earned).toLocaleString()}
                 </div>
               </div>
             </div>
@@ -448,18 +455,14 @@ export default function BattlefieldHome() {
             {/* Info Section */}
             <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 mb-6">
               <h3 className="text-xl font-bold text-yellow-400 mb-4">📚 How to Play</h3>
-              <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
+              <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-300">
                 <div>
-                  <div className="font-bold text-white mb-2">1️⃣ Your Army Claims You</div>
-                  <p>You don't choose your army - your army chooses YOU! Bears 🐻 claim you if your shorts dominate. Bulls 🐂 claim you if your longs win!</p>
+                  <div className="font-bold text-white mb-2">1️⃣ Start Trading</div>
+                  <p>Open leveraged positions (1x-200x). Profit from Bitcoin price movements with paper money.</p>
                 </div>
                 <div>
-                  <div className="font-bold text-white mb-2">2️⃣ Start Trading</div>
-                  <p>Open leveraged positions (1x-100x). Profit from Bitcoin price movements with paper money.</p>
-                </div>
-                <div>
-                  <div className="font-bold text-white mb-2">3️⃣ Compete & Win</div>
-                  <p>Climb the leaderboard! Top traders earn $BATTLE tokens and glory for their army.</p>
+                  <div className="font-bold text-white mb-2">2️⃣ Compete & Win</div>
+                  <p>Climb the leaderboard! Top traders earn $BATTLE tokens and glory!</p>
                 </div>
               </div>
             </div>
@@ -523,7 +526,7 @@ export default function BattlefieldHome() {
 
       {/* Footer */}
       <footer className="border-t border-slate-700 mt-12 py-6 text-center text-gray-500 text-sm space-y-3">
-        <p className="mb-2">⚔️ <strong>BATTLEFIELD</strong> - Bears 🐻 vs Bulls 🐂</p>
+        <p className="mb-2">⚔️ <strong>BATTLEFIELD</strong></p>
         <p className="text-xs">⚠️ Paper money only. No real funds at risk. High leverage trading is educational.</p>
         <p className="text-xs">Powered by $BATTLE token • Launching on Clanker.world</p>
         <div className="pt-4 border-t border-slate-800 space-y-1">
