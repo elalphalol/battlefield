@@ -321,40 +321,88 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* Open Positions */}
-        <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
-          <div className="p-4 border-b border-slate-700">
-            <h2 className="text-xl font-bold text-yellow-400">📊 Open Positions ({profile.openPositions.length})</h2>
-          </div>
-          <div className="p-4">
-            {profile.openPositions.length === 0 ? (
-              <p className="text-gray-400 text-center py-4">No open positions</p>
-            ) : (
-              <div className="space-y-3">
-                {profile.openPositions.map((pos) => (
-                  <div key={pos.id} className="bg-slate-700/50 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`font-bold ${pos.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
-                            {pos.position_type === 'long' ? '📈 LONG' : '📉 SHORT'} {pos.leverage}x
-                          </span>
+        {/* Open Positions & Trading History Side by Side */}
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Open Positions */}
+          <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
+            <div className="p-4 border-b border-slate-700">
+              <h2 className="text-xl font-bold text-yellow-400">📊 Open Positions ({profile.openPositions.length})</h2>
+            </div>
+            <div className="p-4 max-h-[600px] overflow-y-auto">
+              {profile.openPositions.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No open positions</p>
+              ) : (
+                <div className="space-y-3">
+                  {profile.openPositions.map((pos) => (
+                    <div key={pos.id} className="bg-slate-700/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`font-bold ${pos.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                              {pos.position_type === 'long' ? '📈 LONG' : '📉 SHORT'} {pos.leverage}x
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-400">
+                            Entry: ${pos.entry_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Size: ${pos.position_size.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Liq: ${pos.liquidation_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                          </p>
                         </div>
-                        <p className="text-sm text-gray-400">
-                          Entry: ${pos.entry_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} • Size: ${pos.position_size.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Liq: ${pos.liquidation_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">{formatShortDate(pos.opened_at)}</p>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">{formatShortDate(pos.opened_at)}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Trades Preview */}
+          <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
+            <div className="p-4 border-b border-slate-700">
+              <h2 className="text-xl font-bold text-yellow-400">📜 Recent Trades</h2>
+            </div>
+            <div className="p-4 max-h-[600px] overflow-y-auto">
+              {profile.recentHistory.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No trading history yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {profile.recentHistory.slice(0, 10).map((trade) => (
+                    <div key={trade.id} className="bg-slate-700/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`font-bold text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                              {trade.position_type === 'long' ? '📈 LONG' : '📉 SHORT'} {trade.leverage}x
+                            </span>
+                            {trade.status === 'liquidated' && (
+                              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded">
+                                💥 LIQ
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            ${trade.entry_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})} → ${trade.exit_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                          </p>
+                          <p className="text-xs text-gray-500">{formatShortDate(trade.closed_at)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-lg font-bold ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -405,7 +453,7 @@ export default function UserProfilePage() {
         {showTitleGlossary && (
           <div className="bg-slate-800 border-2 border-yellow-500 rounded-lg">
             <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-yellow-400">👑 Player Title Rankings</h2>
+              <h2 className="text-xl font-bold text-yellow-400">📚 Complete Achievement & Title Glossary</h2>
               <button
                 onClick={() => setShowTitleGlossary(false)}
                 className="text-gray-400 hover:text-white text-2xl"
@@ -413,134 +461,182 @@ export default function UserProfilePage() {
                 ✕
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
               <p className="text-gray-300 text-sm mb-4">
                 Player titles are automatically assigned based on your best achievement. Higher rarity titles are rarer and more prestigious!
               </p>
-              {titleRankings.map((tier) => (
-                <div key={tier.rarity} className={`${tier.color} rounded-lg p-4`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <h3 className="text-lg font-bold text-white">{tier.rarity}</h3>
-                    <div className="flex-1 h-1 bg-white/30 rounded"></div>
+              
+              {/* Title Rarity Rankings */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-yellow-400 mb-3">🏆 Player Title Rankings by Rarity</h3>
+                {titleRankings.map((tier) => (
+                  <div key={tier.rarity} className={`${tier.color} rounded-lg p-4`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-lg font-bold text-white">{tier.rarity}</h3>
+                      <div className="flex-1 h-1 bg-white/30 rounded"></div>
+                    </div>
+                    <ul className="space-y-1">
+                      {tier.titles.map((title, idx) => (
+                        <li key={idx} className="text-sm text-white/90 flex items-center gap-2">
+                          <span className="text-white">•</span>
+                          {title}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <ul className="space-y-1">
-                    {tier.titles.map((title, idx) => (
-                      <li key={idx} className="text-sm text-white/90 flex items-center gap-2">
-                        <span className="text-white">•</span>
-                        {title}
-                      </li>
-                    ))}
-                  </ul>
+                ))}
+              </div>
+
+              {/* Complete Achievement List */}
+              <div className="bg-slate-700 rounded-lg p-6 mt-6">
+                <h3 className="text-lg font-bold text-purple-400 mb-4">📋 Complete Achievement List</h3>
+                <p className="text-xs text-gray-400 mb-4">All 40+ achievements and their exact unlock requirements:</p>
+                
+                <div className="space-y-4">
+                  {/* Trading Volume */}
+                  <div>
+                    <h4 className="font-bold text-blue-400 mb-2">📊 Trading Volume Achievements</h4>
+                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
+                      <li>⚔️ First Blood - Complete 1 trade</li>
+                      <li>📈 Apprentice Trader - Complete 10 trades</li>
+                      <li>💹 Skilled Trader - Complete 50 trades</li>
+                      <li>🏅 Veteran Trader - Complete 100 trades</li>
+                      <li>👑 Elite Trader - Complete 500 trades</li>
+                      <li>🌟 Master Trader - Complete 1,000 trades</li>
+                    </ul>
+                  </div>
+
+                  {/* P&L */}
+                  <div>
+                    <h4 className="font-bold text-green-400 mb-2">💰 Profit & Loss Achievements</h4>
+                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
+                      <li>💰 First Profit - Reach $100 total P&L</li>
+                      <li>💎 Profitable Trader - Reach $1,000 total P&L</li>
+                      <li>🔥 Hot Streak - Reach $5,000 total P&L</li>
+                      <li>🚀 To The Moon - Reach $10,000 total P&L</li>
+                      <li>🐋 Whale Status - Reach $50,000 total P&L</li>
+                      <li>🏆 Legendary Profit - Reach $100,000 total P&L</li>
+                    </ul>
+                  </div>
+
+                  {/* Win Rate */}
+                  <div>
+                    <h4 className="font-bold text-purple-400 mb-2">🎯 Win Rate Achievements</h4>
+                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
+                      <li>⚖️ Balanced - Maintain 50%+ win rate (min 20 trades)</li>
+                      <li>✨ Consistent Winner - Maintain 60%+ win rate (min 50 trades)</li>
+                      <li>🎯 Sharpshooter - Maintain 70%+ win rate (min 100 trades)</li>
+                      <li>💫 Elite Precision - Maintain 80%+ win rate (min 200 trades)</li>
+                    </ul>
+                  </div>
+
+                  {/* Streaks */}
+                  <div>
+                    <h4 className="font-bold text-orange-400 mb-2">🔥 Win Streak Achievements</h4>
+                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
+                      <li>🔥 On Fire - Achieve 3-win streak</li>
+                      <li>🌡️ Heating Up - Achieve 5-win streak</li>
+                      <li>💥 Unstoppable - Achieve 10-win streak</li>
+                      <li>⚡ Lightning - Achieve 20-win streak</li>
+                      <li>🌪️ Legendary Streak - Achieve 50-win streak</li>
+                    </ul>
+                  </div>
+
+                  {/* Rankings */}
+                  <div>
+                    <h4 className="font-bold text-yellow-400 mb-2">🏅 Ranking Achievements</h4>
+                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
+                      <li>🏅 Top 100 - Reach Top 100 on leaderboard</li>
+                      <li>🥉 Top 50 - Reach Top 50 on leaderboard</li>
+                      <li>🥈 Top 10 Elite - Reach Top 10 on leaderboard</li>
+                      <li>🥇 Podium Finisher - Reach Top 3 on leaderboard</li>
+                      <li>👑 #1 Champion - Reach #1 on leaderboard</li>
+                    </ul>
+                  </div>
+
+                  {/* Survival */}
+                  <div>
+                    <h4 className="font-bold text-cyan-400 mb-2">🛡️ Survival Achievements</h4>
+                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
+                      <li>🛡️ Survivor - Complete 50 trades without liquidation</li>
+                      <li>🏰 Fortress - Complete 100 trades without liquidation</li>
+                      <li>💎 Diamond Hands - Complete 500 trades without liquidation</li>
+                    </ul>
+                  </div>
+
+                  {/* Special */}
+                  <div>
+                    <h4 className="font-bold text-pink-400 mb-2">✨ Special Achievements</h4>
+                    <ul className="text-sm text-gray-300 space-y-1 ml-4">
+                      <li>🎭 The Comeback - Recover from negative P&L to reach $1,000 profit (requires at least 1 liquidation)</li>
+                      <li>🎲 High Roller - Survive 10+ liquidations and still be profitable</li>
+                      <li>💯 Perfect Score - Maintain 100% win rate with 10+ trades</li>
+                    </ul>
+                  </div>
                 </div>
-              ))}
+              </div>
+
               <div className="bg-slate-700 rounded-lg p-4 mt-4">
                 <p className="text-xs text-gray-400 text-center">
-                  💡 Your highest rarity title is automatically displayed. Complete more achievements to unlock rarer titles!
+                  💡 Your highest rarity title is automatically displayed. Achievements unlock exactly as described above!
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Recent History */}
-        <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
-          <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-yellow-400">
-              📜 Trading History ({profile.pagination.totalRecords} total)
-            </h2>
-            <p className="text-sm text-gray-400">
-              Page {profile.pagination.currentPage} of {profile.pagination.totalPages}
+        {/* Full Trading History with Pagination - Button to expand */}
+        {profile.pagination.totalPages > 1 && (
+          <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6 text-center">
+            <h3 className="text-lg font-bold text-yellow-400 mb-2">
+              📜 View Full Trading History ({profile.pagination.totalRecords} total trades)
+            </h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Showing recent 10 trades above. Click below to view paginated history.
             </p>
-          </div>
-          <div className="p-4">
-            {profile.recentHistory.length === 0 ? (
-              <p className="text-gray-400 text-center py-4">No trading history yet</p>
-            ) : (
-              <>
-                <div className="space-y-3">
-                {profile.recentHistory.map((trade) => (
-                  <div key={trade.id} className="bg-slate-700/50 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`font-bold ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
-                            {trade.position_type === 'long' ? '📈 LONG' : '📉 SHORT'} {trade.leverage}x
-                          </span>
-                          {trade.status === 'liquidated' && (
-                            <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded">
-                              💥 LIQUIDATED
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-400">
-                          ${trade.entry_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} → ${trade.exit_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} • ${trade.position_size.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {formatShortDate(trade.closed_at)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-xl font-bold ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {((trade.pnl / trade.position_size) * 100).toFixed(1)}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-4 py-2 rounded-lg font-bold transition ${
+                  currentPage === 1
+                    ? 'bg-slate-700 text-gray-500 cursor-not-allowed'
+                    : 'bg-slate-700 text-white hover:bg-slate-600'
+                }`}
+              >
+                ← Prev
+              </button>
+
+              <div className="flex gap-2">
+                {Array.from({ length: Math.min(profile.pagination.totalPages, 5) }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`px-4 py-2 rounded-lg font-bold transition ${
+                      page === currentPage
+                        ? 'bg-yellow-500 text-slate-900'
+                        : 'bg-slate-700 text-white hover:bg-slate-600'
+                    }`}
+                  >
+                    {page}
+                  </button>
                 ))}
-                </div>
+              </div>
 
-                {/* Pagination Controls */}
-                {profile.pagination.totalPages > 1 && (
-                  <div className="mt-6 flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className={`px-4 py-2 rounded-lg font-bold transition ${
-                        currentPage === 1
-                          ? 'bg-slate-700 text-gray-500 cursor-not-allowed'
-                          : 'bg-slate-700 text-white hover:bg-slate-600'
-                      }`}
-                    >
-                      ← Prev
-                    </button>
-
-                    {/* Page Numbers */}
-                    <div className="flex gap-2">
-                      {Array.from({ length: profile.pagination.totalPages }, (_, i) => i + 1).map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`px-4 py-2 rounded-lg font-bold transition ${
-                            page === currentPage
-                              ? 'bg-yellow-500 text-slate-900'
-                              : 'bg-slate-700 text-white hover:bg-slate-600'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === profile.pagination.totalPages}
-                      className={`px-4 py-2 rounded-lg font-bold transition ${
-                        currentPage === profile.pagination.totalPages
-                          ? 'bg-slate-700 text-gray-500 cursor-not-allowed'
-                          : 'bg-slate-700 text-white hover:bg-slate-600'
-                      }`}
-                    >
-                      Next →
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === profile.pagination.totalPages}
+                className={`px-4 py-2 rounded-lg font-bold transition ${
+                  currentPage === profile.pagination.totalPages
+                    ? 'bg-slate-700 text-gray-500 cursor-not-allowed'
+                    : 'bg-slate-700 text-white hover:bg-slate-600'
+                }`}
+              >
+                Next →
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
