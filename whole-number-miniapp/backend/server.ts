@@ -740,20 +740,25 @@ app.get('/api/leaderboard/rank/:walletAddress', async (req: Request, res: Respon
   const { walletAddress } = req.params;
 
   try {
-    const result = await pool.query(
-      `SELECT 
-        ROW_NUMBER() OVER (ORDER BY total_pnl DESC) as rank,
-        *
-       FROM current_leaderboard
-       WHERE wallet_address = $1`,
+    // Get the user's P&L first
+    const userResult = await pool.query(
+      'SELECT total_pnl FROM users WHERE wallet_address = $1',
       [walletAddress]
     );
 
-    if (result.rows.length === 0) {
-      return res.json({ success: true, rank: null, message: 'User not on leaderboard yet' });
+    if (userResult.rows.length === 0) {
+      return res.json({ success: true, rank: null, message: 'User not found' });
     }
 
-    res.json({ success: true, rank: result.rows[0].rank, user: result.rows[0] });
+    const userPnl = Number(userResult.rows[0].total_pnl);
+
+    // Count how many users have higher P&L
+    const rankResult = await pool.query(
+      'SELECT COUNT(*) + 1 as rank FROM users WHERE total_pnl > $1',
+      [userPnl]
+    );
+
+    res.json({ success: true, rank: Number(rankResult.rows[0].rank) });
   } catch (error) {
     console.error('Error fetching user rank:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch rank' });
