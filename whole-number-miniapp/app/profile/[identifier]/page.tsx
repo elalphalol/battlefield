@@ -131,6 +131,60 @@ export default function UserProfilePage() {
     return `${diffDays}d ago`;
   };
 
+  // Calculate achievement points based on stats
+  const calculateAchievementPoints = (stats: UserProfile['stats']) => {
+    let totalPoints = 0;
+    const rank = Number(stats.rank);
+    
+    // Trading Volume
+    if (stats.total_trades >= 1) totalPoints += 5;
+    if (stats.total_trades >= 10) totalPoints += 5;
+    if (stats.total_trades >= 50) totalPoints += 5;
+    if (stats.total_trades >= 100) totalPoints += 10;
+    if (stats.total_trades >= 500) totalPoints += 25;
+    if (stats.total_trades >= 1000) totalPoints += 25;
+    
+    // P&L Milestones
+    if (stats.total_pnl >= 100) totalPoints += 5;
+    if (stats.total_pnl >= 1000) totalPoints += 10;
+    if (stats.total_pnl >= 5000) totalPoints += 10;
+    if (stats.total_pnl >= 10000) totalPoints += 25;
+    if (stats.total_pnl >= 50000) totalPoints += 50;
+    if (stats.total_pnl >= 100000) totalPoints += 100;
+    
+    // Win Rate
+    if (stats.win_rate >= 50 && stats.total_trades >= 20) totalPoints += 10;
+    if (stats.win_rate >= 60 && stats.total_trades >= 50) totalPoints += 25;
+    if (stats.win_rate >= 70 && stats.total_trades >= 100) totalPoints += 50;
+    if (stats.win_rate >= 80 && stats.total_trades >= 200) totalPoints += 50;
+    
+    // Streak
+    if (stats.best_streak >= 3) totalPoints += 5;
+    if (stats.best_streak >= 5) totalPoints += 10;
+    if (stats.best_streak >= 10) totalPoints += 10;
+    if (stats.best_streak >= 20) totalPoints += 25;
+    if (stats.best_streak >= 50) totalPoints += 50;
+    
+    // Rankings
+    if (rank <= 100 && rank > 0) totalPoints += 25;
+    if (rank <= 50 && rank > 0) totalPoints += 50;
+    if (rank <= 10 && rank > 0) totalPoints += 100;
+    if (rank <= 3 && rank > 0) totalPoints += 100;
+    if (rank === 1) totalPoints += 200;
+    
+    // Survival
+    if (stats.total_trades >= 50 && stats.times_liquidated === 0) totalPoints += 50;
+    if (stats.total_trades >= 100 && stats.times_liquidated === 0) totalPoints += 50;
+    if (stats.total_trades >= 500 && stats.times_liquidated === 0) totalPoints += 100;
+    
+    // Special
+    if (stats.total_pnl >= 1000 && stats.times_liquidated > 0) totalPoints += 100;
+    if (stats.times_liquidated >= 10 && stats.total_pnl > 0) totalPoints += 100;
+    if (stats.win_rate === 100 && stats.total_trades >= 10) totalPoints += 100;
+    
+    return totalPoints;
+  };
+
   // Get player title based on stats (automatically selects rarest/best)
   const getPlayerTitle = (stats: UserProfile['stats']) => {
     // Fix: Convert rank to number to handle both string and number types from API
@@ -241,6 +295,18 @@ export default function UserProfilePage() {
               </p>
             </div>
 
+            {/* Player Title - Moved here */}
+            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-4 text-center min-w-[200px]">
+              <p className="text-gray-400 text-xs mb-1">Player Title</p>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <span className="text-2xl">{getPlayerTitle(profile.stats).badge}</span>
+                <p className={`text-sm font-bold ${getPlayerTitle(profile.stats).color}`}>
+                  {getPlayerTitle(profile.stats).title}
+                </p>
+              </div>
+              <p className="text-xs text-gray-500">{getPlayerTitle(profile.stats).rarity}</p>
+            </div>
+
             {/* Rank Badge */}
             <div className="text-center">
               <div className="text-4xl mb-2">{getRankBadge(profile.stats.rank)}</div>
@@ -302,16 +368,12 @@ export default function UserProfilePage() {
             <p className="text-xl font-bold text-red-400">💥 {profile.stats.times_liquidated}</p>
           </div>
 
-          {/* Player Title */}
-          <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-4 text-center">
-            <p className="text-gray-400 text-sm mb-1">Player Title</p>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-2xl">{getPlayerTitle(profile.stats).badge}</span>
-              <p className={`text-sm font-bold ${getPlayerTitle(profile.stats).color}`}>
-                {getPlayerTitle(profile.stats).title}
-              </p>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">{getPlayerTitle(profile.stats).rarity}</p>
+          {/* Achievement Points */}
+          <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 text-center">
+            <p className="text-gray-400 text-sm mb-1">Achievement Points</p>
+            <p className="text-xl font-bold text-yellow-400 flex items-center justify-center gap-2">
+              ⭐ {calculateAchievementPoints(profile.stats)}
+            </p>
           </div>
 
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 text-center">
