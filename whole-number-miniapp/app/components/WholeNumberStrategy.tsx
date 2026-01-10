@@ -88,16 +88,6 @@ export function WholeNumberStrategy() {
             </p>
           </div>
 
-          <div className="bg-gradient-to-r from-green-900/30 to-red-900/30 border border-yellow-500 rounded-lg p-4 text-center">
-            <p className="font-bold text-yellow-300 text-lg mb-1">
-              ⚔️ Bears vs Bulls ⚔️
-            </p>
-            <p className="text-sm text-gray-300">
-              Your army claims YOU! Bears 🐻 claim you if your shorts dominate. Bulls 🐂 claim you if your longs win. 
-              Trade smart, climb the ranks, and bring glory to your army!
-            </p>
-          </div>
-
           {/* Deep Dive Button */}
           <div className=" mt-6 text-center">
             <Link 
