@@ -237,14 +237,14 @@ export function Achievements({ stats }: AchievementsProps) {
       target: 50,
     },
 
-    // Ranking Achievements
+    // Ranking Achievements - Fix: Convert rank to number to handle string/number types
     {
       id: 'rank_top100',
       title: '🏅 Top 100',
       description: 'Reached Top 100 on the leaderboard',
       icon: '🏅',
       category: 'rank',
-      unlocked: stats.rank <= 100 && stats.rank > 0,
+      unlocked: Number(stats.rank) <= 100 && Number(stats.rank) > 0,
     },
     {
       id: 'rank_top50',
@@ -252,7 +252,7 @@ export function Achievements({ stats }: AchievementsProps) {
       description: 'Reached Top 50 on the leaderboard',
       icon: '🥉',
       category: 'rank',
-      unlocked: stats.rank <= 50 && stats.rank > 0,
+      unlocked: Number(stats.rank) <= 50 && Number(stats.rank) > 0,
     },
     {
       id: 'rank_top10',
@@ -260,7 +260,7 @@ export function Achievements({ stats }: AchievementsProps) {
       description: 'Reached Top 10 on the leaderboard',
       icon: '🥈',
       category: 'rank',
-      unlocked: stats.rank <= 10 && stats.rank > 0,
+      unlocked: Number(stats.rank) <= 10 && Number(stats.rank) > 0,
     },
     {
       id: 'rank_top3',
@@ -268,7 +268,7 @@ export function Achievements({ stats }: AchievementsProps) {
       description: 'Reached Top 3 on the leaderboard',
       icon: '🥇',
       category: 'rank',
-      unlocked: stats.rank <= 3 && stats.rank > 0,
+      unlocked: Number(stats.rank) <= 3 && Number(stats.rank) > 0,
     },
     {
       id: 'rank_1',
@@ -276,7 +276,7 @@ export function Achievements({ stats }: AchievementsProps) {
       description: 'Reached #1 on the leaderboard',
       icon: '👑',
       category: 'rank',
-      unlocked: stats.rank === 1,
+      unlocked: Number(stats.rank) === 1,
     },
 
     // Survival Achievements
@@ -339,11 +339,12 @@ export function Achievements({ stats }: AchievementsProps) {
   // Calculate completion percentage
   const completionRate = ((unlockedAchievements.length / allAchievements.length) * 100).toFixed(1);
 
-  // Get title based on achievements
+  // Get title based on achievements - Fix: Convert rank to number
   const getPlayerTitle = (): { title: string; badge: string; color: string } => {
-    if (stats.rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400' };
-    if (stats.rank <= 3) return { title: 'Elite Warrior', badge: '🥇', color: 'text-orange-400' };
-    if (stats.rank <= 10) return { title: 'Master Trader', badge: '🥈', color: 'text-gray-300' };
+    const rank = Number(stats.rank);
+    if (rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400' };
+    if (rank <= 3) return { title: 'Elite Warrior', badge: '🥇', color: 'text-orange-400' };
+    if (rank <= 10) return { title: 'Master Trader', badge: '🥈', color: 'text-gray-300' };
     if (stats.total_pnl >= 100000) return { title: 'Legendary Profit King', badge: '🏆', color: 'text-purple-400' };
     if (stats.total_pnl >= 50000) return { title: 'Whale Trader', badge: '🐋', color: 'text-blue-400' };
     if (stats.win_rate >= 80 && stats.total_trades >= 200) return { title: 'Precision Expert', badge: '💫', color: 'text-cyan-400' };

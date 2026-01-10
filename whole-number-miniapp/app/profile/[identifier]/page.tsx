@@ -134,14 +134,17 @@ export default function UserProfilePage() {
 
   // Get player title based on stats (automatically selects rarest/best)
   const getPlayerTitle = (stats: UserProfile['stats']) => {
-    if (stats.rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400', rarity: 'Mythic' };
-    if (stats.rank <= 3) return { title: 'Elite Warrior', badge: '🥇', color: 'text-orange-400', rarity: 'Legendary' };
-    if (stats.rank <= 10) return { title: 'Master Trader', badge: '🥈', color: 'text-gray-300', rarity: 'Legendary' };
+    // Fix: Convert rank to number to handle both string and number types from API
+    const rank = Number(stats.rank);
+    
+    if (rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400', rarity: 'Mythic' };
+    if (rank <= 3) return { title: 'Elite Warrior', badge: '🥇', color: 'text-orange-400', rarity: 'Legendary' };
+    if (rank <= 10) return { title: 'Master Trader', badge: '🥈', color: 'text-gray-300', rarity: 'Legendary' };
     if (stats.total_pnl >= 100000) return { title: 'Legendary Profit King', badge: '🏆', color: 'text-purple-400', rarity: 'Legendary' };
     if (stats.total_pnl >= 50000) return { title: 'Whale Trader', badge: '🐋', color: 'text-blue-400', rarity: 'Epic' };
     if (stats.win_rate >= 80 && stats.total_trades >= 200) return { title: 'Precision Expert', badge: '💫', color: 'text-cyan-400', rarity: 'Epic' };
     if (stats.best_streak >= 50) return { title: 'Streak Legend', badge: '🌪️', color: 'text-red-400', rarity: 'Epic' };
-    if (stats.total_trades >= 1000) return { title: 'Trading Veteran', badge: '🌟', color: 'text-yellow-300', rarity: 'Rare' };
+    if (stats.total_trades >= 1000) return { title: 'Master Trader', badge: '🌟', color: 'text-yellow-300', rarity: 'Rare' };
     if (stats.total_trades >= 500) return { title: 'Elite Trader', badge: '👑', color: 'text-purple-300', rarity: 'Rare' };
     if (stats.total_pnl >= 10000) return { title: 'Moon Walker', badge: '🚀', color: 'text-green-400', rarity: 'Rare' };
     if (stats.total_pnl >= 5000) return { title: 'Hot Trader', badge: '🔥', color: 'text-orange-300', rarity: 'Uncommon' };
@@ -158,7 +161,7 @@ export default function UserProfilePage() {
     { rarity: 'Mythic', color: 'bg-gradient-to-r from-yellow-500 to-orange-500', textColor: 'text-yellow-400', titles: ['Battlefield Champion (#1)'] },
     { rarity: 'Legendary', color: 'bg-gradient-to-r from-purple-500 to-pink-500', textColor: 'text-purple-400', titles: ['Elite Warrior (Top 3)', 'Master Trader (Top 10)', 'Legendary Profit King ($100K+ P&L)'] },
     { rarity: 'Epic', color: 'bg-gradient-to-r from-blue-500 to-cyan-500', textColor: 'text-blue-400', titles: ['Whale Trader ($50K+ P&L)', 'Precision Expert (80%+ WR, 200+ trades)', 'Streak Legend (50+ streak)'] },
-    { rarity: 'Rare', color: 'bg-gradient-to-r from-green-500 to-emerald-500', textColor: 'text-green-400', titles: ['Trading Veteran (1000+ trades)', 'Elite Trader (500+ trades)', 'Moon Walker ($10K+ P&L)'] },
+    { rarity: 'Rare', color: 'bg-gradient-to-r from-green-500 to-emerald-500', textColor: 'text-green-400', titles: ['Master Trader (1000+ trades)', 'Elite Trader (500+ trades)', 'Moon Walker ($10K+ P&L)'] },
     { rarity: 'Uncommon', color: 'bg-gradient-to-r from-gray-500 to-slate-500', textColor: 'text-gray-300', titles: ['Hot Trader ($5K+ P&L)', 'Sharpshooter (70%+ WR, 100+ trades)', 'Veteran Warrior (100+ trades)', 'Profitable Trader ($1K+ P&L)'] },
     { rarity: 'Common', color: 'bg-gradient-to-r from-slate-600 to-slate-700', textColor: 'text-gray-400', titles: ['Unstoppable (10+ streak)', 'Skilled Trader (50+ trades)', 'Apprentice Trader (10+ trades)', 'Battlefield Recruit (Starter)'] },
   ];
