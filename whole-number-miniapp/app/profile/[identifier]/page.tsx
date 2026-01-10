@@ -207,7 +207,7 @@ export default function UserProfilePage() {
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
             <p className="text-gray-400 text-sm mb-1">Balance</p>
             <p className="text-2xl font-bold text-white">
-              ${profile.stats.paper_balance.toFixed(0)}
+              ${profile.stats.paper_balance.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
             </p>
           </div>
 
@@ -215,7 +215,7 @@ export default function UserProfilePage() {
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
             <p className="text-gray-400 text-sm mb-1">Total P&L</p>
             <p className={`text-2xl font-bold ${profile.stats.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {profile.stats.total_pnl >= 0 ? '+' : ''}${profile.stats.total_pnl.toFixed(2)}
+              {profile.stats.total_pnl >= 0 ? '+' : ''}${profile.stats.total_pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
             </p>
           </div>
 
@@ -282,10 +282,10 @@ export default function UserProfilePage() {
                           </span>
                         </div>
                         <p className="text-sm text-gray-400">
-                          Entry: ${pos.entry_price.toFixed(2)} • Size: ${pos.position_size.toFixed(2)}
+                          Entry: ${pos.entry_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} • Size: ${pos.position_size.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                         </p>
                         <p className="text-xs text-gray-500">
-                          Liq: ${pos.liquidation_price.toFixed(2)}
+                          Liq: ${pos.liquidation_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                         </p>
                       </div>
                       <div className="text-right">
@@ -324,7 +324,7 @@ export default function UserProfilePage() {
                           )}
                         </div>
                         <p className="text-sm text-gray-400">
-                          ${trade.entry_price.toFixed(2)} → ${trade.exit_price.toFixed(2)} • ${trade.position_size.toFixed(2)}
+                          ${trade.entry_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} → ${trade.exit_price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} • ${trade.position_size.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                         </p>
                         <p className="text-xs text-gray-500">
                           {formatShortDate(trade.closed_at)}
@@ -332,7 +332,7 @@ export default function UserProfilePage() {
                       </div>
                       <div className="text-right">
                         <p className={`text-xl font-bold ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
+                          {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                         </p>
                         <p className="text-xs text-gray-500">
                           {((trade.pnl / trade.position_size) * 100).toFixed(1)}%
