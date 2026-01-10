@@ -13,6 +13,7 @@ import { TradeHistory } from '../components/TradeHistory';
 import { WholeNumberStrategy as StrategyGuide } from '../components/WholeNumberStrategy';
 import { MarketCycle } from '../components/MarketCycle';
 import { BattleAlerts } from '../components/BattleAlerts';
+import { ArmyBattleStatus } from '../components/ArmyBattleStatus';
 import { useBTCPrice } from '../hooks/useBTCPrice';
 import { WholeNumberStrategy } from '../lib/strategy';
 
@@ -452,24 +453,93 @@ export default function BattlefieldHome() {
           </div>
         ) : (
           <div>
-            {/* Info Section */}
-            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-yellow-400 mb-4">📚 How to Play</h3>
-              <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-300">
-                <div>
-                  <div className="font-bold text-white mb-2">1️⃣ Start Trading</div>
-                  <p>Open leveraged positions (1x-200x). Profit from Bitcoin price movements with paper money.</p>
+            {/* Army Battle Status */}
+            <ArmyBattleStatus />
+
+            {/* How the Ranking System Works */}
+            <div className="bg-slate-800/50 border-2 border-yellow-500/50 rounded-lg p-6 mb-6">
+              <h3 className="text-2xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
+                <span>📊</span>
+                <span>How the Ranking System Works</span>
+              </h3>
+              
+              <div className="space-y-4 text-gray-300">
+                {/* Ranking Explanation */}
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                    <span className="text-xl">🏆</span>
+                    <span>Individual Rankings</span>
+                  </h4>
+                  <p className="text-sm">
+                    Player rankings are determined by your <strong className="text-green-400">total P&L (Profit & Loss)</strong>. 
+                    The more profit you make from your trades, the higher you climb on the leaderboard. 
+                    Trade strategically using leverage (1x-200x) to maximize your gains!
+                  </p>
                 </div>
-                <div>
-                  <div className="font-bold text-white mb-2">2️⃣ Compete & Win</div>
-                  <p>Climb the leaderboard! Top traders earn $BATTLE tokens and glory!</p>
+
+                {/* Army Airdrop Explanation */}
+                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-lg p-4 border-2 border-purple-500/50">
+                  <h4 className="font-bold text-purple-300 mb-3 flex items-center gap-2">
+                    <span className="text-xl">💎</span>
+                    <span>Weekly Army Airdrop</span>
+                  </h4>
+                  
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <strong className="text-white">How We Determine the Winning Army:</strong>
+                      <p className="mt-1">
+                        Every week, we calculate the <strong className="text-green-400">combined P&L</strong> of all players in the 
+                        <strong className="text-green-400"> 🐂 Bulls Army</strong> vs the combined P&L of all players in the 
+                        <strong className="text-red-400"> 🐻 Bears Army</strong>. The army with the highest total profit wins!
+                      </p>
+                    </div>
+
+                    <div className="bg-slate-900/50 rounded p-3 border border-slate-700">
+                      <strong className="text-yellow-400">📅 Weekly Announcement:</strong>
+                      <p className="mt-1">
+                        Every Monday at a set time, we announce the winning army with detailed stats showing the P&L difference. 
+                        <strong className="text-purple-400"> ALL players</strong> in the winning army receive a 
+                        <strong className="text-purple-400"> juicy $BATTLE token airdrop!</strong>
+                      </p>
+                    </div>
+
+                    <div>
+                      <strong className="text-white">Strategic Army Switching:</strong>
+                      <p className="mt-1">
+                        Your army is automatically determined by your <strong className="text-blue-400">open positions</strong>. 
+                        You can switch armies anytime by opening positions in the opposite direction - 
+                        even at the last second before the weekly snapshot! 
+                        Use the Army Battle Status above to see which army is winning and plan your strategy.
+                      </p>
+                    </div>
+
+                    <div className="bg-yellow-900/20 rounded p-3 border border-yellow-500/30">
+                      <strong className="text-yellow-400">⚡ Pro Tip:</strong>
+                      <p className="mt-1">
+                        Watch the army standings closely in the final days. You can join the winning army without opening new 
+                        positions by closing your current ones, or strategically close losing positions to help your army's total P&L!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weekly Reset */}
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                    <span className="text-xl">🔄</span>
+                    <span>Weekly Reset</span>
+                  </h4>
+                  <p className="text-sm">
+                    After each weekly airdrop, the ranking system continues as normal. A new week begins every Monday, 
+                    but army assignments stay dynamic - they're always based on your current positions and can change anytime!
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Rewards Info */}
+            {/* Individual Rewards Info */}
             <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-purple-400 mb-3 text-center">💎 Weekly Rewards</h3>
+              <h3 className="text-xl font-bold text-purple-400 mb-3 text-center">🏆 Top Trader Rewards (Individual)</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
                 <div>
                   <div className="text-2xl mb-1">🥇</div>

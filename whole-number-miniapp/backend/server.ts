@@ -767,11 +767,46 @@ app.get('/api/leaderboard/rank/:walletAddress', async (req: Request, res: Respon
 // Get army stats
 app.get('/api/army/stats', async (req: Request, res: Response) => {
   try {
-    const result = await pool.query('SELECT * FROM army_stats ORDER BY army');
+    // Get total P&L and player count for each army
+    const bullsStats = await pool.query(
+      `SELECT 
+        COUNT(*) as player_count,
+        COALESCE(SUM(total_pnl), 0) as total_pnl
+       FROM users
+       WHERE army = 'bulls'`
+    );
+
+    const bearsStats = await pool.query(
+      `SELECT 
+        COUNT(*) as player_count,
+        COALESCE(SUM(total_pnl), 0) as total_pnl
+       FROM users
+       WHERE army = 'bears'`
+    );
+
+    // Calculate next Monday for weekly snapshot
+    const getNextMonday = () => {
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek); // Days until next Monday
+      
+      const nextMonday = new Date(now);
+      nextMonday.setDate(now.getDate() + daysUntilMonday);
+      nextMonday.setHours(12, 0, 0, 0); // Set to 12:00 PM (noon) on Monday
+      
+      return nextMonday.toISOString();
+    };
 
     const stats = {
-      bears: result.rows.find(r => r.army === 'bears'),
-      bulls: result.rows.find(r => r.army === 'bulls')
+      bulls: {
+        totalPnl: Number(bullsStats.rows[0].total_pnl),
+        playerCount: Number(bullsStats.rows[0].player_count)
+      },
+      bears: {
+        totalPnl: Number(bearsStats.rows[0].total_pnl),
+        playerCount: Number(bearsStats.rows[0].player_count)
+      },
+      weekEndsAt: getNextMonday()
     };
 
     res.json({ success: true, stats });
