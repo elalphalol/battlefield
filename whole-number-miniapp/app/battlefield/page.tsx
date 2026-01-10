@@ -506,10 +506,12 @@ export default function BattlefieldHome() {
                     <div>
                       <strong className="text-white">Strategic Army Switching:</strong>
                       <p className="mt-1">
-                        Your army is automatically determined by your <strong className="text-blue-400">open positions</strong>. 
-                        You can switch armies anytime by opening positions in the opposite direction - 
+                        Your army is determined by comparing your <strong className="text-blue-400">total positive P&L from longs</strong> vs 
+                        <strong className="text-red-400"> total positive P&L from shorts</strong>. 
+                        Bulls = more profit from longs, Bears = more profit from shorts. 
+                        Switch armies by <strong className="text-yellow-400">closing winning positions</strong> in the opposite direction - 
                         even at the last second before the weekly snapshot! 
-                        Use the Army Battle Status above to see which army is winning and plan your strategy.
+                        Only profitable trades count, so you can't sabotage your army.
                       </p>
                     </div>
 

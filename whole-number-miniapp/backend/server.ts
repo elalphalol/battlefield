@@ -767,23 +767,6 @@ app.get('/api/leaderboard/rank/:walletAddress', async (req: Request, res: Respon
 // Get army stats
 app.get('/api/army/stats', async (req: Request, res: Response) => {
   try {
-    // Get total P&L and player count for each army
-    const bullsStats = await pool.query(
-      `SELECT 
-        COUNT(*) as player_count,
-        COALESCE(SUM(total_pnl), 0) as total_pnl
-       FROM users
-       WHERE army = 'bulls'`
-    );
-
-    const bearsStats = await pool.query(
-      `SELECT 
-        COUNT(*) as player_count,
-        COALESCE(SUM(total_pnl), 0) as total_pnl
-       FROM users
-       WHERE army = 'bears'`
-    );
-
     // Calculate next Monday for weekly snapshot
     const getNextMonday = () => {
       const now = new Date();
@@ -794,8 +777,54 @@ app.get('/api/army/stats', async (req: Request, res: Response) => {
       nextMonday.setDate(now.getDate() + daysUntilMonday);
       nextMonday.setHours(12, 0, 0, 0); // Set to 12:00 PM (noon) on Monday
       
-      return nextMonday.toISOString();
+      return nextMonday;
     };
+
+    // Get last Monday (beginning of current week)
+    const getLastMonday = () => {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Days since last Monday
+      
+      const lastMonday = new Date(now);
+      lastMonday.setDate(now.getDate() - daysToSubtract);
+      lastMonday.setHours(12, 0, 0, 0); // Set to 12:00 PM (noon) on Monday
+      
+      return lastMonday;
+    };
+
+    const weekStart = getLastMonday();
+    const weekEnd = getNextMonday();
+
+    // For Bulls Army: Sum ONLY POSITIVE P&L from LONG positions closed this week
+    const bullsStats = await pool.query(
+      `SELECT 
+        COUNT(DISTINCT u.id) as player_count,
+        COALESCE(SUM(CASE WHEN t.pnl > 0 THEN t.pnl ELSE 0 END), 0) as total_pnl
+       FROM users u
+       LEFT JOIN trades t ON u.id = t.user_id 
+         AND t.position_type = 'long' 
+         AND t.status IN ('closed', 'liquidated')
+         AND t.closed_at >= $1
+         AND t.closed_at < $2
+       WHERE u.army = 'bulls'`,
+      [weekStart, weekEnd]
+    );
+
+    // For Bears Army: Sum ONLY POSITIVE P&L from SHORT positions closed this week
+    const bearsStats = await pool.query(
+      `SELECT 
+        COUNT(DISTINCT u.id) as player_count,
+        COALESCE(SUM(CASE WHEN t.pnl > 0 THEN t.pnl ELSE 0 END), 0) as total_pnl
+       FROM users u
+       LEFT JOIN trades t ON u.id = t.user_id 
+         AND t.position_type = 'short' 
+         AND t.status IN ('closed', 'liquidated')
+         AND t.closed_at >= $1
+         AND t.closed_at < $2
+       WHERE u.army = 'bears'`,
+      [weekStart, weekEnd]
+    );
 
     const stats = {
       bulls: {
@@ -806,7 +835,7 @@ app.get('/api/army/stats', async (req: Request, res: Response) => {
         totalPnl: Number(bearsStats.rows[0].total_pnl),
         playerCount: Number(bearsStats.rows[0].player_count)
       },
-      weekEndsAt: getNextMonday()
+      weekEndsAt: weekEnd.toISOString()
     };
 
     res.json({ success: true, stats });

@@ -204,7 +204,7 @@ export function ArmyBattleStatus() {
             </strong> army will receive $BATTLE tokens when snapshot is taken!
           </p>
           <p className="text-xs text-gray-400 mt-2">
-            💡 Switch armies anytime by opening positions in the opposite direction
+            💡 Switch armies by closing winning positions in the opposite direction. Only positive P&L counts!
           </p>
         </div>
       </div>
