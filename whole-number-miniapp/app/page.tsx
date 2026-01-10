@@ -26,7 +26,7 @@ export default function LandingPage() {
           <p className="text-xl sm:text-2xl md:text-3xl text-gray-300 font-bold">
           </p>
           <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto">
-            Paper trade Bitcoin up tp 200x leverage. Master the Whole Number Strategy. 
+            Paper trade Bitcoin up to 200x leverage. Master the Whole Number Strategy. 
             Compete for glory and earn $BATTLE tokens!
           </p>
         </div>
