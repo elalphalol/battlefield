@@ -187,18 +187,31 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
               >
                 <div className="flex items-center gap-4">
                   {/* Rank */}
-                  <div className="text-2xl font-bold w-12 text-center">
+                  <div className="text-2xl font-bold w-12 text-center flex-shrink-0">
                     {getRankBadge(rank)}
                   </div>
+
+                  {/* Profile Picture */}
+                  {entry.pfp_url ? (
+                    <img 
+                      src={entry.pfp_url} 
+                      alt={entry.username || `Trader ${entry.fid}`}
+                      className="w-12 h-12 rounded-full border-2 border-slate-600 flex-shrink-0"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className={`w-12 h-12 rounded-full border-2 ${entry.army === 'bears' ? 'border-red-500 bg-red-900/30' : 'border-green-500 bg-green-900/30'} flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-2xl">{getArmyEmoji(entry.army)}</span>
+                    </div>
+                  )}
 
                   {/* User Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xl ${getArmyColor(entry.army)}`}>
-                        {getArmyEmoji(entry.army)}
-                      </span>
                       <span className="font-bold text-white truncate">
-                        {entry.username || `Trader ${entry.fid}`}
+                        {entry.username || `Trader${entry.fid}`}
                       </span>
                       {isUserEntry && (
                         <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded">
