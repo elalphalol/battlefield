@@ -180,7 +180,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
             return (
               <div
                 key={entry.wallet_address}
-                onClick={() => router.push(`/profile/${entry.fid}`)}
+                onClick={() => router.push(`/profile/${entry.fid || entry.wallet_address}`)}
                 className={`p-4 hover:bg-slate-700/50 transition-colors cursor-pointer ${
                   isUserEntry ? 'bg-blue-900/20 border-l-4 border-blue-500' : ''
                 }`}

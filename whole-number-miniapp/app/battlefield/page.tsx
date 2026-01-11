@@ -654,7 +654,7 @@ export default function BattlefieldHome() {
         {/* Profile Button */}
         {address && userData && (
           <button
-            onClick={() => window.location.href = `/profile/${userData.fid}`}
+            onClick={() => window.location.href = `/profile/${userData.fid || userData.wallet_address}`}
             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
             aria-label="My Profile"
           >
