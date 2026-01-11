@@ -1,20 +1,7 @@
-import { createCanvas, registerFont } from 'canvas';
+import { createCanvas, loadImage } from 'canvas';
+import path from 'path';
 
 export const runtime = 'nodejs';
-
-// Try to register DejaVu Sans font (common on Linux servers)
-try {
-  registerFont('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', { 
-    family: 'DejaVu Sans', 
-    weight: 'bold' 
-  });
-  registerFont('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', { 
-    family: 'DejaVu Sans', 
-    weight: 'normal' 
-  });
-} catch (e) {
-  console.log('DejaVu Sans font not found, using fallback');
-}
 
 export async function GET(request: Request) {
   // Test endpoint
@@ -37,57 +24,66 @@ export async function GET(request: Request) {
     const leverage = searchParams.get('leverage') || '1';
 
     const isProfit = parseFloat(pnlPercent) >= 0;
-    const isBears = army === 'bears';
 
-    // Create canvas
+    // Determine which template to use
+    const templateName = isProfit 
+      ? `${army}-win.png` 
+      : `${army}-loss.png`;
+    
+    const templatePath = path.join(process.cwd(), 'public', templateName);
+
+    // Load the template image
+    const template = await loadImage(templatePath);
+
+    // Create canvas with template
     const canvas = createCanvas(1200, 630);
     const ctx = canvas.getContext('2d');
 
-    // Background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 1200, 630);
-    gradient.addColorStop(0, isBears ? '#7f1d1d' : '#14532d');
-    gradient.addColorStop(1, '#0f172a');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 1200, 630);
+    // Draw template as background
+    ctx.drawImage(template, 0, 0, 1200, 630);
 
-    // Use DejaVu Sans (registered at module load)
-    const fontFamily = 'DejaVu Sans, sans-serif';
-    
+    // Add semi-transparent overlay in center for better text readability
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(200, 80, 800, 470);
+
+    // Setup text rendering with fallback fonts
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
     // Title
     ctx.fillStyle = '#fbbf24';
-    ctx.font = `bold 60px ${fontFamily}`;
-    ctx.textAlign = 'center';
-    ctx.fillText('BATTLEFIELD', 600, 100);
+    ctx.font = 'bold 60px Arial, sans-serif';
+    ctx.fillText('BATTLEFIELD', 600, 120);
 
     // Subtitle
     ctx.fillStyle = '#9ca3af';
-    ctx.font = `24px ${fontFamily}`;
-    ctx.fillText('Bears vs Bulls', 600, 140);
+    ctx.font = '24px Arial, sans-serif';
+    ctx.fillText('Bears vs Bulls', 600, 170);
 
     // Username & Army
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 36px ${fontFamily}`;
-    ctx.fillText(`${username} - ${army.toUpperCase()} ARMY`, 600, 200);
+    ctx.font = 'bold 36px Arial, sans-serif';
+    ctx.fillText(`${username} - ${army.toUpperCase()} ARMY`, 600, 230);
 
     // Position Type
     ctx.fillStyle = '#9ca3af';
-    ctx.font = `28px ${fontFamily}`;
-    ctx.fillText(`${positionType.toUpperCase()} ${leverage}x`, 600, 250);
+    ctx.font = '28px Arial, sans-serif';
+    ctx.fillText(`${positionType.toUpperCase()} ${leverage}x`, 600, 280);
 
     // P&L Percentage (BIG)
     ctx.fillStyle = isProfit ? '#22c55e' : '#ef4444';
-    ctx.font = `bold 120px ${fontFamily}`;
+    ctx.font = 'bold 120px Arial, sans-serif';
     const pnlText = `${isProfit ? '+' : ''}${pnlPercent}%`;
-    ctx.fillText(pnlText, 600, 380);
+    ctx.fillText(pnlText, 600, 390);
 
     // P&L Dollar Amount
-    ctx.font = `bold 48px ${fontFamily}`;
+    ctx.font = 'bold 48px Arial, sans-serif';
     const dollarText = `${isProfit ? '+' : ''}$${pnl}`;
-    ctx.fillText(dollarText, 600, 450);
+    ctx.fillText(dollarText, 600, 470);
 
     // Footer
-    ctx.fillStyle = '#6b7280';
-    ctx.font = `24px ${fontFamily}`;
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '20px Arial, sans-serif';
     ctx.fillText('battlefield-roan.vercel.app', 600, 580);
 
     // Return as PNG
