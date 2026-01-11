@@ -89,12 +89,7 @@ export default function UserProfilePage() {
 
   // Load profile on mount and when identifier/page changes
   useEffect(() => {
-    // Wait a moment for price to load, or load anyway after timeout
-    const timer = setTimeout(() => {
-      fetchProfile(currentPage);
-    }, currentPrice ? 0 : 1000);
-    
-    return () => clearTimeout(timer);
+    fetchProfile(currentPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identifier, currentPage]);
 
