@@ -109,39 +109,84 @@ app.post('/api/users', async (req: Request, res: Response) => {
   }
 
   try {
-    // Check if user exists
+    // Check if user exists by FID or wallet address
     const existingUser = await pool.query(
-      'SELECT * FROM users WHERE fid = $1 OR wallet_address = $2',
+      'SELECT * FROM users WHERE fid = $1 OR LOWER(wallet_address) = LOWER($2)',
       [fid, walletAddress]
     );
 
     if (existingUser.rows.length > 0) {
-      // Update existing user
+      // Update existing user with new Farcaster data
       const updated = await pool.query(
         `UPDATE users 
-         SET username = COALESCE($1, username),
-             pfp_url = COALESCE($2, pfp_url),
-             army = COALESCE($3, army),
+         SET fid = $1,
+             username = $2,
+             pfp_url = $3,
+             wallet_address = LOWER($4),
+             army = COALESCE($5, army),
              last_active = NOW()
-         WHERE fid = $4
+         WHERE id = $6
          RETURNING *`,
-        [username, pfpUrl, army, fid]
+        [fid, username || existingUser.rows[0].username, pfpUrl, walletAddress, army, existingUser.rows[0].id]
       );
+      console.log(`✅ Updated existing user: ${username} (FID: ${fid})`);
       return res.json({ success: true, user: updated.rows[0], isNew: false });
     }
 
-    // Create new user
+    // Create new user with Farcaster data
     const newUser = await pool.query(
       `INSERT INTO users (fid, wallet_address, username, pfp_url, army, paper_balance)
-       VALUES ($1, $2, $3, $4, $5, 10000.00)
+       VALUES ($1, LOWER($2), $3, $4, $5, 10000.00)
        RETURNING *`,
-      [fid, walletAddress, username, pfpUrl, army || 'bulls']
+      [fid, walletAddress, username || `User${fid}`, pfpUrl, army || 'bulls']
     );
 
+    console.log(`✅ Created new user: ${newUser.rows[0].username} (FID: ${fid})`);
     res.json({ success: true, user: newUser.rows[0], isNew: true });
   } catch (error) {
     console.error('Error creating/updating user:', error);
     res.status(500).json({ success: false, message: 'Failed to process user' });
+  }
+});
+
+// Update existing user with Farcaster data
+app.post('/api/users/update-farcaster', async (req: Request, res: Response) => {
+  const { walletAddress, fid, username, pfpUrl } = req.body;
+
+  if (!walletAddress || !fid) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Wallet address and FID required' 
+    });
+  }
+
+  try {
+    const updated = await pool.query(
+      `UPDATE users 
+       SET fid = $1, 
+           username = $2, 
+           pfp_url = $3, 
+           last_active = NOW()
+       WHERE LOWER(wallet_address) = LOWER($4)
+       RETURNING *`,
+      [fid, username, pfpUrl, walletAddress]
+    );
+
+    if (updated.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    console.log(`✅ Updated user with Farcaster data: ${username} (FID: ${fid})`);
+    res.json({ success: true, user: updated.rows[0] });
+  } catch (error) {
+    console.error('Error updating user with Farcaster data:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update user' 
+    });
   }
 });
 
