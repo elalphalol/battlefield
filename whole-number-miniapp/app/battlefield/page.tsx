@@ -48,15 +48,28 @@ export default function BattlefieldHome() {
   // Initialize Farcaster and get wallet address
   useEffect(() => {
     const initFarcaster = async () => {
-      const { farcasterAuth } = await import('../lib/farcaster');
-      await farcasterAuth.initialize();
-      
-      if (farcasterAuth.isInFarcasterFrame()) {
-        const signInResult = await farcasterAuth.signInWithFarcaster();
-        if (signInResult) {
-          console.log('✅ Farcaster wallet detected:', signInResult.walletAddress);
-          setFarcasterWallet(signInResult.walletAddress);
+      try {
+        console.log('🔍 Initializing Farcaster...');
+        const { farcasterAuth } = await import('../lib/farcaster');
+        const initialized = await farcasterAuth.initialize();
+        console.log('Farcaster initialized:', initialized);
+        
+        if (farcasterAuth.isInFarcasterFrame()) {
+          console.log('✅ Running in Farcaster Frame');
+          const signInResult = await farcasterAuth.signInWithFarcaster();
+          console.log('Sign in result:', signInResult);
+          
+          if (signInResult && signInResult.walletAddress) {
+            console.log('✅ Farcaster wallet detected:', signInResult.walletAddress);
+            setFarcasterWallet(signInResult.walletAddress);
+          } else {
+            console.warn('⚠️ No wallet address in Farcaster sign-in result');
+          }
+        } else {
+          console.log('⚠️ Not in Farcaster Frame');
         }
+      } catch (error) {
+        console.error('❌ Farcaster initialization error:', error);
       }
     };
     
