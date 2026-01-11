@@ -379,9 +379,9 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
       {/* Open Positions */}
       {openTrades.length > 0 && (
         <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
-          <h3 className="text-lg font-bold text-yellow-400 mb-3">📊 Open Positions ({openTrades.length}/10)</h3>
+          <h3 className="text-xl font-bold text-yellow-400 mb-4">📊 Open Positions ({openTrades.length}/10)</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {openTrades.map((trade) => {
               const { pnl, percentage } = calculatePnL(trade);
               const isLiquidationWarning = isNearLiquidation(trade);
@@ -389,7 +389,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
               return (
                 <div
                   key={trade.id}
-                  className={`border rounded p-2 text-xs ${
+                  className={`border-2 rounded-lg p-3 ${
                     isLiquidationWarning
                       ? 'border-red-500 bg-red-900/20 animate-pulse'
                       : pnl >= 0
@@ -398,20 +398,20 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1">
-                      <span className={`text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-base ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                         {trade.position_type === 'long' ? '📈' : '📉'}
                       </span>
-                      <span className={`font-bold text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`font-bold text-base ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                         {trade.position_type.toUpperCase()} {trade.leverage}x
                       </span>
                     </div>
-                    <div className={`font-bold text-sm ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`font-bold text-base ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {pnl >= 0 ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-1 text-[10px] text-gray-400 mb-2">
+                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 mb-3">
                     <div>Entry: ${Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     <div>Now: ${btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     <div>Size: ${Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
@@ -420,7 +420,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                   </div>
 
                   {isLiquidationWarning && (
-                    <div className="bg-red-500/20 border border-red-500 rounded px-1 py-0.5 mb-1 text-[10px] text-red-300 text-center font-bold">
+                    <div className="bg-red-500/20 border border-red-500 rounded px-2 py-1 mb-2 text-xs text-red-300 text-center font-bold">
                       ⚠️ LIQUIDATION WARNING!
                     </div>
                   )}
@@ -428,7 +428,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                   <button
                     onClick={() => handleCloseTrade(trade.id)}
                     disabled={closingTradeId === trade.id}
-                    className="w-full bg-slate-600 hover:bg-slate-500 text-white py-1 rounded text-xs font-semibold transition-all disabled:opacity-50"
+                    className="w-full bg-slate-600 hover:bg-slate-500 text-white py-2 rounded text-sm font-semibold transition-all disabled:opacity-50"
                   >
                     {closingTradeId === trade.id ? 'Closing...' : 'Close'}
                   </button>

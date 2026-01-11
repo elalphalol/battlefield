@@ -94,7 +94,7 @@ export function TradeHistory() {
     <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
       <h3 className="text-xl font-bold text-yellow-400 mb-4">📜 Trade History (Last 5)</h3>
       
-      <div className="space-y-2">
+      <div className="space-y-3">
         {history.map((trade) => {
           const pnl = Number(trade.pnl);
           const pnlPercentage = (pnl / Number(trade.position_size)) * 100;
