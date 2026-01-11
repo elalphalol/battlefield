@@ -85,11 +85,13 @@ export default function UserProfilePage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Load profile on mount and when identifier/page changes
+  // Load profile on mount and when identifier/page changes (only when price is available)
   useEffect(() => {
-    fetchProfile(currentPage);
+    if (currentPrice) {
+      fetchProfile(currentPage);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [identifier, currentPage]);
+  }, [identifier, currentPage, currentPrice]);
 
   const fetchProfile = async (page: number = 1) => {
     try {
