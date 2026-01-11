@@ -34,3 +34,15 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Mobile safe area support */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ensure modals don't overflow viewport on mobile */
+@supports (height: 100dvh) {
+  .mobile-modal {
+    max-height: 75dvh;
+  }
+}

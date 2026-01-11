@@ -47,12 +47,10 @@ export function WalletConnect() {
         
         // Show success message
         console.log('✅ Farcaster authentication successful!');
-      } else {
-        alert('❌ Failed to sign in with Farcaster. Please try again.');
       }
     } catch (error) {
       console.error('Farcaster sign-in error:', error);
-      alert('❌ Failed to sign in with Farcaster. Please try again.');
+      // Only log error, don't show alert - user can try wallet connection instead
     } finally {
       setFarcasterConnecting(false);
     }
@@ -173,8 +171,8 @@ export function WalletConnect() {
           />
           
           {/* Modal - improved positioning for mobile */}
-          <div className="fixed md:absolute left-0 right-0 md:right-0 md:left-auto bottom-0 md:bottom-auto md:top-full md:mt-2 w-full md:w-80 bg-slate-800 border-2 border-slate-700 rounded-t-2xl md:rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto">
-            <div className="p-4">
+          <div className="fixed md:absolute left-0 right-0 md:right-0 md:left-auto bottom-0 md:bottom-auto md:top-full md:mt-2 w-full md:w-80 bg-slate-800 border-2 border-slate-700 rounded-t-2xl md:rounded-lg shadow-xl z-50 max-h-[75vh] md:max-h-[90vh] overflow-y-auto safe-bottom">
+            <div className="p-4 pb-6">
               {/* Mobile drag handle */}
               <div className="w-12 h-1 bg-slate-600 rounded-full mx-auto mb-4 md:hidden" />
               
