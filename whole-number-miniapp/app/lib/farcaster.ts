@@ -1,0 +1,140 @@
+// Farcaster Authentication Integration
+import sdk from '@farcaster/frame-sdk';
+
+export interface FarcasterUser {
+  fid: number;
+  username?: string;
+  displayName?: string;
+  pfpUrl?: string;
+  custody?: string;
+  verifications?: string[];
+}
+
+interface FarcasterContext {
+  user?: {
+    fid: number;
+    username?: string;
+    displayName?: string;
+    pfpUrl?: string;
+    custodyAddress?: string;
+    verifications?: string[];
+  };
+}
+
+export class FarcasterAuth {
+  private static instance: FarcasterAuth;
+  private isReady = false;
+  private context: FarcasterContext | null = null;
+
+  private constructor() {}
+
+  static getInstance(): FarcasterAuth {
+    if (!FarcasterAuth.instance) {
+      FarcasterAuth.instance = new FarcasterAuth();
+    }
+    return FarcasterAuth.instance;
+  }
+
+  async initialize(): Promise<boolean> {
+    try {
+      // Initialize the Farcaster Frame SDK
+      this.context = await sdk.context;
+      console.log('Farcaster SDK initialized:', this.context);
+      this.isReady = true;
+      return true;
+    } catch (error) {
+      console.log('Not running in Farcaster context:', error);
+      this.isReady = false;
+      return false;
+    }
+  }
+
+  isInFarcasterFrame(): boolean {
+    return this.isReady && this.context !== null;
+  }
+
+  async getFarcasterUser(): Promise<FarcasterUser | null> {
+    try {
+      if (!this.context || !this.context.user) {
+        return null;
+      }
+
+      const user = this.context.user;
+      
+      // Get the first verified address as the wallet address
+      const walletAddress = user.verifications && user.verifications.length > 0 
+        ? user.verifications[0] 
+        : null;
+
+      return {
+        fid: user.fid,
+        username: user.username,
+        displayName: user.displayName,
+        pfpUrl: user.pfpUrl,
+        custody: user.custodyAddress,
+        verifications: user.verifications || []
+      };
+    } catch (error) {
+      console.error('Error getting Farcaster user:', error);
+      return null;
+    }
+  }
+
+  async signInWithFarcaster(): Promise<{ farcasterUser: FarcasterUser; walletAddress: string } | null> {
+    try {
+      const user = await this.getFarcasterUser();
+      if (!user) {
+        throw new Error('No Farcaster user found');
+      }
+
+      // Get verified wallet address
+      const walletAddress = user.verifications && user.verifications.length > 0
+        ? user.verifications[0]
+        : user.custody || '';
+
+      if (!walletAddress) {
+        throw new Error('No wallet address found for Farcaster user');
+      }
+
+      console.log('Farcaster sign-in successful:', { fid: user.fid, username: user.username, walletAddress });
+
+      return {
+        farcasterUser: user,
+        walletAddress
+      };
+    } catch (error) {
+      console.error('Farcaster sign-in failed:', error);
+      return null;
+    }
+  }
+
+  // Register or update user on backend
+  async registerUser(farcasterUser: FarcasterUser, walletAddress: string, army?: 'bears' | 'bulls') {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fid: farcasterUser.fid,
+          walletAddress: walletAddress.toLowerCase(),
+          username: farcasterUser.username || farcasterUser.displayName || `User${farcasterUser.fid}`,
+          pfpUrl: farcasterUser.pfpUrl,
+          army: army || 'bulls'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to register user on backend');
+      }
+
+      const data = await response.json();
+      console.log('User registered/updated:', data);
+      return data;
+    } catch (error) {
+      console.error('Error registering user:', error);
+      throw error;
+    }
+  }
+}
+
+export const farcasterAuth = FarcasterAuth.getInstance();
