@@ -217,12 +217,6 @@ export function TradeHistory() {
                         <span className="text-lg">🟪</span> Farcaster
                       </button>
                       <button
-                        onClick={() => handleShare('twitter')}
-                        className="w-full text-left px-4 py-3 hover:bg-blue-600 text-white text-sm font-bold transition-all flex items-center gap-2 border-b border-slate-700"
-                      >
-                        <span className="text-lg">🐦</span> Twitter
-                      </button>
-                      <button
                         onClick={() => handleShare('copy')}
                         className="w-full text-left px-4 py-3 hover:bg-green-600 text-white text-sm font-bold transition-all flex items-center gap-2"
                       >

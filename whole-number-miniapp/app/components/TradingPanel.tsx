@@ -402,12 +402,15 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                       <span className={`text-base ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                         {trade.position_type === 'long' ? '📈' : '📉'}
                       </span>
-                      <span className={`font-bold text-base ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`font-bold text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                         {trade.position_type.toUpperCase()} {trade.leverage}x
                       </span>
                     </div>
-                    <div className={`font-bold text-base ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {pnl >= 0 ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)
+                    <div className={`font-bold text-sm text-right ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {pnl >= 0 ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      <div className="text-xs">
+                        ({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)
+                      </div>
                     </div>
                   </div>
 
