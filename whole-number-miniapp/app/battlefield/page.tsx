@@ -85,17 +85,17 @@ export default function BattlefieldHome() {
         let fid, username, pfpUrl;
         
         if (farcasterUser) {
-          // Use real Farcaster data
+          // Use real Farcaster data (ONLY in Farcaster mini app)
           fid = farcasterUser.fid;
           username = farcasterUser.username || farcasterUser.displayName || `User${farcasterUser.fid}`;
           pfpUrl = farcasterUser.pfpUrl || '';
           console.log('✅ Creating user with Farcaster data:', { fid, username, pfpUrl });
         } else {
-          // Fallback for non-Farcaster users
-          fid = Math.floor(Math.random() * 1000000);
-          username = `Trader${address.slice(2, 8)}`;
-          pfpUrl = '';
-          console.log('⚠️ Creating user without Farcaster (fallback):', { fid, username });
+          // For regular wallet users (desktop/mobile browser - NO Farcaster)
+          fid = null; // NULL for non-Farcaster users
+          username = `Trader${address.slice(2, 8)}`; // Use wallet address for username
+          pfpUrl = '/battlefield-logo.jpg'; // Generic game PFP
+          console.log('⚠️ Creating regular wallet user (no Farcaster):', { fid, username, pfpUrl });
         }
 
         // Create new user
