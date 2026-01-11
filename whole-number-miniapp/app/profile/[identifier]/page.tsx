@@ -451,6 +451,9 @@ export default function UserProfilePage() {
                             Size: ${pos.position_size.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                           </p>
                           <p className="text-xs text-gray-500">
+                            Total: ${(pos.position_size * pos.leverage).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                          </p>
+                          <p className="text-xs text-gray-500">
                             Liq: ${pos.liquidation_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                           </p>
                           <p className="text-xs text-gray-500">{formatShortDate(pos.opened_at)}</p>
@@ -487,7 +490,7 @@ export default function UserProfilePage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`font-bold text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                            <span className={`font-bold ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                               {trade.position_type === 'long' ? '📈 LONG' : '📉 SHORT'} {trade.leverage}x
                             </span>
                             {trade.status === 'liquidated' && (
@@ -496,13 +499,13 @@ export default function UserProfilePage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-sm text-gray-400">
                             ${trade.entry_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})} → ${trade.exit_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                           </p>
                           <p className="text-xs text-gray-500">{formatShortDate(trade.closed_at)}</p>
                         </div>
                         <div className="text-right">
-                          <p className={`text-lg font-bold ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          <p className={`text-xl font-bold ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                           </p>
                         </div>
