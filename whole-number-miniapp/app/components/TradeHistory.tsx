@@ -105,15 +105,13 @@ export function TradeHistory() {
             const army = userData?.army || 'bulls';
             const username = userData?.username || address?.slice(0, 8);
             
+            // Don't use toLocaleString for URL params - it adds commas that get encoded
             const params = new URLSearchParams({
               army,
               type: trade.position_type,
               leverage: trade.leverage.toString(),
-              pnl: pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+              pnl: pnl.toFixed(2),
               pnlPercent: pnlPercentage.toFixed(1),
-              entry: Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-              exit: Number(trade.exit_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-              size: Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
               username: username || 'Trader'
             });
 

@@ -489,11 +489,12 @@ export default function UserProfilePage() {
                       const armyEmoji = army === 'bears' ? '🐻' : '🐂';
                       const websiteUrl = window.location.origin;
                       
+                      // Don't use toLocaleString for URL params - it adds commas that get encoded
                       const params = new URLSearchParams({
                         army,
                         type: trade.position_type,
                         leverage: trade.leverage.toString(),
-                        pnl: pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                        pnl: pnl.toFixed(2),
                         pnlPercent: pnlPercentage.toFixed(1),
                         username: profile.user.username || 'Trader'
                       });
