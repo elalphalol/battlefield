@@ -288,8 +288,9 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                   const numValue = parseInt(value) || 0;
                   const maxBalance = Math.floor(Number(paperBalance));
                   if (numValue > 0 && numValue <= maxBalance) {
-                    const newPercent = Math.max(1, Math.min(100, Math.round((numValue / maxBalance) * 100)));
-                    setPositionSizePercent(newPercent);
+                    // Calculate exact percentage without rounding to avoid drift
+                    const exactPercent = (numValue / maxBalance) * 100;
+                    setPositionSizePercent(exactPercent);
                   }
                 }
               }}
@@ -396,8 +397,9 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                   <div className="grid grid-cols-2 gap-1 text-[10px] text-gray-400 mb-2">
                     <div>Entry: ${Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                     <div>Now: ${btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                    <div>Size: ${Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                    <div>Liq: ${Number(trade.liquidation_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div>Size: ${Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
+                    <div>Total: ${(Number(trade.position_size) * Number(trade.leverage)).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
+                    <div className="col-span-2">Liq: ${Number(trade.liquidation_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                   </div>
 
                   {isLiquidationWarning && (

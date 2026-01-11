@@ -87,11 +87,22 @@ export default function UserProfilePage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Load profile on mount and when identifier/page changes
+  // Load profile when price is ready and when identifier/page changes
   useEffect(() => {
-    fetchProfile(currentPage);
+    // Only fetch if we have a price (either from API or fallback)
+    if (currentPrice && currentPrice > 0) {
+      fetchProfile(currentPage);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identifier, currentPage]);
+  
+  // Trigger initial load once price is available
+  useEffect(() => {
+    if (currentPrice && currentPrice > 0 && !profile && !loading) {
+      fetchProfile(currentPage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPrice]);
 
   const fetchProfile = async (page: number = 1) => {
     try {
