@@ -24,9 +24,10 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   const { address } = useAccount();
   const [tradeType, setTradeType] = useState<'long' | 'short'>('long');
   const [leverage, setLeverage] = useState(50);
-  const [positionSizePercent, setPositionSizePercent] = useState(10); // Percentage of balance
+  const [positionSizePercent, setPositionSizePercent] = useState(0); // Percentage of balance - starts at 0
   const [inputValue, setInputValue] = useState(''); // Separate state for input
   const [isTyping, setIsTyping] = useState(false); // Track if user is actively typing
+  const [isManualInput, setIsManualInput] = useState(false); // Track if user manually entered a value
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [isOpening, setIsOpening] = useState(false);
   const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
@@ -34,7 +35,10 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   // Calculate actual position size from percentage
   // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
   // So we just use the percentage of balance directly
-  const positionSize = Number(((positionSizePercent / 100) * Number(paperBalance)).toFixed(2));
+  // Only show decimals if user manually input them, otherwise round to whole numbers
+  const positionSize = isManualInput 
+    ? Number(((positionSizePercent / 100) * Number(paperBalance)).toFixed(2))
+    : Math.floor((positionSizePercent / 100) * Number(paperBalance));
   
   // Update input value when position size changes from slider (but not when typing)
   useEffect(() => {
@@ -287,10 +291,18 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                   setInputValue(value);
                   const numValue = parseFloat(value) || 0;
                   const maxBalance = Number(paperBalance);
+                  // Mark as manual input if user entered decimals
+                  if (value.includes('.')) {
+                    setIsManualInput(true);
+                  } else {
+                    setIsManualInput(false);
+                  }
                   if (numValue > 0 && numValue <= maxBalance) {
                     // Calculate exact percentage without rounding to avoid drift
                     const exactPercent = (numValue / maxBalance) * 100;
                     setPositionSizePercent(exactPercent);
+                  } else if (numValue === 0 || value === '') {
+                    setPositionSizePercent(0);
                   }
                 }
               }}
@@ -299,12 +311,14 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                 // Ensure value is valid on blur
                 const numValue = parseFloat(inputValue) || 0;
                 const maxBalance = Number(paperBalance);
-                if (numValue < 0.01) {
-                  setPositionSizePercent(1);
-                  setInputValue(((1 / 100) * maxBalance).toFixed(2));
+                if (numValue < 0) {
+                  setPositionSizePercent(0);
+                  setInputValue('0');
+                  setIsManualInput(false);
                 } else if (numValue > maxBalance) {
                   setPositionSizePercent(100);
                   setInputValue(maxBalance.toFixed(2));
+                  setIsManualInput(true);
                 }
               }}
               className="w-full bg-slate-700 text-white px-4 py-2 rounded border border-slate-600 focus:border-cyan-500 focus:outline-none"
@@ -315,15 +329,18 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
           {/* Percentage Slider */}
           <input
             type="range"
-            min="1"
+            min="0"
             max="100"
             step="1"
             value={positionSizePercent}
-            onChange={(e) => setPositionSizePercent(Number(e.target.value))}
+            onChange={(e) => {
+              setPositionSizePercent(Number(e.target.value));
+              setIsManualInput(false); // Clear manual input flag when using slider
+            }}
             className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
           />
           <div className="flex justify-between text-xs text-gray-400 mt-1">
-            <span>1%</span>
+            <span>0%</span>
             <span className="text-gray-500">{positionSizePercent.toFixed(2)}%</span>
             <span>100%</span>
           </div>
