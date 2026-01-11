@@ -34,7 +34,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   // Calculate actual position size from percentage
   // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
   // So we just use the percentage of balance directly
-  const positionSize = Math.floor((positionSizePercent / 100) * Number(paperBalance));
+  const positionSize = Number(((positionSizePercent / 100) * Number(paperBalance)).toFixed(2));
   
   // Update input value when position size changes from slider (but not when typing)
   useEffect(() => {
@@ -282,11 +282,11 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
               onFocus={() => setIsTyping(true)}
               onChange={(e) => {
                 const value = e.target.value;
-                // Allow only digits
-                if (value === '' || /^\d+$/.test(value)) {
+                // Allow digits and decimal point, max 2 decimal places
+                if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
                   setInputValue(value);
-                  const numValue = parseInt(value) || 0;
-                  const maxBalance = Math.floor(Number(paperBalance));
+                  const numValue = parseFloat(value) || 0;
+                  const maxBalance = Number(paperBalance);
                   if (numValue > 0 && numValue <= maxBalance) {
                     // Calculate exact percentage without rounding to avoid drift
                     const exactPercent = (numValue / maxBalance) * 100;
@@ -297,18 +297,18 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
               onBlur={() => {
                 setIsTyping(false);
                 // Ensure value is valid on blur
-                const numValue = parseInt(inputValue) || 0;
-                const maxBalance = Math.floor(Number(paperBalance));
-                if (numValue < 1) {
+                const numValue = parseFloat(inputValue) || 0;
+                const maxBalance = Number(paperBalance);
+                if (numValue < 0.01) {
                   setPositionSizePercent(1);
-                  setInputValue(Math.floor((1 / 100) * maxBalance).toString());
+                  setInputValue(((1 / 100) * maxBalance).toFixed(2));
                 } else if (numValue > maxBalance) {
                   setPositionSizePercent(100);
-                  setInputValue(maxBalance.toString());
+                  setInputValue(maxBalance.toFixed(2));
                 }
               }}
               className="w-full bg-slate-700 text-white px-4 py-2 rounded border border-slate-600 focus:border-cyan-500 focus:outline-none"
-              placeholder="Enter amount in $ (whole numbers)"
+              placeholder="Enter amount in $ (e.g., 25.16)"
             />
           </div>
           
