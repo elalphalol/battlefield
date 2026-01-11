@@ -1,7 +1,22 @@
-import { createCanvas, loadImage } from 'canvas';
+import { createCanvas, loadImage, registerFont } from 'canvas';
 import path from 'path';
 
 export const runtime = 'nodejs';
+
+// Register bundled Roboto fonts
+try {
+  const fontDir = path.join(process.cwd(), 'public', 'fonts');
+  registerFont(path.join(fontDir, 'Roboto-Bold.ttf'), { 
+    family: 'Roboto', 
+    weight: 'bold' 
+  });
+  registerFont(path.join(fontDir, 'Roboto-Regular.ttf'), { 
+    family: 'Roboto', 
+    weight: 'normal' 
+  });
+} catch (e) {
+  console.error('Failed to register fonts:', e);
+}
 
 export async function GET(request: Request) {
   // Test endpoint
@@ -52,38 +67,38 @@ export async function GET(request: Request) {
 
     // Title
     ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 60px Arial, sans-serif';
+    ctx.font = 'bold 60px Roboto, sans-serif';
     ctx.fillText('BATTLEFIELD', 600, 120);
 
     // Subtitle
     ctx.fillStyle = '#9ca3af';
-    ctx.font = '24px Arial, sans-serif';
+    ctx.font = '24px Roboto, sans-serif';
     ctx.fillText('Bears vs Bulls', 600, 170);
 
     // Username & Army
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px Arial, sans-serif';
+    ctx.font = 'bold 36px Roboto, sans-serif';
     ctx.fillText(`${username} - ${army.toUpperCase()} ARMY`, 600, 230);
 
     // Position Type
     ctx.fillStyle = '#9ca3af';
-    ctx.font = '28px Arial, sans-serif';
+    ctx.font = '28px Roboto, sans-serif';
     ctx.fillText(`${positionType.toUpperCase()} ${leverage}x`, 600, 280);
 
     // P&L Percentage (BIG)
     ctx.fillStyle = isProfit ? '#22c55e' : '#ef4444';
-    ctx.font = 'bold 120px Arial, sans-serif';
+    ctx.font = 'bold 120px Roboto, sans-serif';
     const pnlText = `${isProfit ? '+' : ''}${pnlPercent}%`;
     ctx.fillText(pnlText, 600, 390);
 
     // P&L Dollar Amount
-    ctx.font = 'bold 48px Arial, sans-serif';
+    ctx.font = 'bold 48px Roboto, sans-serif';
     const dollarText = `${isProfit ? '+' : ''}$${pnl}`;
     ctx.fillText(dollarText, 600, 470);
 
     // Footer
     ctx.fillStyle = '#9ca3af';
-    ctx.font = '20px Arial, sans-serif';
+    ctx.font = '20px Roboto, sans-serif';
     ctx.fillText('battlefield-roan.vercel.app', 600, 580);
 
     // Return as PNG
