@@ -36,41 +36,44 @@ export async function GET(request: Request) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1200, 630);
 
+    // Use sans-serif as fallback - Vercel should have this
+    const fontFamily = 'sans-serif';
+    
     // Title
     ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 60px Arial';
+    ctx.font = `bold 60px ${fontFamily}`;
     ctx.textAlign = 'center';
     ctx.fillText('BATTLEFIELD', 600, 100);
 
     // Subtitle
     ctx.fillStyle = '#9ca3af';
-    ctx.font = '24px Arial';
+    ctx.font = `24px ${fontFamily}`;
     ctx.fillText('Bears vs Bulls', 600, 140);
 
     // Username & Army
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px Arial';
+    ctx.font = `bold 36px ${fontFamily}`;
     ctx.fillText(`${username} - ${army.toUpperCase()} ARMY`, 600, 200);
 
     // Position Type
     ctx.fillStyle = '#9ca3af';
-    ctx.font = '28px Arial';
+    ctx.font = `28px ${fontFamily}`;
     ctx.fillText(`${positionType.toUpperCase()} ${leverage}x`, 600, 250);
 
     // P&L Percentage (BIG)
     ctx.fillStyle = isProfit ? '#22c55e' : '#ef4444';
-    ctx.font = 'bold 120px Arial';
+    ctx.font = `bold 120px ${fontFamily}`;
     const pnlText = `${isProfit ? '+' : ''}${pnlPercent}%`;
     ctx.fillText(pnlText, 600, 380);
 
     // P&L Dollar Amount
-    ctx.font = 'bold 48px Arial';
+    ctx.font = `bold 48px ${fontFamily}`;
     const dollarText = `${isProfit ? '+' : ''}$${pnl}`;
     ctx.fillText(dollarText, 600, 450);
 
     // Footer
     ctx.fillStyle = '#6b7280';
-    ctx.font = '24px Arial';
+    ctx.font = `24px ${fontFamily}`;
     ctx.fillText('battlefield-roan.vercel.app', 600, 580);
 
     // Return as PNG
