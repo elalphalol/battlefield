@@ -48,7 +48,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
   }, [positionSize, isTyping]);
   
   // Calculate fee for display purposes only (will be deducted from P&L later)
-  const feePercentage = leverage > 1 ? leverage * 0.1 : 0;
+  const feePercentage = leverage > 1 ? leverage * 0.05 : 0;
 
   useEffect(() => {
     if (address) {
@@ -172,7 +172,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
     
     // Include the trading fee in the PNL so users see the break-even needed
     // Fee was paid upfront, so we subtract it to show real net P&L
-    const feePercentage = tradeLeverage > 1 ? tradeLeverage * 0.1 : 0;
+    const feePercentage = tradeLeverage > 1 ? tradeLeverage * 0.05 : 0;
     const tradingFee = (feePercentage / 100) * collateral;
     const netPnl = pnlFromPriceMovement - tradingFee;
     

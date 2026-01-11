@@ -139,6 +139,46 @@ export default function GlossaryPage() {
           </div>
         </div>
 
+        {/* Trading Mechanics & Fees */}
+        <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
+          <h2 className="text-2xl font-bold text-red-400 mb-4">⚙️ Trading Mechanics & Fees</h2>
+          
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-bold text-yellow-400 mb-2 text-lg">📊 How Trading Fees Work</h3>
+              <div className="bg-slate-700/50 rounded-lg p-4 space-y-2 text-sm text-gray-300">
+                <p>
+                  <span className="font-semibold text-white">Trading Fee Formula:</span> Leverage × 0.05%
+                </p>
+                <ul className="ml-4 space-y-1">
+                  <li>• 10x leverage = 0.5% fee</li>
+                  <li>• 50x leverage = 2.5% fee</li>
+                  <li>• 100x leverage = 5% fee</li>
+                  <li>• 200x leverage = 10% fee</li>
+                </ul>
+                <p className="pt-2 text-yellow-300">
+                  <span className="font-semibold">⚠️ Important:</span> Fees are deducted from your P&L when closing a position, not when opening.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-cyan-400 mb-2 text-lg">💡 Why Positions Start in Negative P&L</h3>
+              <div className="bg-slate-700/50 rounded-lg p-4 space-y-2 text-sm text-gray-300">
+                <p>
+                  When you open a position, you'll notice it starts with <span className="text-red-400 font-semibold">negative P&L</span>. This is normal!
+                </p>
+                <p className="pt-2">
+                  <span className="font-semibold text-white">Why?</span> The trading fee is already calculated into your unrealized profit/loss. This shows you the <span className="text-green-400 font-semibold">real break-even point</span> you need to reach to become profitable.
+                </p>
+                <p className="pt-2 text-yellow-300">
+                  <span className="font-semibold">Example:</span> Open a 100x position with $100. Fee = 5% ($5). Your position starts at -$5. The price needs to move favorably by $5 for you to break even.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Footer Note */}
         <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
           <p className="text-sm text-gray-400 text-center">

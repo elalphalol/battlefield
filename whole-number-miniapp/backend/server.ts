@@ -376,7 +376,7 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
     }
 
     // Calculate trading fee (will be deducted from P&L when closing, not upfront)
-    const feePercentage = leverage > 1 ? leverage * 0.1 : 0; // 2x = 0.2%, 10x = 1%, 50x = 5%, 100x = 10%
+    const feePercentage = leverage > 1 ? leverage * 0.05 : 0; // 2x = 0.1%, 10x = 0.5%, 50x = 2.5%, 100x = 5%, 200x = 10%
     const tradingFee = (feePercentage / 100) * size;
     
     // Check if user has enough for position size only (fee comes from P&L later)
@@ -514,7 +514,7 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
     let pnl = priceChangePercentage * leveragedPositionSize;
 
     // Calculate trading fee (deducted from P&L when closing)
-    const feePercentage = leverage > 1 ? leverage * 0.1 : 0;
+    const feePercentage = leverage > 1 ? leverage * 0.05 : 0;
     const tradingFee = (feePercentage / 100) * collateral;
     
     // Deduct fee from P&L (this is where fee is actually paid)
@@ -728,7 +728,7 @@ app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
           const pnl = priceChangePercentage * leveragedPositionSize;
           
           // Deduct trading fee from P&L
-          const feePercentage = leverage > 1 ? leverage * 0.1 : 0;
+          const feePercentage = leverage > 1 ? leverage * 0.05 : 0;
           const tradingFee = (feePercentage / 100) * collateral;
           current_pnl = pnl - tradingFee;
         }
