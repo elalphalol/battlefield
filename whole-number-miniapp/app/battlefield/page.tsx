@@ -53,8 +53,8 @@ export default function BattlefieldHome() {
   const wholeNumber = useMemo(() => strategy.getWholeNumber(btcPrice), [btcPrice, strategy]);
   const nextWholeNumber = useMemo(() => strategy.getNextWholeNumber(btcPrice), [btcPrice, strategy]);
   const zoneInfo = useMemo(() => strategy.getZoneInfo(coordinate), [coordinate, strategy]);
-  const direction = useMemo(() => strategy.getMarketDirection(), [strategy]);
-  const recommendation = useMemo(() => strategy.getRecommendedAction(coordinate, direction), [coordinate, direction, strategy]);
+  const direction = useMemo(() => strategy.getMarketDirection(), [btcPrice, strategy]);
+  const recommendation = useMemo(() => strategy.getRecommendedAction(coordinate, direction), [coordinate, direction, btcPrice, strategy]);
 
   // Check beams
   useEffect(() => {
