@@ -134,7 +134,7 @@ export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps)
 
       <div className="mt-3 text-center text-xs leading-relaxed text-gray-400">
         {hasOpenPositions ? (
-          <>Close all positions to claim</>
+          <>Close all positions to claim<br/>Can only claim when balance &lt; $100</>
         ) : (
           <>Claim $1,000 when balance &lt; $100<br/>(10min cooldown)</>
         )}

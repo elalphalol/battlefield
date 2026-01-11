@@ -389,7 +389,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
                       </span>
                     </div>
                     <div className={`font-bold text-sm ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)
+                      {pnl >= 0 ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} ({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)
                     </div>
                   </div>
 

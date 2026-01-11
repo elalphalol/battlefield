@@ -89,7 +89,7 @@ export default function UserProfilePage() {
     if (currentPrice) {
       fetchProfile(currentPage);
     }
-  }, [identifier, currentPage, currentPrice]);
+  }, [identifier, currentPage]);
 
   const fetchProfile = async (page: number = 1) => {
     try {
