@@ -1063,6 +1063,44 @@ app.get('/api/army/stats', async (req: Request, res: Response) => {
 // ADMIN ENDPOINTS
 // ============================================
 
+// Update a specific user's Farcaster profile data
+app.post('/api/admin/update-user-profile', async (req: Request, res: Response) => {
+  const { walletAddress, fid, username, pfpUrl } = req.body;
+
+  if (!walletAddress || !fid || !username) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Wallet address, FID, and username required' 
+    });
+  }
+
+  try {
+    const updated = await pool.query(
+      `UPDATE users 
+       SET fid = $1, 
+           username = $2, 
+           pfp_url = $3,
+           last_active = NOW()
+       WHERE LOWER(wallet_address) = LOWER($4)
+       RETURNING *`,
+      [fid, username, pfpUrl, walletAddress]
+    );
+
+    if (updated.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    console.log(`✅ Admin updated user: ${username} (FID: ${fid}) for wallet ${walletAddress}`);
+    res.json({ success: true, user: updated.rows[0] });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ success: false, message: 'Failed to update user profile' });
+  }
+});
+
 // Recalculate all user armies based on closed positions
 app.post('/api/admin/recalculate-armies', async (req: Request, res: Response) => {
   try {
