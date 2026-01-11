@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     const size = searchParams.get('size') || '0';
     const username = searchParams.get('username') || 'Trader';
 
-    const isProfit = parseFloat(pnl) >= 0;
+    const isProfit = parseFloat(pnlPercent) >= 0;
     const isBears = army === 'bears';
 
     // Enhanced Colors
@@ -24,7 +24,6 @@ export async function GET(request: Request) {
     const bgGradientEnd = '#0f172a';
     const accentColor = isBears ? '#ef4444' : '#22c55e';
     const textColor = isProfit ? '#22c55e' : '#ef4444';
-    const glowColor = isProfit ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)';
 
     return new ImageResponse(
       (
