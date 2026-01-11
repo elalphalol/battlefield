@@ -19,10 +19,12 @@ export async function GET(request: Request) {
     const isProfit = parseFloat(pnl) >= 0;
     const isBears = army === 'bears';
 
-    // Colors
-    const bgColor = isBears ? '#1e1b4b' : '#1e3a1e';
+    // Enhanced Colors
+    const bgGradientStart = isBears ? '#450a0a' : '#052e16';
+    const bgGradientEnd = '#0f172a';
     const accentColor = isBears ? '#ef4444' : '#22c55e';
     const textColor = isProfit ? '#22c55e' : '#ef4444';
+    const glowColor = isProfit ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)';
 
     return new ImageResponse(
       (
@@ -32,8 +34,8 @@ export async function GET(request: Request) {
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: bgColor,
-            backgroundImage: `linear-gradient(135deg, ${bgColor} 0%, #0f172a 100%)`,
+            backgroundColor: bgGradientEnd,
+            backgroundImage: `linear-gradient(135deg, ${bgGradientStart} 0%, ${bgGradientEnd} 100%)`,
             padding: '60px',
             fontFamily: 'system-ui, sans-serif',
           }}
