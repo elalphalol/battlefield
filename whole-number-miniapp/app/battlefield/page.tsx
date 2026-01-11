@@ -520,6 +520,7 @@ export default function BattlefieldHome() {
                   btcPrice={btcPrice}
                   paperBalance={userData?.paper_balance || 0}
                   onTradeComplete={handleTradeComplete}
+                  walletAddress={address}
                 />
               </div>
 

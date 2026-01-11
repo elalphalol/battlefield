@@ -18,10 +18,13 @@ interface TradingPanelProps {
   btcPrice: number;
   paperBalance: number;
   onTradeComplete: () => void;
+  walletAddress?: string; // Add optional wallet address prop
 }
 
-export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: TradingPanelProps) {
-  const { address } = useAccount();
+export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAddress }: TradingPanelProps) {
+  const { address: wagmiAddress } = useAccount();
+  // Use passed wallet address if available, otherwise fall back to wagmi
+  const address = walletAddress || wagmiAddress;
   const [tradeType, setTradeType] = useState<'long' | 'short'>('long');
   const [leverage, setLeverage] = useState(50);
   const [positionSizePercent, setPositionSizePercent] = useState(0); // Percentage of balance - starts at 0
