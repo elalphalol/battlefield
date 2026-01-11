@@ -92,6 +92,16 @@ export function WalletConnect() {
   const farcasterWalletAddress = farcasterUser?.verifications?.[0] || farcasterUser?.custody;
   const hasValidConnection = (isConnected && address) || (isInFarcaster && farcasterWalletAddress);
 
+  // Debug logging
+  console.log('WalletConnect Debug:', {
+    isConnected,
+    address,
+    isInFarcaster,
+    farcasterUser: farcasterUser?.fid,
+    farcasterWalletAddress,
+    hasValidConnection
+  });
+
   // Connected state (either wagmi wallet OR Farcaster verified wallet)
   if (hasValidConnection) {
     const displayAddress = address || farcasterWalletAddress || '';
