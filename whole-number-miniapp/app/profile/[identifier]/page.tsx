@@ -488,6 +488,7 @@ export default function UserProfilePage() {
                       const army = profile.user.army;
                       const armyEmoji = army === 'bears' ? '🐻' : '🐂';
                       const websiteUrl = window.location.origin;
+                      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                       
                       // Don't use toLocaleString for URL params - it adds commas that get encoded
                       const params = new URLSearchParams({
@@ -504,15 +505,23 @@ export default function UserProfilePage() {
                       const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls`;
 
                       if (platform === 'farcaster') {
-                        const encodedText = encodeURIComponent(shareText);
-                        const encodedImage = encodeURIComponent(imageUrl);
-                        window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
+                        if (isMobile) {
+                          // Mobile: Use Warpcast with image embed
+                          const encodedText = encodeURIComponent(shareText);
+                          const encodedImage = encodeURIComponent(imageUrl);
+                          window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
+                        } else {
+                          // Desktop: Just copy text + image URL for manual paste
+                          navigator.clipboard.writeText(`${shareText}\n\nImage: ${imageUrl}\n\nPlay: ${websiteUrl}`);
+                          alert('✅ Copied to clipboard! Open Warpcast and paste, then manually add the image screenshot.');
+                        }
                       } else if (platform === 'twitter') {
                         const encodedText = encodeURIComponent(shareText + `\n\n${websiteUrl}`);
                         window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
                       } else if (platform === 'copy') {
-                        navigator.clipboard.writeText(`${shareText}\n\n${imageUrl}\n\n🎮 ${websiteUrl}`);
-                        alert('✅ Copied to clipboard!');
+                        // Just copy the image URL for easy sharing
+                        navigator.clipboard.writeText(imageUrl);
+                        alert('✅ Image URL copied! Paste in any app.');
                       }
                       
                       setOpenShareMenuId(null);
