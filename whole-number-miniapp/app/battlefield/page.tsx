@@ -78,15 +78,35 @@ export default function BattlefieldHome() {
       if (data.success) {
         setUserData(data.user);
       } else {
+        // No user found - try to get Farcaster data
+        const { farcasterAuth } = await import('../lib/farcaster');
+        const farcasterUser = await farcasterAuth.getFarcasterUser();
+
+        let fid, username, pfpUrl;
+        
+        if (farcasterUser) {
+          // Use real Farcaster data
+          fid = farcasterUser.fid;
+          username = farcasterUser.username || farcasterUser.displayName || `User${farcasterUser.fid}`;
+          pfpUrl = farcasterUser.pfpUrl || '';
+          console.log('✅ Creating user with Farcaster data:', { fid, username, pfpUrl });
+        } else {
+          // Fallback for non-Farcaster users
+          fid = Math.floor(Math.random() * 1000000);
+          username = `Trader${address.slice(2, 8)}`;
+          pfpUrl = '';
+          console.log('⚠️ Creating user without Farcaster (fallback):', { fid, username });
+        }
+
         // Create new user
         const createResponse = await fetch(getApiUrl('api/users'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            fid: Math.floor(Math.random() * 1000000),
+            fid,
             walletAddress: address,
-            username: `Trader${address.slice(2, 8)}`,
-            pfpUrl: '',
+            username,
+            pfpUrl,
             army: 'bulls' // Default army for backend
           })
         });
@@ -94,6 +114,7 @@ export default function BattlefieldHome() {
         const createData = await createResponse.json();
         if (createData.success) {
           setUserData(createData.user);
+          console.log('✅ User created successfully:', createData.user);
         }
       }
     } catch (error) {
