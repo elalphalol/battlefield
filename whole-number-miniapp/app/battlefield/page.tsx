@@ -171,22 +171,22 @@ export default function BattlefieldHome() {
           </div>
 
           {/* Whole Number Info */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-slate-900 rounded-lg p-4 text-center">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-6">
+            <div className="bg-slate-900 rounded-lg p-2 sm:p-4 text-center overflow-hidden">
               <div className="text-xs text-gray-400 mb-1">Current Whole</div>
-              <div className="text-xl font-bold text-blue-400">
+              <div className="text-sm sm:text-xl font-bold text-blue-400 break-words">
                 ${strategy.formatNumber(wholeNumber)}
               </div>
             </div>
-            <div className="bg-slate-900 rounded-lg p-4 text-center">
+            <div className="bg-slate-900 rounded-lg p-2 sm:p-4 text-center overflow-hidden">
               <div className="text-xs text-gray-400 mb-1">Coordinate</div>
-              <div className="text-2xl font-bold text-yellow-400">
+              <div className="text-xl sm:text-2xl font-bold text-yellow-400">
                 {coordinate.toString().padStart(3, '0')}
               </div>
             </div>
-            <div className="bg-slate-900 rounded-lg p-4 text-center">
+            <div className="bg-slate-900 rounded-lg p-2 sm:p-4 text-center overflow-hidden">
               <div className="text-xs text-gray-400 mb-1">Next Whole</div>
-              <div className="text-xl font-bold text-green-400">
+              <div className="text-sm sm:text-xl font-bold text-green-400 break-words">
                 ${strategy.formatNumber(nextWholeNumber)}
               </div>
             </div>
@@ -206,7 +206,11 @@ export default function BattlefieldHome() {
 
         {/* Battle Strategy - Clean 4-card layout */}
         <div className="bg-slate-800/50 rounded-lg p-6 mb-6 border border-slate-700">
-          <h2 className="text-2xl font-bold text-yellow-400 mb-6 text-center">⚔️ BATTLE STRATEGY</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-yellow-400 mb-6 text-center flex items-center justify-center gap-2 flex-wrap">
+            <span>⚔️</span>
+            <span>BATTLE STRATEGY</span>
+            <span>⚔️</span>
+          </h2>
           
           <div className="grid md:grid-cols-4 gap-4">
             {/* Market Direction */}
