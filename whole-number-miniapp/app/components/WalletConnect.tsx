@@ -106,16 +106,16 @@ export function WalletConnect() {
       
       {showModal && (
         <>
-          {/* Backdrop for mobile */}
+          {/* Backdrop for mobile - lower z-index to not block WalletConnect */}
           <div 
-            className="fixed inset-0 bg-black/50 z-[100] md:hidden"
+            className="fixed inset-0 bg-black/50 z-[50] md:hidden"
             onClick={() => setShowModal(false)}
           />
           
           {/* Modal */}
           <div 
             ref={modalRef}
-            className="fixed md:absolute left-1/2 top-1/2 md:left-auto md:top-auto -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 md:right-0 md:mt-2 w-[90vw] max-w-[320px] md:w-80 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-[101] md:z-50"
+            className="fixed md:absolute left-1/2 top-1/2 md:left-auto md:top-auto -translate-x-1/2 -translate-y-1/2 md:translate-x-0 md:translate-y-0 md:right-0 md:mt-2 w-[90vw] max-w-[320px] md:w-80 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-[100] md:z-50"
           >
             <div className="p-4">
               <div className="flex items-center justify-between mb-3">
@@ -132,19 +132,14 @@ export function WalletConnect() {
                 {connectors.map((connector) => (
                   <button
                     key={connector.id}
-                    onClick={async () => {
-                      try {
-                        // Close modal immediately to remove backdrop
-                        setShowModal(false);
-                        
-                        // Small delay to ensure backdrop is removed before QR modal shows
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        
-                        // Then trigger connection
+                    onClick={() => {
+                      // Close modal first to remove backdrop that blocks WalletConnect QR
+                      setShowModal(false);
+                      
+                      // Use setTimeout to ensure modal is fully closed before triggering connection
+                      setTimeout(() => {
                         connect({ connector });
-                      } catch (error) {
-                        console.error('Connection error:', error);
-                      }
+                      }, 50);
                     }}
                     className="w-full bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white py-3 rounded-lg font-bold text-left px-4 flex items-center justify-between transition-all active:scale-98 text-sm sm:text-base"
                   >
