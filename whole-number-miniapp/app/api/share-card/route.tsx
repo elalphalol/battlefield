@@ -3,8 +3,18 @@ import { ImageResponse } from '@vercel/og';
 export const runtime = 'edge';
 
 export async function GET(request: Request) {
+  // First, test if route is working at all
+  const { searchParams } = new URL(request.url);
+  const test = searchParams.get('test');
+  
+  if (test === 'ping') {
+    return new Response('Share card route is working!', {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+
   try {
-    const { searchParams } = new URL(request.url);
     
     const army = searchParams.get('army') || 'bulls';
     const positionType = searchParams.get('type') || 'long';
