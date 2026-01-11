@@ -164,61 +164,65 @@ export function WalletConnect() {
       
       {showModal && (
         <>
-          {/* Backdrop - clicking closes modal */}
+          {/* Backdrop for mobile and desktop */}
           <div 
-            className="fixed inset-0 bg-black/50 z-[9998]"
+            className="fixed inset-0 bg-black/60 z-[999] md:hidden"
             onClick={() => setShowModal(false)}
           />
           
-          {/* Modal - ALWAYS fixed at bottom on mobile, dropdown on desktop */}
+          {/* Modal - Bottom sheet on mobile, dropdown on desktop */}
           <div className="fixed md:absolute 
-                          left-0 right-0 
-                          md:right-0 md:left-auto 
-                          bottom-0 md:bottom-auto 
+                          inset-x-0 md:inset-x-auto
+                          bottom-0 md:bottom-auto
+                          md:right-0 
                           md:top-full md:mt-2 
                           w-full md:w-80 
                           bg-slate-800 border-2 border-slate-700 
-                          rounded-t-2xl md:rounded-lg 
-                          shadow-2xl z-[9999] 
-                          max-h-[70vh] overflow-y-auto">
-            <div className="p-5 pb-8">
+                          rounded-t-3xl md:rounded-lg 
+                          shadow-2xl z-[1000]
+                          max-h-[65vh] md:max-h-[85vh] 
+                          overflow-y-auto
+                          animate-slide-up md:animate-none">
+            <div className="p-4 md:p-4 pb-safe">
               {/* Mobile drag handle */}
-              <div className="w-12 h-1 bg-slate-600 rounded-full mx-auto mb-4 md:hidden" />
+              <div className="w-12 h-1.5 bg-slate-600 rounded-full mx-auto mb-3 md:hidden flex-shrink-0" />
               
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-white font-bold text-lg">Connect</div>
+              <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                <div className="text-white font-bold text-lg">Connect Wallet</div>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-white text-2xl leading-none"
+                  className="text-gray-400 hover:text-white text-3xl leading-none w-8 h-8 flex items-center justify-center"
+                  aria-label="Close"
                 >
                   ×
                 </button>
               </div>
               
               <div className="space-y-3">
-                {/* Farcaster Sign In - ALWAYS show, works on farcaster.xyz too */}
-                {!farcasterUser && (
-                  <button
-                    onClick={handleFarcasterSignIn}
-                    disabled={farcasterConnecting}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white py-4 rounded-lg font-bold text-left px-4 flex items-center justify-between disabled:opacity-50 shadow-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">🎭</span>
-                      <div>
-                        <div className="font-bold">Sign in with Farcaster</div>
-                        <div className="text-xs text-purple-200">
-                          {isInFarcaster ? 'Recommended in Warpcast' : 'Works on farcaster.xyz'}
+                {/* Farcaster Sign In - ONLY show when in Farcaster Frame (Warpcast) */}
+                {isInFarcaster && !farcasterUser && (
+                  <>
+                    <button
+                      onClick={handleFarcasterSignIn}
+                      disabled={farcasterConnecting}
+                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white py-4 rounded-lg font-bold text-left px-4 flex items-center justify-between disabled:opacity-50 shadow-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🎭</span>
+                        <div>
+                          <div className="font-bold">Sign in with Farcaster</div>
+                          <div className="text-xs text-purple-200">Recommended in Warpcast</div>
                         </div>
                       </div>
-                    </div>
-                    {farcasterConnecting && <span className="animate-spin">⏳</span>}
-                  </button>
+                      {farcasterConnecting && <span className="animate-spin">⏳</span>}
+                    </button>
+                    <div className="text-center text-gray-400 text-xs">OR</div>
+                  </>
                 )}
 
                 {/* Wallet connection options */}
-                <div className="text-gray-400 text-xs mt-4 mb-2">
-                  Or connect with wallet:
+                <div className="text-gray-400 text-xs mb-2 font-semibold">
+                  {isInFarcaster ? 'Connect with wallet:' : 'Select wallet to connect:'}
                 </div>
                 
                 {connectors.map((connector) => (

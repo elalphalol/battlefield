@@ -40,6 +40,26 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+.pb-safe {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+/* Slide up animation for mobile modal */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
 /* Ensure modals don't overflow viewport on mobile */
 @supports (height: 100dvh) {
   .mobile-modal {
