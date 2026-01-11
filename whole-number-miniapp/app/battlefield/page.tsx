@@ -38,29 +38,30 @@ export default function BattlefieldHome() {
   const { address: wagmiAddress } = useAccount();
   const { price: btcPrice, isLoading } = useBTCPrice(5000);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'ranking'>('trade');
   const [strategy] = useState(() => new WholeNumberStrategy());
+  const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
+  
+  // Use Farcaster wallet if available, otherwise use wagmi wallet
+  const address = farcasterWallet || wagmiAddress;
 
-  // Use either wagmi wallet address OR Farcaster verified wallet
-  const address = wagmiAddress || farcasterWallet;
-
-  // Get Farcaster wallet address on mount
+  // Initialize Farcaster and get wallet address
   useEffect(() => {
-    const getFarcasterWallet = async () => {
+    const initFarcaster = async () => {
       const { farcasterAuth } = await import('../lib/farcaster');
-      const user = await farcasterAuth.getFarcasterUser();
-      if (user && user.verifications && user.verifications.length > 0) {
-        const wallet = user.verifications[0];
-        setFarcasterWallet(wallet);
-        console.log('✅ Using Farcaster verified wallet:', wallet);
+      await farcasterAuth.initialize();
+      
+      if (farcasterAuth.isInFarcasterFrame()) {
+        const signInResult = await farcasterAuth.signInWithFarcaster();
+        if (signInResult) {
+          console.log('✅ Farcaster wallet detected:', signInResult.walletAddress);
+          setFarcasterWallet(signInResult.walletAddress);
+        }
       }
     };
     
-    if (!wagmiAddress) {
-      getFarcasterWallet();
-    }
-  }, [wagmiAddress]);
+    initFarcaster();
+  }, []);
 
   // Update strategy with new price
   useEffect(() => {

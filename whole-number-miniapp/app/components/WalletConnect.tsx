@@ -13,7 +13,7 @@ export function WalletConnect() {
   const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null);
   const [farcasterConnecting, setFarcasterConnecting] = useState(false);
 
-  // Initialize Farcaster SDK on mount and auto-register user
+  // Initialize Farcaster SDK on mount
   useEffect(() => {
     const initFarcaster = async () => {
       const initialized = await farcasterAuth.initialize();
@@ -24,21 +24,6 @@ export function WalletConnect() {
         if (user) {
           setFarcasterUser(user);
           console.log('Farcaster user detected:', user);
-          
-          // AUTO-REGISTER: Get verified wallet address and create/update user profile
-          const walletAddress = user.verifications && user.verifications.length > 0
-            ? user.verifications[0]
-            : user.custody;
-            
-          if (walletAddress) {
-            console.log('Auto-registering Farcaster user with wallet:', walletAddress);
-            try {
-              await farcasterAuth.registerUser(user, walletAddress);
-              console.log('✅ User profile auto-created/updated');
-            } catch (error) {
-              console.error('Error auto-registering user:', error);
-            }
-          }
         }
       }
     };
@@ -88,24 +73,8 @@ export function WalletConnect() {
     }
   };
 
-  // Check if user has Farcaster wallet available
-  const farcasterWalletAddress = farcasterUser?.verifications?.[0] || farcasterUser?.custody;
-  const hasValidConnection = (isConnected && address) || (isInFarcaster && farcasterWalletAddress);
-
-  // Debug logging
-  console.log('WalletConnect Debug:', {
-    isConnected,
-    address,
-    isInFarcaster,
-    farcasterUser: farcasterUser?.fid,
-    farcasterWalletAddress,
-    hasValidConnection
-  });
-
-  // Connected state (either wagmi wallet OR Farcaster verified wallet)
-  if (hasValidConnection) {
-    const displayAddress = address || farcasterWalletAddress || '';
-    
+  // Connected state (either wallet or Farcaster)
+  if (isConnected && address) {
     return (
       <div className="relative">
         <button
@@ -115,7 +84,7 @@ export function WalletConnect() {
           {farcasterUser && (
             <span className="text-purple-400">🎭</span>
           )}
-          {displayAddress.slice(0, 6)}...{displayAddress.slice(-4)}
+          {address.slice(0, 6)}...{address.slice(-4)}
         </button>
         
         {showModal && (
@@ -132,7 +101,7 @@ export function WalletConnect() {
                 </div>
               )}
               <div className="text-white font-mono text-sm mb-4">
-                {displayAddress.slice(0, 6)}...{displayAddress.slice(-4)}
+                {address.slice(0, 6)}...{address.slice(-4)}
               </div>
               <button
                 onClick={() => {
@@ -151,6 +120,54 @@ export function WalletConnect() {
     );
   }
 
+  // Farcaster-only state (has Farcaster user but not wallet connected)
+  if (isInFarcaster && farcasterUser) {
+    return (
+      <div className="relative">
+        <button
+          onClick={() => setShowModal(!showModal)}
+          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg transition-all duration-200 hover:shadow-xl flex items-center gap-2"
+        >
+          🎭 {farcasterUser.username || `FID ${farcasterUser.fid}`}
+        </button>
+        
+        {showModal && (
+          <div className="absolute right-0 mt-2 w-80 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-50">
+            <div className="p-4">
+              <div className="text-white font-bold mb-3">Farcaster Profile</div>
+              <div className="mb-3 p-3 bg-purple-900/30 border border-purple-500/30 rounded">
+                <div className="flex items-center gap-3 mb-2">
+                  {farcasterUser.pfpUrl && (
+                    <img src={farcasterUser.pfpUrl} alt="Profile" className="w-10 h-10 rounded-full" />
+                  )}
+                  <div>
+                    <div className="text-white font-semibold">
+                      {farcasterUser.username || farcasterUser.displayName}
+                    </div>
+                    <div className="text-gray-400 text-xs">FID: {farcasterUser.fid}</div>
+                  </div>
+                </div>
+                {farcasterUser.verifications && farcasterUser.verifications.length > 0 && (
+                  <div className="text-xs text-gray-400 mt-2">
+                    <div className="text-green-400 mb-1">✅ Verified Address:</div>
+                    <div className="font-mono text-white">
+                      {farcasterUser.verifications[0].slice(0, 6)}...{farcasterUser.verifications[0].slice(-4)}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg font-bold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Not connected state - show connection options
   return (
@@ -265,7 +282,7 @@ export function WalletConnect() {
 
               {/* Help text */}
               <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded text-xs text-gray-300">
-                <div className="font-semibold text-blue-400 mb-1">� Tip</div>
+                <div className="font-semibold text-blue-400 mb-1">💡 Tip</div>
                 {isInFarcaster 
                   ? 'Use Farcaster sign-in to automatically link your profile and wallet!'
                   : 'Connect your wallet to start paper trading on the Battlefield!'}
