@@ -652,9 +652,9 @@ export default function BattlefieldHome() {
       {/* Sticky Navigation Buttons */}
       <div className="fixed bottom-8 right-8 z-40 flex flex-col gap-3">
         {/* Profile Button */}
-        {address && (
+        {address && userData && (
           <button
-            onClick={() => window.location.href = `/profile/${address}`}
+            onClick={() => window.location.href = `/profile/${userData.fid}`}
             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
             aria-label="My Profile"
           >
