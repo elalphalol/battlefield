@@ -42,8 +42,10 @@ export function BattlefieldVisual({
     <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-xl border-2 border-yellow-500/50 p-6 shadow-2xl">
       {/* Title */}
       <div className="text-center mb-6">
-        <h2 className="text-3xl font-bold text-yellow-400 flex items-center justify-center gap-3">
-          🎯 THE BATTLEFIELD 🎯
+        <h2 className="text-2xl sm:text-3xl font-bold text-yellow-400 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+          <span>🎯</span>
+          <span>THE BATTLEFIELD</span>
+          <span>🎯</span>
         </h2>
       </div>
 
@@ -124,26 +126,26 @@ export function BattlefieldVisual({
       </div>
 
       {/* Zone indicators */}
-      <div className="grid grid-cols-5 gap-2 mb-6 text-xs text-center">
-        <div className="p-2 bg-red-900/30 rounded border border-red-500/50">
-          <div className="font-bold">0-226</div>
-          <div className="text-red-400">BEAMS</div>
+      <div className="grid grid-cols-5 gap-1 sm:gap-2 mb-6 text-[10px] sm:text-xs text-center">
+        <div className="p-1 sm:p-2 bg-red-900/30 rounded border border-red-500/50 overflow-hidden">
+          <div className="font-bold truncate">0-226</div>
+          <div className="text-red-400 truncate">BEAMS</div>
         </div>
-        <div className="p-2 bg-orange-900/30 rounded border border-orange-500/50">
-          <div className="font-bold">226-500</div>
-          <div className="text-orange-400">WEAK</div>
+        <div className="p-1 sm:p-2 bg-orange-900/30 rounded border border-orange-500/50 overflow-hidden">
+          <div className="font-bold truncate">226-500</div>
+          <div className="text-orange-400 truncate">WEAK</div>
         </div>
-        <div className="p-2 bg-blue-900/30 rounded border border-blue-500/50">
-          <div className="font-bold">500-700</div>
-          <div className="text-blue-400">MIDDLE</div>
+        <div className="p-1 sm:p-2 bg-blue-900/30 rounded border border-blue-500/50 overflow-hidden">
+          <div className="font-bold truncate">500-700</div>
+          <div className="text-blue-400 truncate">MIDDLE</div>
         </div>
-        <div className="p-2 bg-yellow-900/30 rounded border border-yellow-500/50">
-          <div className="font-bold">700-888</div>
-          <div className="text-yellow-400">DIP BUY</div>
+        <div className="p-1 sm:p-2 bg-yellow-900/30 rounded border border-yellow-500/50 overflow-hidden">
+          <div className="font-bold truncate">700-888</div>
+          <div className="text-yellow-400 truncate">DIP BUY</div>
         </div>
-        <div className="p-2 bg-green-900/30 rounded border border-green-500/50">
-          <div className="font-bold">900s</div>
-          <div className="text-green-400">ROCKET</div>
+        <div className="p-1 sm:p-2 bg-green-900/30 rounded border border-green-500/50 overflow-hidden">
+          <div className="font-bold truncate">900s</div>
+          <div className="text-green-400 truncate">ROCKET</div>
         </div>
       </div>
 
