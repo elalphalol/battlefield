@@ -66,6 +66,7 @@ export default function UserProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
+  const [priceLoaded, setPriceLoaded] = useState(false);
 
   // Fetch BTC price
   useEffect(() => {
@@ -75,34 +76,31 @@ export default function UserProfilePage() {
         const data = await response.json();
         const btcPrice = parseFloat(data.data.rates.USD);
         setCurrentPrice(btcPrice);
+        if (!priceLoaded) {
+          setPriceLoaded(true);
+        }
       } catch (error) {
         console.error('Error fetching BTC price:', error);
         // Set a default price if fetch fails so page doesn't get stuck
         setCurrentPrice(100000);
+        if (!priceLoaded) {
+          setPriceLoaded(true);
+        }
       }
     };
 
     fetchPrice();
     const interval = setInterval(fetchPrice, 10000); // Update every 10 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [priceLoaded]);
 
-  // Load profile when price is ready and when identifier/page changes
+  // Load profile once when price is loaded or when page/identifier changes
   useEffect(() => {
-    // Only fetch if we have a price (either from API or fallback)
-    if (currentPrice && currentPrice > 0) {
+    if (priceLoaded && currentPrice && currentPrice > 0) {
       fetchProfile(currentPage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [identifier, currentPage]);
-  
-  // Trigger initial load once price is available
-  useEffect(() => {
-    if (currentPrice && currentPrice > 0 && !profile && !loading) {
-      fetchProfile(currentPage);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPrice]);
+  }, [identifier, currentPage, priceLoaded]);
 
   const fetchProfile = async (page: number = 1) => {
     try {

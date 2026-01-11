@@ -324,7 +324,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete }: Tradin
           />
           <div className="flex justify-between text-xs text-gray-400 mt-1">
             <span>1%</span>
-            <span className="text-gray-500">{positionSizePercent}%</span>
+            <span className="text-gray-500">{positionSizePercent.toFixed(2)}%</span>
             <span>100%</span>
           </div>
         </div>
