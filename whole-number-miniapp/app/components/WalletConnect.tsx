@@ -141,94 +141,6 @@ export function WalletConnect() {
     );
   }
 
-  // Farcaster-only state (has Farcaster user but not wallet connected)
-  if (isInFarcaster && farcasterUser) {
-    return (
-      <div className="relative">
-        <button
-          onClick={() => setShowModal(!showModal)}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg transition-all duration-200 hover:shadow-xl flex items-center gap-2 animate-pulse"
-        >
-          🔗 Connect Wallet
-        </button>
-        
-        {showModal && (
-          <div className="absolute right-0 mt-2 w-80 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-50">
-            <div className="p-4">
-              <div className="text-white font-bold mb-3">✅ Farcaster Connected</div>
-              <div className="mb-4 p-3 bg-purple-900/30 border border-purple-500/30 rounded">
-                <div className="flex items-center gap-3 mb-2">
-                  {farcasterUser.pfpUrl && (
-                    <img src={farcasterUser.pfpUrl} alt="Profile" className="w-10 h-10 rounded-full" />
-                  )}
-                  <div>
-                    <div className="text-white font-semibold">
-                      {farcasterUser.username || farcasterUser.displayName}
-                    </div>
-                    <div className="text-gray-400 text-xs">FID: {farcasterUser.fid}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Call to action to connect wallet */}
-              <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded">
-                <div className="text-yellow-400 font-bold mb-2">⚠️ Wallet Required</div>
-                <div className="text-sm text-gray-300 mb-3">
-                  Connect your wallet to start trading on the Battlefield!
-                </div>
-              </div>
-
-              {/* Wallet connection options */}
-              <div className="space-y-2 mb-3">
-                {connectors.map((connector) => (
-                  <button
-                    key={connector.id}
-                    onClick={() => {
-                      try {
-                        connect({ connector });
-                        setTimeout(() => setShowModal(false), 500);
-                      } catch (error) {
-                        console.error('Connection error:', error);
-                      }
-                    }}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold text-left px-4 flex items-center justify-between transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {connector.id === 'injected' ? '🦊' : 
-                         connector.id === 'walletConnect' ? '📱' : 
-                         '💼'}
-                      </span>
-                      <div>
-                        <div className="font-bold">
-                          {connector.id === 'injected' ? 'Browser Wallet' : 
-                           connector.id === 'walletConnect' ? 'Mobile Wallets' : 
-                           connector.name}
-                        </div>
-                        <div className="text-xs text-blue-200">
-                          {connector.id === 'injected' ? 'Rabby, MetaMask, etc.' : 
-                           connector.id === 'walletConnect' ? 'Trust, Rainbow, Coinbase' : 
-                           ''}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-white">→</span>
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setShowModal(false)}
-                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg font-bold"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   // Not connected state - show connection options
   return (
@@ -343,7 +255,7 @@ export function WalletConnect() {
 
               {/* Help text */}
               <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded text-xs text-gray-300">
-                <div className="font-semibold text-blue-400 mb-1">💡 Tip</div>
+                <div className="font-semibold text-blue-400 mb-1">� Tip</div>
                 {isInFarcaster 
                   ? 'Use Farcaster sign-in to automatically link your profile and wallet!'
                   : 'Connect your wallet to start paper trading on the Battlefield!'}
