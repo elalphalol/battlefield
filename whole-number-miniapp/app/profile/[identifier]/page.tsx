@@ -67,6 +67,7 @@ export default function UserProfilePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceLoaded, setPriceLoaded] = useState(false);
+  const [openShareMenuId, setOpenShareMenuId] = useState<number | null>(null);
 
   // Fetch BTC price
   useEffect(() => {
@@ -476,34 +477,133 @@ export default function UserProfilePage() {
               {profile.recentHistory.length === 0 ? (
                 <p className="text-gray-400 text-center py-4">No trading history yet</p>
               ) : (
-                <div className="space-y-3">
-                  {profile.recentHistory.map((trade) => (
-                    <div key={trade.id} className="bg-slate-700/50 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`font-bold ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
-                              {trade.position_type === 'long' ? '📈 LONG' : '📉 SHORT'} {trade.leverage}x
+                <div className="space-y-2">
+                  {profile.recentHistory.map((trade) => {
+                    const pnl = Number(trade.pnl);
+                    const pnlPercentage = (pnl / Number(trade.position_size)) * 100;
+                    const isProfit = pnl >= 0;
+                    const isLiquidated = trade.status === 'liquidated';
+
+                    const handleShare = (platform: 'farcaster' | 'twitter' | 'copy') => {
+                      const army = profile.user.army;
+                      const armyEmoji = army === 'bears' ? '🐻' : '🐂';
+                      
+                      const params = new URLSearchParams({
+                        army,
+                        type: trade.position_type,
+                        leverage: trade.leverage.toString(),
+                        pnl: pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                        pnlPercent: pnlPercentage.toFixed(1),
+                        entry: Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                        exit: Number(trade.exit_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                        size: Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                        username: profile.user.username || 'Trader'
+                      });
+
+                      const imageUrl = `${window.location.origin}/api/share-card?${params.toString()}`;
+                      const websiteUrl = 'https://battlefield-mini.vercel.app';
+                      
+                      const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls`;
+
+                      if (platform === 'farcaster') {
+                        const encodedText = encodeURIComponent(shareText);
+                        const encodedImage = encodeURIComponent(imageUrl);
+                        window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
+                      } else if (platform === 'twitter') {
+                        const encodedText = encodeURIComponent(shareText + `\n\n${websiteUrl}`);
+                        window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
+                      } else if (platform === 'copy') {
+                        navigator.clipboard.writeText(`${shareText}\n\nImage: ${imageUrl}\n${websiteUrl}`);
+                        alert('✅ Copied to clipboard! Paste in any social media.');
+                      }
+                      
+                      setOpenShareMenuId(null);
+                    };
+
+                    return (
+                      <div
+                        key={trade.id}
+                        className={`border-2 rounded-lg p-3 ${
+                          isLiquidated
+                            ? 'border-red-900 bg-red-950/30'
+                            : isProfit
+                            ? 'border-green-900 bg-green-950/30'
+                            : 'border-red-700 bg-red-950/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                              {trade.position_type === 'long' ? '📈' : '📉'}
                             </span>
-                            {trade.status === 'liquidated' && (
-                              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded">
-                                💥 LIQ
+                            <span className="text-sm font-bold text-white">
+                              {trade.position_type.toUpperCase()} {trade.leverage}x
+                            </span>
+                            {isLiquidated && (
+                              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded font-bold">
+                                LIQUIDATED
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-400">
-                            ${trade.entry_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})} → ${trade.exit_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
-                          </p>
-                          <p className="text-xs text-gray-500">{formatShortDate(trade.closed_at)}</p>
+                          <div className={`text-sm font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                            {isProfit ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            <span className="text-xs ml-1">
+                              ({isProfit ? '+' : ''}{pnlPercentage.toFixed(1)}%)
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className={`text-xl font-bold ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                          </p>
+
+                        <div className="grid grid-cols-3 gap-2 text-xs text-gray-400">
+                          <div>
+                            <span className="text-gray-500">Entry:</span> ${Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Exit:</span> ${Number(trade.exit_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Size:</span> ${Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                          </div>
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="text-xs text-gray-500">
+                            {new Date(trade.closed_at).toLocaleString()}
+                          </div>
+                          <div className="relative">
+                            <button
+                              onClick={() => setOpenShareMenuId(openShareMenuId === trade.id ? null : trade.id)}
+                              className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
+                            >
+                              📤 Share
+                            </button>
+                            
+                            {openShareMenuId === trade.id && (
+                              <div className="absolute right-0 bottom-full mb-2 w-48 bg-slate-900 border-2 border-purple-500 rounded-lg shadow-xl z-50 overflow-hidden">
+                                <button
+                                  onClick={() => handleShare('farcaster')}
+                                  className="w-full text-left px-4 py-3 hover:bg-purple-600 text-white text-sm font-bold transition-all flex items-center gap-2 border-b border-slate-700"
+                                >
+                                  <span className="text-lg">🟪</span> Farcaster
+                                </button>
+                                <button
+                                  onClick={() => handleShare('twitter')}
+                                  className="w-full text-left px-4 py-3 hover:bg-blue-600 text-white text-sm font-bold transition-all flex items-center gap-2 border-b border-slate-700"
+                                >
+                                  <span className="text-lg">🐦</span> Twitter
+                                </button>
+                                <button
+                                  onClick={() => handleShare('copy')}
+                                  className="w-full text-left px-4 py-3 hover:bg-green-600 text-white text-sm font-bold transition-all flex items-center gap-2"
+                                >
+                                  <span className="text-lg">📋</span> Copy Link
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
