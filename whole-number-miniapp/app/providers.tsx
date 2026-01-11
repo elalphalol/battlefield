@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { base } from 'wagmi/chains';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
+import sdk from '@farcaster/frame-sdk';
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,19 @@ const wagmiConfig = createConfig({
 });
 
 export function Providers({ children }: { children: ReactNode }) {
+  // Call Farcaster SDK ready when component mounts
+  useEffect(() => {
+    const initSdk = async () => {
+      try {
+        await sdk.actions.ready();
+        console.log('Farcaster SDK ready');
+      } catch (error) {
+        console.log('Not in Farcaster context:', error);
+      }
+    };
+    initSdk();
+  }, []);
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
