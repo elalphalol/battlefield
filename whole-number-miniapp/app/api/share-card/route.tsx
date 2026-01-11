@@ -1,6 +1,20 @@
-import { createCanvas } from 'canvas';
+import { createCanvas, registerFont } from 'canvas';
 
 export const runtime = 'nodejs';
+
+// Try to register DejaVu Sans font (common on Linux servers)
+try {
+  registerFont('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', { 
+    family: 'DejaVu Sans', 
+    weight: 'bold' 
+  });
+  registerFont('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', { 
+    family: 'DejaVu Sans', 
+    weight: 'normal' 
+  });
+} catch (e) {
+  console.log('DejaVu Sans font not found, using fallback');
+}
 
 export async function GET(request: Request) {
   // Test endpoint
@@ -36,8 +50,8 @@ export async function GET(request: Request) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1200, 630);
 
-    // Use sans-serif as fallback - Vercel should have this
-    const fontFamily = 'sans-serif';
+    // Use DejaVu Sans (registered at module load)
+    const fontFamily = 'DejaVu Sans, sans-serif';
     
     // Title
     ctx.fillStyle = '#fbbf24';
