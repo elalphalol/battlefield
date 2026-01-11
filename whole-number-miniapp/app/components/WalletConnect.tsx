@@ -164,15 +164,24 @@ export function WalletConnect() {
       
       {showModal && (
         <>
-          {/* Backdrop for mobile - clicking closes modal */}
+          {/* Backdrop - clicking closes modal */}
           <div 
-            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            className="fixed inset-0 bg-black/50 z-[9998]"
             onClick={() => setShowModal(false)}
           />
           
-          {/* Modal - improved positioning for mobile */}
-          <div className="fixed md:absolute left-0 right-0 md:right-0 md:left-auto bottom-0 md:bottom-auto md:top-full md:mt-2 w-full md:w-80 bg-slate-800 border-2 border-slate-700 rounded-t-2xl md:rounded-lg shadow-xl z-50 max-h-[75vh] md:max-h-[90vh] overflow-y-auto safe-bottom">
-            <div className="p-4 pb-6">
+          {/* Modal - ALWAYS fixed at bottom on mobile, dropdown on desktop */}
+          <div className="fixed md:absolute 
+                          left-0 right-0 
+                          md:right-0 md:left-auto 
+                          bottom-0 md:bottom-auto 
+                          md:top-full md:mt-2 
+                          w-full md:w-80 
+                          bg-slate-800 border-2 border-slate-700 
+                          rounded-t-2xl md:rounded-lg 
+                          shadow-2xl z-[9999] 
+                          max-h-[70vh] overflow-y-auto">
+            <div className="p-5 pb-8">
               {/* Mobile drag handle */}
               <div className="w-12 h-1 bg-slate-600 rounded-full mx-auto mb-4 md:hidden" />
               
@@ -187,8 +196,8 @@ export function WalletConnect() {
               </div>
               
               <div className="space-y-3">
-                {/* Farcaster Sign In - only show if in Farcaster context */}
-                {isInFarcaster && !farcasterUser && (
+                {/* Farcaster Sign In - ALWAYS show, works on farcaster.xyz too */}
+                {!farcasterUser && (
                   <button
                     onClick={handleFarcasterSignIn}
                     disabled={farcasterConnecting}
@@ -198,7 +207,9 @@ export function WalletConnect() {
                       <span className="text-2xl">🎭</span>
                       <div>
                         <div className="font-bold">Sign in with Farcaster</div>
-                        <div className="text-xs text-purple-200">Recommended in Warpcast</div>
+                        <div className="text-xs text-purple-200">
+                          {isInFarcaster ? 'Recommended in Warpcast' : 'Works on farcaster.xyz'}
+                        </div>
                       </div>
                     </div>
                     {farcasterConnecting && <span className="animate-spin">⏳</span>}
@@ -207,7 +218,7 @@ export function WalletConnect() {
 
                 {/* Wallet connection options */}
                 <div className="text-gray-400 text-xs mt-4 mb-2">
-                  {isInFarcaster ? 'Or connect with wallet:' : 'Select wallet:'}
+                  Or connect with wallet:
                 </div>
                 
                 {connectors.map((connector) => (
