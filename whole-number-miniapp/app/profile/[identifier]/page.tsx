@@ -91,7 +91,7 @@ export default function UserProfilePage() {
       fetchProfile(currentPage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [identifier, currentPage, currentPrice]);
+  }, [identifier, currentPage]);
 
   const fetchProfile = async (page: number = 1) => {
     try {
