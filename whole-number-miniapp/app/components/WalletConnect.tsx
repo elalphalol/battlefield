@@ -31,6 +31,23 @@ export function WalletConnect() {
     initFarcaster();
   }, []);
 
+  // When wallet connects in Farcaster frame, update profile with Farcaster data
+  useEffect(() => {
+    const updateFarcasterData = async () => {
+      if (isConnected && address && isInFarcaster && !farcasterUser) {
+        console.log('Wallet connected in Farcaster frame, fetching Farcaster data...');
+        const user = await farcasterAuth.getFarcasterUser();
+        if (user) {
+          setFarcasterUser(user);
+          // Update backend with Farcaster data
+          await farcasterAuth.updateExistingUser(address);
+        }
+      }
+    };
+    
+    updateFarcasterData();
+  }, [isConnected, address, isInFarcaster]);
+
   // Handle Farcaster sign-in
   const handleFarcasterSignIn = async () => {
     setFarcasterConnecting(true);

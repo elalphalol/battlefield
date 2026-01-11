@@ -111,7 +111,10 @@ export class FarcasterAuth {
   // Register or update user on backend
   async registerUser(farcasterUser: FarcasterUser, walletAddress: string, army?: 'bears' | 'bulls') {
     try {
-      const response = await fetch('/api/users', {
+      // Import getApiUrl dynamically to avoid circular dependencies
+      const { getApiUrl } = await import('../config/api');
+      
+      const response = await fetch(getApiUrl('api/users'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,15 +127,48 @@ export class FarcasterAuth {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to register user on backend');
+        const errorData = await response.json();
+        console.error('Backend error:', errorData);
+        throw new Error(errorData.message || 'Failed to register user on backend');
       }
 
       const data = await response.json();
-      console.log('User registered/updated:', data);
+      console.log('✅ User registered/updated:', data);
       return data;
     } catch (error) {
-      console.error('Error registering user:', error);
+      console.error('❌ Error registering user:', error);
       throw error;
+    }
+  }
+
+  // Update existing user with Farcaster data if wallet already exists
+  async updateExistingUser(walletAddress: string) {
+    try {
+      const user = await this.getFarcasterUser();
+      if (!user) return null;
+
+      const { getApiUrl } = await import('../config/api');
+      
+      const response = await fetch(getApiUrl('api/users/update-farcaster'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: walletAddress.toLowerCase(),
+          fid: user.fid,
+          username: user.username || user.displayName || `User${user.fid}`,
+          pfpUrl: user.pfpUrl
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Updated existing user with Farcaster data:', data);
+        return data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error updating existing user:', error);
+      return null;
     }
   }
 }
