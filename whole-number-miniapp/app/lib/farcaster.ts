@@ -87,13 +87,32 @@ export class FarcasterAuth {
         throw new Error('No Farcaster user found');
       }
 
-      // Get verified wallet address
-      const walletAddress = user.verifications && user.verifications.length > 0
-        ? user.verifications[0]
-        : user.custody || '';
+      // Method 1: Try to get wallet from SDK's wallet provider
+      let walletAddress = '';
+      
+      try {
+        // Request wallet access from Farcaster Frame
+        const provider = await sdk.wallet.ethProvider;
+        if (provider) {
+          const accounts = await provider.request({ method: 'eth_accounts' });
+          if (accounts && accounts.length > 0) {
+            walletAddress = accounts[0];
+            console.log('✅ Got wallet from eth_accounts:', walletAddress);
+          }
+        }
+      } catch (providerError) {
+        console.log('No eth provider available:', providerError);
+      }
+
+      // Method 2: Fallback to verifications or custody address
+      if (!walletAddress) {
+        walletAddress = user.verifications && user.verifications.length > 0
+          ? user.verifications[0]
+          : user.custody || '';
+      }
 
       if (!walletAddress) {
-        throw new Error('No wallet address found for Farcaster user');
+        throw new Error('No wallet address found - user may need to connect wallet in Farcaster');
       }
 
       console.log('Farcaster sign-in successful:', { fid: user.fid, username: user.username, walletAddress });
