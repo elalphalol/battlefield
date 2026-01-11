@@ -132,9 +132,19 @@ export function WalletConnect() {
                 {connectors.map((connector) => (
                   <button
                     key={connector.id}
-                    onClick={() => {
-                      connect({ connector });
-                      setShowModal(false);
+                    onClick={async () => {
+                      try {
+                        // Close modal immediately to remove backdrop
+                        setShowModal(false);
+                        
+                        // Small delay to ensure backdrop is removed before QR modal shows
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        // Then trigger connection
+                        connect({ connector });
+                      } catch (error) {
+                        console.error('Connection error:', error);
+                      }
                     }}
                     className="w-full bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white py-3 rounded-lg font-bold text-left px-4 flex items-center justify-between transition-all active:scale-98 text-sm sm:text-base"
                   >
