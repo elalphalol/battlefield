@@ -1,9 +1,9 @@
-import { ImageResponse } from '@vercel/og';
+import { createCanvas } from 'canvas';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
-  // First, test if route is working at all
+  // Test endpoint
   const { searchParams } = new URL(request.url);
   const test = searchParams.get('test');
   
@@ -19,49 +19,73 @@ export async function GET(request: Request) {
     const pnlPercent = searchParams.get('pnlPercent') || '0';
     const pnl = searchParams.get('pnl') || '0';
     const username = searchParams.get('username') || 'Trader';
+    const positionType = searchParams.get('type') || 'long';
+    const leverage = searchParams.get('leverage') || '1';
 
     const isProfit = parseFloat(pnlPercent) >= 0;
-    const bgColor = army === 'bears' ? '#7f1d1d' : '#14532d';
-    const textColor = isProfit ? '#22c55e' : '#ef4444';
+    const isBears = army === 'bears';
 
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            display: 'flex',
-            height: '100%',
-            width: '100%',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            backgroundColor: bgColor,
-            fontSize: 32,
-            fontWeight: 600,
-          }}
-        >
-          <div style={{ color: '#fbbf24', fontSize: 60, fontWeight: 700 }}>
-            BATTLEFIELD
-          </div>
-          <div style={{ color: '#fff', marginTop: 20 }}>
-            {username} - {army.toUpperCase()}
-          </div>
-          <div style={{ color: textColor, fontSize: 100, fontWeight: 700, marginTop: 20 }}>
-            {isProfit ? '+' : ''}{pnlPercent}%
-          </div>
-          <div style={{ color: textColor, fontSize: 40, marginTop: 10 }}>
-            {isProfit ? '+' : ''}${pnl}
-          </div>
-        </div>
-      ),
-      {
-        width: 1200,
-        height: 630,
-      }
-    );
+    // Create canvas
+    const canvas = createCanvas(1200, 630);
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 1200, 630);
+    gradient.addColorStop(0, isBears ? '#7f1d1d' : '#14532d');
+    gradient.addColorStop(1, '#0f172a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1200, 630);
+
+    // Title
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 60px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('BATTLEFIELD', 600, 100);
+
+    // Subtitle
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '24px Arial';
+    ctx.fillText('Bears vs Bulls', 600, 140);
+
+    // Username & Army
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 36px Arial';
+    ctx.fillText(`${username} - ${army.toUpperCase()} ARMY`, 600, 200);
+
+    // Position Type
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '28px Arial';
+    ctx.fillText(`${positionType.toUpperCase()} ${leverage}x`, 600, 250);
+
+    // P&L Percentage (BIG)
+    ctx.fillStyle = isProfit ? '#22c55e' : '#ef4444';
+    ctx.font = 'bold 120px Arial';
+    const pnlText = `${isProfit ? '+' : ''}${pnlPercent}%`;
+    ctx.fillText(pnlText, 600, 380);
+
+    // P&L Dollar Amount
+    ctx.font = 'bold 48px Arial';
+    const dollarText = `${isProfit ? '+' : ''}$${pnl}`;
+    ctx.fillText(dollarText, 600, 450);
+
+    // Footer
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '24px Arial';
+    ctx.fillText('battlefield-roan.vercel.app', 600, 580);
+
+    // Return as PNG
+    const buffer = canvas.toBuffer('image/png');
+    return new Response(buffer as any, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    });
   } catch (e: any) {
     console.error('Share card error:', e);
     return new Response(`Failed to generate image: ${e.message}`, {
       status: 500,
+      headers: { 'Content-Type': 'text/plain' },
     });
   }
 }

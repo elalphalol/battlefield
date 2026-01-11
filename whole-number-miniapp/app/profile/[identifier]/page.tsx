@@ -489,16 +489,27 @@ export default function UserProfilePage() {
                       const armyEmoji = army === 'bears' ? '🐻' : '🐂';
                       const websiteUrl = window.location.origin;
                       
-                      const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls\n\n🎮 Play: ${websiteUrl}`;
+                      const params = new URLSearchParams({
+                        army,
+                        type: trade.position_type,
+                        leverage: trade.leverage.toString(),
+                        pnl: pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                        pnlPercent: pnlPercentage.toFixed(1),
+                        username: profile.user.username || 'Trader'
+                      });
+                      const imageUrl = `${websiteUrl}/api/share-card?${params.toString()}`;
+                      
+                      const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls`;
 
                       if (platform === 'farcaster') {
                         const encodedText = encodeURIComponent(shareText);
-                        window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
+                        const encodedImage = encodeURIComponent(imageUrl);
+                        window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
                       } else if (platform === 'twitter') {
-                        const encodedText = encodeURIComponent(shareText);
+                        const encodedText = encodeURIComponent(shareText + `\n\n${websiteUrl}`);
                         window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
                       } else if (platform === 'copy') {
-                        navigator.clipboard.writeText(shareText);
+                        navigator.clipboard.writeText(`${shareText}\n\n${imageUrl}\n\n🎮 ${websiteUrl}`);
                         alert('✅ Copied to clipboard!');
                       }
                       
