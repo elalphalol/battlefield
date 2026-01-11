@@ -511,9 +511,9 @@ export default function UserProfilePage() {
                           const encodedImage = encodeURIComponent(imageUrl);
                           window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
                         } else {
-                          // Desktop: Just copy text + image URL for manual paste
-                          navigator.clipboard.writeText(`${shareText}\n\nImage: ${imageUrl}\n\nPlay: ${websiteUrl}`);
-                          alert('✅ Copied to clipboard! Open Warpcast and paste, then manually add the image screenshot.');
+                          // Desktop: Open Warpcast with just text
+                          const encodedText = encodeURIComponent(shareText);
+                          window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
                         }
                       } else if (platform === 'twitter') {
                         const encodedText = encodeURIComponent(shareText + `\n\n${websiteUrl}`);
