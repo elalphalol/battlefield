@@ -147,12 +147,19 @@ export async function GET(request: Request) {
       {
         width: 1200,
         height: 630,
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
       }
     );
   } catch (e: any) {
     console.log(`${e.message}`);
-    return new Response(`Failed to generate image`, {
+    return new Response(`Failed to generate image: ${e.message}`, {
       status: 500,
+      headers: {
+        'Content-Type': 'text/plain',
+      },
     });
   }
 }
