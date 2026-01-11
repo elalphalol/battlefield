@@ -13,7 +13,7 @@ export function WalletConnect() {
   const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null);
   const [farcasterConnecting, setFarcasterConnecting] = useState(false);
 
-  // Initialize Farcaster SDK on mount
+  // Initialize Farcaster SDK on mount and auto-register user
   useEffect(() => {
     const initFarcaster = async () => {
       const initialized = await farcasterAuth.initialize();
@@ -24,6 +24,21 @@ export function WalletConnect() {
         if (user) {
           setFarcasterUser(user);
           console.log('Farcaster user detected:', user);
+          
+          // AUTO-REGISTER: Get verified wallet address and create/update user profile
+          const walletAddress = user.verifications && user.verifications.length > 0
+            ? user.verifications[0]
+            : user.custody;
+            
+          if (walletAddress) {
+            console.log('Auto-registering Farcaster user with wallet:', walletAddress);
+            try {
+              await farcasterAuth.registerUser(user, walletAddress);
+              console.log('✅ User profile auto-created/updated');
+            } catch (error) {
+              console.error('Error auto-registering user:', error);
+            }
+          }
         }
       }
     };

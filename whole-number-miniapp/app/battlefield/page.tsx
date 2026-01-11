@@ -35,11 +35,32 @@ interface UserData {
 }
 
 export default function BattlefieldHome() {
-  const { address } = useAccount();
+  const { address: wagmiAddress } = useAccount();
   const { price: btcPrice, isLoading } = useBTCPrice(5000);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'ranking'>('trade');
   const [strategy] = useState(() => new WholeNumberStrategy());
+
+  // Use either wagmi wallet address OR Farcaster verified wallet
+  const address = wagmiAddress || farcasterWallet;
+
+  // Get Farcaster wallet address on mount
+  useEffect(() => {
+    const getFarcasterWallet = async () => {
+      const { farcasterAuth } = await import('../lib/farcaster');
+      const user = await farcasterAuth.getFarcasterUser();
+      if (user && user.verifications && user.verifications.length > 0) {
+        const wallet = user.verifications[0];
+        setFarcasterWallet(wallet);
+        console.log('✅ Using Farcaster verified wallet:', wallet);
+      }
+    };
+    
+    if (!wagmiAddress) {
+      getFarcasterWallet();
+    }
+  }, [wagmiAddress]);
 
   // Update strategy with new price
   useEffect(() => {
