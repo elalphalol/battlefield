@@ -121,23 +121,21 @@ export function TradeHistory() {
           };
 
           const handleShare = (platform: 'farcaster' | 'twitter' | 'copy') => {
-            const imageUrl = generateImageUrl();
-            const websiteUrl = window.location.origin; // Use actual current URL
+            const websiteUrl = window.location.origin;
             const army = userData?.army || 'bulls';
             const armyEmoji = army === 'bears' ? '🐻' : '🐂';
             
-            const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls`;
+            const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls\n\n🎮 Play: ${websiteUrl}`;
 
             if (platform === 'farcaster') {
               const encodedText = encodeURIComponent(shareText);
-              const encodedImage = encodeURIComponent(imageUrl);
-              window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
+              window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
             } else if (platform === 'twitter') {
-              const encodedText = encodeURIComponent(shareText + `\n\n${websiteUrl}`);
+              const encodedText = encodeURIComponent(shareText);
               window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
             } else if (platform === 'copy') {
-              navigator.clipboard.writeText(`${shareText}\n\n📸 View Image: ${imageUrl}\n🎮 Play: ${websiteUrl}`);
-              alert('✅ Copied to clipboard! The image URL and game link are included.');
+              navigator.clipboard.writeText(shareText);
+              alert('✅ Copied to clipboard!');
             }
             
             setOpenShareMenuId(null);
