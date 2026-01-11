@@ -77,6 +77,8 @@ export default function UserProfilePage() {
         setCurrentPrice(btcPrice);
       } catch (error) {
         console.error('Error fetching BTC price:', error);
+        // Set a default price if fetch fails so page doesn't get stuck
+        setCurrentPrice(100000);
       }
     };
 
@@ -85,11 +87,14 @@ export default function UserProfilePage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Load profile on mount and when identifier/page changes (only when price is available)
+  // Load profile on mount and when identifier/page changes
   useEffect(() => {
-    if (currentPrice) {
+    // Wait a moment for price to load, or load anyway after timeout
+    const timer = setTimeout(() => {
       fetchProfile(currentPage);
-    }
+    }, currentPrice ? 0 : 1000);
+    
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identifier, currentPage]);
 
