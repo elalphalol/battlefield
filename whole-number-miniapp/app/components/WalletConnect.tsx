@@ -88,8 +88,14 @@ export function WalletConnect() {
     }
   };
 
-  // Connected state (either wallet or Farcaster)
-  if (isConnected && address) {
+  // Check if user has Farcaster wallet available
+  const farcasterWalletAddress = farcasterUser?.verifications?.[0] || farcasterUser?.custody;
+  const hasValidConnection = (isConnected && address) || (isInFarcaster && farcasterWalletAddress);
+
+  // Connected state (either wagmi wallet OR Farcaster verified wallet)
+  if (hasValidConnection) {
+    const displayAddress = address || farcasterWalletAddress || '';
+    
     return (
       <div className="relative">
         <button
@@ -99,7 +105,7 @@ export function WalletConnect() {
           {farcasterUser && (
             <span className="text-purple-400">🎭</span>
           )}
-          {address.slice(0, 6)}...{address.slice(-4)}
+          {displayAddress.slice(0, 6)}...{displayAddress.slice(-4)}
         </button>
         
         {showModal && (
@@ -116,7 +122,7 @@ export function WalletConnect() {
                 </div>
               )}
               <div className="text-white font-mono text-sm mb-4">
-                {address.slice(0, 6)}...{address.slice(-4)}
+                {displayAddress.slice(0, 6)}...{displayAddress.slice(-4)}
               </div>
               <button
                 onClick={() => {
