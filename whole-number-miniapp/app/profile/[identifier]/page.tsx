@@ -496,7 +496,8 @@ export default function UserProfilePage() {
                         leverage: trade.leverage.toString(),
                         pnl: pnl.toFixed(2),
                         pnlPercent: pnlPercentage.toFixed(1),
-                        username: profile.user.username || 'Trader'
+                        username: profile.user.username || 'Trader',
+                        v: Date.now().toString() // Cache buster
                       });
                       const imageUrl = `${websiteUrl}/api/share-card?${params.toString()}`;
                       

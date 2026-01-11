@@ -112,7 +112,8 @@ export function TradeHistory() {
               leverage: trade.leverage.toString(),
               pnl: pnl.toFixed(2),
               pnlPercent: pnlPercentage.toFixed(1),
-              username: username || 'Trader'
+              username: username || 'Trader',
+              v: Date.now().toString() // Cache buster
             });
 
             return `${window.location.origin}/api/share-card?${params.toString()}`;
