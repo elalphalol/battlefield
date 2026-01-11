@@ -288,50 +288,56 @@ export default function UserProfilePage() {
         </button>
 
         {/* Profile Header */}
-        <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
-          <div className="flex items-center gap-6">
-            {/* Avatar */}
-            {profile.user.pfp_url ? (
-              <img 
-                src={profile.user.pfp_url} 
-                alt={profile.user.username}
-                className="w-24 h-24 rounded-full border-4 border-slate-600"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full border-4 border-slate-600 bg-slate-700 flex items-center justify-center text-4xl">
-                {getArmyEmoji(profile.user.army)}
-              </div>
-            )}
-
-            {/* User Info */}
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold text-white">{profile.user.username}</h1>
-                <span className={`text-3xl ${getArmyColor(profile.user.army)}`}>
+        <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 sm:p-6">
+          <div className="flex flex-col gap-4">
+            {/* Top Row: Avatar and User Info */}
+            <div className="flex items-center gap-4">
+              {/* Avatar */}
+              {profile.user.pfp_url ? (
+                <img 
+                  src={profile.user.pfp_url} 
+                  alt={profile.user.username}
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-slate-600 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-slate-600 bg-slate-700 flex items-center justify-center text-3xl sm:text-4xl flex-shrink-0">
                   {getArmyEmoji(profile.user.army)}
-                </span>
-              </div>
-              <p className="text-gray-400 text-sm mb-2">FID: {profile.user.fid}</p>
-              <p className="text-gray-500 text-xs font-mono truncate">
-                {profile.user.wallet_address}
-              </p>
-            </div>
+                </div>
+              )}
 
-            {/* Player Title - Centered better */}
-            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-4 text-center mx-auto">
-              <p className="text-gray-400 text-xs mb-2">Player Title</p>
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-2xl">{getPlayerTitle(profile.stats).badge}</span>
-                <p className={`text-md font-bold ${getPlayerTitle(profile.stats).color}`}>
-                  {getPlayerTitle(profile.stats).title}
+              {/* User Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white truncate">{profile.user.username}</h1>
+                  <span className={`text-xl sm:text-2xl md:text-3xl ${getArmyColor(profile.user.army)} flex-shrink-0`}>
+                    {getArmyEmoji(profile.user.army)}
+                  </span>
+                </div>
+                <p className="text-gray-400 text-xs sm:text-sm mb-1 sm:mb-2">FID: {profile.user.fid}</p>
+                <p className="text-gray-500 text-[10px] sm:text-xs font-mono truncate">
+                  {profile.user.wallet_address}
                 </p>
               </div>
             </div>
 
-            {/* Rank Badge - Improved design */}
-            <div className="bg-slate-700 border-2 border-yellow-500 rounded-lg p-4 text-center min-w-[100px]">
-              <p className="text-gray-400 text-xs mb-1">Rank</p>
-              <div className="text-3xl font-bold text-yellow-400">{getRankBadge(profile.stats.rank)}</div>
+            {/* Bottom Row: Player Title and Rank */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Player Title */}
+              <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-3 sm:p-4 text-center">
+                <p className="text-gray-400 text-xs mb-2">Player Title</p>
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <span className="text-xl sm:text-2xl">{getPlayerTitle(profile.stats).badge}</span>
+                  <p className={`text-sm sm:text-md font-bold ${getPlayerTitle(profile.stats).color}`}>
+                    {getPlayerTitle(profile.stats).title}
+                  </p>
+                </div>
+              </div>
+
+              {/* Rank Badge */}
+              <div className="bg-slate-700 border-2 border-yellow-500 rounded-lg p-3 sm:p-4 text-center">
+                <p className="text-gray-400 text-xs mb-1">Rank</p>
+                <div className="text-2xl sm:text-3xl font-bold text-yellow-400">{getRankBadge(profile.stats.rank)}</div>
+              </div>
             </div>
           </div>
         </div>
