@@ -122,7 +122,7 @@ export function TradeHistory() {
 
           const handleShare = (platform: 'farcaster' | 'twitter' | 'copy') => {
             const imageUrl = generateImageUrl();
-            const websiteUrl = 'https://battlefield-mini.vercel.app';
+            const websiteUrl = window.location.origin; // Use actual current URL
             const army = userData?.army || 'bulls';
             const armyEmoji = army === 'bears' ? '🐻' : '🐂';
             
@@ -136,8 +136,8 @@ export function TradeHistory() {
               const encodedText = encodeURIComponent(shareText + `\n\n${websiteUrl}`);
               window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
             } else if (platform === 'copy') {
-              navigator.clipboard.writeText(`${shareText}\n\nImage: ${imageUrl}\n${websiteUrl}`);
-              alert('✅ Copied to clipboard! Paste in any social media.');
+              navigator.clipboard.writeText(`${shareText}\n\n📸 View Image: ${imageUrl}\n🎮 Play: ${websiteUrl}`);
+              alert('✅ Copied to clipboard! The image URL and game link are included.');
             }
             
             setOpenShareMenuId(null);
