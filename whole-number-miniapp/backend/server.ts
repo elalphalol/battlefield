@@ -1,5 +1,6 @@
 // BATTLEFIELD Backend API Server
 // Bears 🐻 vs Bulls 🐂 Paper Trading Game
+// Fixed: Auto-create users when opening positions
 
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
