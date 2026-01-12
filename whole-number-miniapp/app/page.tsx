@@ -8,18 +8,13 @@ export default function LandingPage() {
   const router = useRouter();
 
   const handleExternalLink = async (url: string) => {
-    // Check if we're in a Farcaster frame
+    // Always try SDK first - it will only work in Farcaster miniapp
     try {
-      if (typeof window !== 'undefined' && (window as any).parent !== window) {
-        // Try Farcaster SDK first (for miniapp)
-        await sdk.actions.openUrl(url);
-      } else {
-        // Desktop browser - use regular window.open
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
+      await sdk.actions.openUrl(url);
+      console.log('✅ Opened via Farcaster SDK');
     } catch (error) {
-      console.error('Error opening URL:', error);
-      // Fallback to regular window.open
+      // SDK failed (desktop browser) - use regular window.open
+      console.log('⚠️ SDK failed, using window.open:', error);
       window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
