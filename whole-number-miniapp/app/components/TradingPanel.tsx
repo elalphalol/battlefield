@@ -99,6 +99,12 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       return;
     }
 
+    // Check minimum position size
+    if (positionSize <= 0 || positionSize < 1) {
+      alert('❌ Please enter a position size. Minimum: $1');
+      return;
+    }
+
     if (!address || positionSize > Number(paperBalance)) {
       alert(`Insufficient balance. Available: $${Number(paperBalance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
       return;
@@ -422,14 +428,16 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         {/* Open Button */}
         <button
           onClick={handleOpenTrade}
-          disabled={isOpening || positionSize > Number(paperBalance)}
+          disabled={isOpening || positionSize < 1 || positionSize > Number(paperBalance)}
           className={`w-full py-4 rounded-lg font-bold text-lg transition-all ${
             tradeType === 'long'
               ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500'
               : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500'
           } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {isOpening ? '⏳ Opening...' : `Open ${tradeType.toUpperCase()} ${leverage}x`}
+          {isOpening ? '⏳ Opening...' : 
+           positionSize < 1 ? 'Enter Position Size' :
+           `Open ${tradeType.toUpperCase()} ${leverage}x`}
         </button>
       </div>
 
