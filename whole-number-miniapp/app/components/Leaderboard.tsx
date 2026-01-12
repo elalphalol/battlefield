@@ -210,35 +210,33 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                   {/* User Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-bold text-white truncate">
+                      <span className="font-bold text-white text-sm truncate">
                         {entry.username || `Trader${entry.fid}`}
                       </span>
                       {isUserEntry && (
-                        <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded">
+                        <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">
                           YOU
                         </span>
                       )}
                     </div>
                     
-                    <div className="flex gap-4 text-xs text-gray-400">
-                      <span>💰 ${Number(entry.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>
-                      <span>📊 {Number(entry.win_rate).toFixed(1)}% WR</span>
-                      <span>🔥 {entry.current_streak} streak</span>
+                    {/* Mobile: Simplified info below name */}
+                    <div className="flex gap-3 text-xs text-gray-400">
+                      <span>{Number(entry.win_rate).toFixed(0)}% WR</span>
+                      <span>🔥{entry.current_streak}</span>
+                      <span>{entry.total_trades}T</span>
                     </div>
                   </div>
 
-                  {/* P&L - Now visible on all screens */}
-                  <div className="flex flex-col items-end gap-1">
-                    <div className={`text-lg md:text-2xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {Number(entry.total_pnl) >= 0 ? '+' : ''}${Number(entry.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2})}
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {entry.total_trades} trades
+                  {/* P&L - Prominent on right */}
+                  <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                    <div className={`text-base md:text-xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {Number(entry.total_pnl) >= 0 ? '+' : ''}${Math.abs(Number(entry.total_pnl)).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                     </div>
                     {entry.battle_tokens_earned > 0 && (
                       <div className="text-xs text-purple-400 flex items-center gap-1">
                         <img src="/battlefield-logo.jpg" alt="$BATTLE" className="w-3 h-3 rounded-full" />
-                        {(entry.battle_tokens_earned / 1000000).toFixed(1)}M $BATTLE
+                        {(entry.battle_tokens_earned / 1000000).toFixed(1)}M
                       </div>
                     )}
                   </div>
