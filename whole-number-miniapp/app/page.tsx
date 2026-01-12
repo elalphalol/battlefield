@@ -57,7 +57,7 @@ export default function LandingPage() {
             <div className="bg-slate-900/50 rounded-lg p-4 border border-purple-500/30">
               <p className="text-xs text-gray-500 mb-2">Contract Address (Coming Soon)</p>
               <p className="text-xs md:text-sm font-mono text-purple-300 break-all">
-                0x...DEPLOY_TOKEN_CA_HERE...
+                Deploying Soon
               </p>
             </div>
           </div>
