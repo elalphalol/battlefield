@@ -321,9 +321,6 @@ export default function UserProfilePage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white truncate">{profile.user.username}</h1>
-                  <span className={`text-xl sm:text-2xl md:text-3xl ${getArmyColor(profile.user.army)} flex-shrink-0`}>
-                    {getArmyEmoji(profile.user.army)}
-                  </span>
                 </div>
                 <p className="text-gray-400 text-xs sm:text-sm mb-1 sm:mb-2">FID: {profile.user.fid}</p>
                 <p className="text-gray-500 text-[10px] sm:text-xs font-mono truncate">
