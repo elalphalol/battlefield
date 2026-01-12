@@ -509,7 +509,8 @@ export default function BattlefieldHome() {
               <div className="lg:col-span-3 space-y-4">
                 <PaperMoneyClaim 
                   onClaim={handleClaim} 
-                  paperBalance={userData?.paper_balance || 0} 
+                  paperBalance={userData?.paper_balance || 0}
+                  walletAddress={address}
                 />
                 <UserStats userData={userData} />
               </div>

@@ -7,10 +7,13 @@ import { getApiUrl } from '../config/api';
 interface PaperMoneyClaimProps {
   onClaim: (newBalance: number) => void;
   paperBalance: number;
+  walletAddress?: string; // Add optional wallet address prop
 }
 
-export function PaperMoneyClaim({ onClaim, paperBalance }: PaperMoneyClaimProps) {
-  const { address } = useAccount();
+export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperMoneyClaimProps) {
+  const { address: wagmiAddress } = useAccount();
+  // Use passed wallet address if available, otherwise fall back to wagmi
+  const address = walletAddress || wagmiAddress;
   const [claiming, setClaiming] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [cooldownActive, setCooldownActive] = useState(true);
