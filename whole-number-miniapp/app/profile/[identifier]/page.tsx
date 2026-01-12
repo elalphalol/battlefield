@@ -67,7 +67,6 @@ export default function UserProfilePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceLoaded, setPriceLoaded] = useState(false);
-  const [openShareMenuId, setOpenShareMenuId] = useState<number | null>(null);
 
   // Fetch BTC price
   useEffect(() => {
@@ -481,11 +480,10 @@ export default function UserProfilePage() {
                     const isProfit = pnl >= 0;
                     const isLiquidated = trade.status === 'liquidated';
 
-                    const handleShare = (platform: 'farcaster' | 'twitter' | 'copy') => {
+                    const handleCast = () => {
                       const army = profile.user.army;
                       const armyEmoji = army === 'bears' ? '🐻' : '🐂';
                       const websiteUrl = window.location.origin;
-                      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                       
                       // Don't use toLocaleString for URL params - it adds commas that get encoded
                       const params = new URLSearchParams({
@@ -503,35 +501,24 @@ export default function UserProfilePage() {
                       const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
                       const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
 
-                      if (platform === 'farcaster') {
-                        // Use Farcaster SDK to create a cast with text and image embed
-                        try {
-                          if (typeof window !== 'undefined' && (window as any).sdk) {
-                            const sdk = (window as any).sdk;
-                            sdk.actions.openUrl(`https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`);
-                          } else {
-                            // Fallback to regular URL opening
-                            const encodedText = encodeURIComponent(shareText);
-                            const encodedImage = encodeURIComponent(imageUrl);
-                            window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
-                          }
-                        } catch (error) {
-                          console.error('Error sharing to Farcaster:', error);
-                          // Fallback
+                      // Use Farcaster SDK to create a cast with text and image embed
+                      try {
+                        if (typeof window !== 'undefined' && (window as any).sdk) {
+                          const sdk = (window as any).sdk;
+                          sdk.actions.openUrl(`https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`);
+                        } else {
+                          // Fallback to regular URL opening
                           const encodedText = encodeURIComponent(shareText);
                           const encodedImage = encodeURIComponent(imageUrl);
                           window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
                         }
-                      } else if (platform === 'twitter') {
-                        const encodedText = encodeURIComponent(shareText + `\n\n${websiteUrl}`);
-                        window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
-                      } else if (platform === 'copy') {
-                        // Just copy the image URL for easy sharing
-                        navigator.clipboard.writeText(imageUrl);
-                        alert('✅ Image URL copied! Paste in any app.');
+                      } catch (error) {
+                        console.error('Error casting to Farcaster:', error);
+                        // Fallback
+                        const encodedText = encodeURIComponent(shareText);
+                        const encodedImage = encodeURIComponent(imageUrl);
+                        window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
                       }
-                      
-                      setOpenShareMenuId(null);
                     };
 
                     return (
@@ -587,31 +574,12 @@ export default function UserProfilePage() {
                           <div className="text-xs text-gray-500">
                             {new Date(trade.closed_at).toLocaleString()}
                           </div>
-                          <div className="relative z-50">
-                            <button
-                              onClick={() => setOpenShareMenuId(openShareMenuId === trade.id ? null : trade.id)}
-                              className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1 relative z-50"
-                            >
-                              📤 Share
-                            </button>
-                            
-                            {openShareMenuId === trade.id && (
-                              <div className="absolute right-0 bottom-full mb-2 w-48 bg-slate-900 border-2 border-purple-500 rounded-lg shadow-xl z-[100] overflow-hidden">
-                                <button
-                                  onClick={() => handleShare('farcaster')}
-                                  className="w-full text-left px-4 py-3 hover:bg-purple-600 text-white text-sm font-bold transition-all flex items-center gap-2 border-b border-slate-700"
-                                >
-                                  <span className="text-lg">🟪</span> Farcaster
-                                </button>
-                                <button
-                                  onClick={() => handleShare('copy')}
-                                  className="w-full text-left px-4 py-3 hover:bg-green-600 text-white text-sm font-bold transition-all flex items-center gap-2"
-                                >
-                                  <span className="text-lg">📋</span> Copy Link
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          <button
+                            onClick={handleCast}
+                            className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
+                          >
+                            🟪 Cast
+                          </button>
                         </div>
                       </div>
                     );
