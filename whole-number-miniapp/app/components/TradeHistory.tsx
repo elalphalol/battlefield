@@ -162,7 +162,7 @@ export function TradeHistory() {
                   : 'border-red-700 bg-red-950/20'
               }`}
             >
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className={`text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                     {trade.position_type === 'long' ? '📈' : '📉'}
@@ -176,11 +176,13 @@ export function TradeHistory() {
                     </span>
                   )}
                 </div>
-                <div className={`text-sm font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                  {isProfit ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                  <span className="text-xs ml-1">
+                <div className={`text-right ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className="text-sm font-bold whitespace-nowrap">
+                    {isProfit ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </div>
+                  <div className="text-xs">
                     ({isProfit ? '+' : ''}{pnlPercentage.toFixed(1)}%)
-                  </span>
+                  </div>
                 </div>
               </div>
 
