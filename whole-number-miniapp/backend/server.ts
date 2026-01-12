@@ -413,14 +413,23 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
   }
 
   try {
-    // Get user
-    const user = await pool.query(
+    // Get or create user
+    let user = await pool.query(
       'SELECT id, paper_balance FROM users WHERE LOWER(wallet_address) = LOWER($1)',
       [walletAddress]
     );
 
+    // Auto-create user if they don't exist
     if (user.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      console.log(`🆕 Auto-creating new user for wallet: ${walletAddress}`);
+      const newUser = await pool.query(
+        `INSERT INTO users (wallet_address, username, army, paper_balance)
+         VALUES (LOWER($1), $2, 'bulls', 10000.00)
+         RETURNING id, paper_balance`,
+        [walletAddress, `Trader${walletAddress.slice(2, 8)}`]
+      );
+      user = newUser;
+      console.log(`✅ New user created with $10,000 balance`);
     }
 
     if (user.rows[0].paper_balance < size) {
