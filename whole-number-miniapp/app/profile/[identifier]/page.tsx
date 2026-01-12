@@ -342,10 +342,22 @@ export default function UserProfilePage() {
                 </div>
               </div>
 
-              {/* Rank Badge */}
-              <div className="bg-slate-700 border-2 border-yellow-500 rounded-lg p-3 sm:p-4 text-center">
-                <p className="text-gray-400 text-xs mb-1">Rank</p>
-                <div className="text-2xl sm:text-3xl font-bold text-yellow-400">{getRankBadge(profile.stats.rank)}</div>
+              {/* Army Logo and Rank Badge */}
+              <div className="space-y-3">
+                {/* Army Logo */}
+                <div className="flex justify-center">
+                  <img 
+                    src={profile.user.army === 'bears' ? '/bears-army.png' : '/bulls-army.png'} 
+                    alt={`${profile.user.army} army`}
+                    className="h-16 sm:h-20 w-auto object-contain"
+                  />
+                </div>
+                
+                {/* Rank Badge */}
+                <div className="bg-slate-700 border-2 border-yellow-500 rounded-lg p-3 sm:p-4 text-center">
+                  <p className="text-gray-400 text-xs mb-1">Rank</p>
+                  <div className="text-2xl sm:text-3xl font-bold text-yellow-400">{getRankBadge(profile.stats.rank)}</div>
+                </div>
               </div>
             </div>
           </div>
