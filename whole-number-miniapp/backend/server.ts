@@ -461,7 +461,7 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
 
     // Deduct ONLY position size from balance (fee will be deducted from P&L when closing)
     await pool.query(
-      'UPDATE users SET paper_balance = paper_balance - $1, last_active = NOW() WHERE wallet_address = $2',
+      'UPDATE users SET paper_balance = paper_balance - $1, last_active = NOW() WHERE LOWER(wallet_address) = LOWER($2)',
       [size, walletAddress]
     );
 
