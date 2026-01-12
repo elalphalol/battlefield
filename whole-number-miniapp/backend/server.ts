@@ -641,6 +641,109 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
   }
 });
 
+// Auto-liquidate positions that have hit liquidation price
+app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
+  const { currentPrice } = req.body;
+
+  if (!currentPrice) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Current BTC price required' 
+    });
+  }
+
+  try {
+    // Get all open trades
+    const openTrades = await pool.query(
+      'SELECT * FROM trades WHERE status = $1',
+      ['open']
+    );
+
+    const liquidatedTrades = [];
+
+    for (const trade of openTrades.rows) {
+      const entryPrice = Number(trade.entry_price);
+      const liquidationPrice = Number(trade.liquidation_price);
+      const collateral = Number(trade.position_size);
+      const leverage = Number(trade.leverage);
+      
+      // Check if position should be liquidated
+      let shouldLiquidate = false;
+      
+      if (trade.position_type === 'long') {
+        // Long position liquidates when price drops to liquidation price
+        shouldLiquidate = currentPrice <= liquidationPrice;
+      } else {
+        // Short position liquidates when price rises to liquidation price  
+        shouldLiquidate = currentPrice >= liquidationPrice;
+      }
+
+      if (shouldLiquidate) {
+        await pool.query('BEGIN');
+
+        try {
+          // Calculate final P&L at liquidation
+          const leveragedPositionSize = collateral * leverage;
+          const priceChange = trade.position_type === 'long' 
+            ? currentPrice - entryPrice 
+            : entryPrice - currentPrice;
+          const priceChangePercentage = priceChange / entryPrice;
+          let pnl = priceChangePercentage * leveragedPositionSize;
+
+          // Deduct trading fee
+          const feePercentage = leverage > 1 ? leverage * 0.05 : 0;
+          const tradingFee = (feePercentage / 100) * collateral;
+          const pnlAfterFee = pnl - tradingFee;
+
+          // Mark as liquidated
+          await pool.query(
+            'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_at = NOW() WHERE id = $4',
+            [currentPrice, pnlAfterFee, 'liquidated', trade.id]
+          );
+
+          // No money returned on liquidation (user loses entire collateral)
+          await pool.query(
+            'UPDATE users SET last_active = NOW() WHERE id = $1',
+            [trade.user_id]
+          );
+
+          // Update user's army
+          await updateUserArmy(trade.user_id);
+
+          await pool.query('COMMIT');
+
+          liquidatedTrades.push({
+            tradeId: trade.id,
+            userId: trade.user_id,
+            type: trade.position_type, 
+            leverage: trade.leverage,
+            entryPrice,
+            liquidationPrice:currentPrice,
+            loss: collateral
+          });
+
+          console.log(`💥 AUTO-LIQUIDATED: Trade #${trade.id} - ${trade.position_type.toUpperCase()} ${leverage}x - Loss: $${collateral.toFixed(2)}`);
+        } catch (error) {
+          await pool.query('ROLLBACK');
+          console.error(`Error liquidating trade #${trade.id}:`, error);
+        }
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      liquidatedCount: liquidatedTrades.length,
+      liquidatedTrades,
+      message: liquidatedTrades.length > 0 
+        ? `Auto-liquidated ${liquidatedTrades.length} position(s)` 
+        : 'No positions liquidated'
+    });
+  } catch (error) {
+    console.error('Error in auto-liquidation:', error);
+    res.status(500).json({ success: false, message: 'Failed to process auto-liquidation' });
+  }
+});
+
 // Get user's open trades
 app.get('/api/trades/:walletAddress/open', async (req: Request, res: Response) => {
   const { walletAddress } = req.params;
