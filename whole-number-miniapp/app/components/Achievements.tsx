@@ -142,6 +142,15 @@ export function Achievements({ stats }: AchievementsProps) {
     Mythic: 'text-yellow-400',
   };
 
+  const rarityBorderColors = {
+    Common: 'border-gray-500',
+    Uncommon: 'border-green-500',
+    Rare: 'border-blue-500',
+    Epic: 'border-purple-500',
+    Legendary: 'border-orange-500',
+    Mythic: 'border-yellow-500',
+  };
+
   return (
     <div className="space-y-6">
       {/* Player Title & Points */}
@@ -186,21 +195,18 @@ export function Achievements({ stats }: AchievementsProps) {
               {unlockedAchievements.map((achievement) => (
                 <div
                   key={achievement.id}
-                  className={`bg-slate-700/50 border-l-4 ${categoryColors[achievement.category]} rounded-lg p-4 relative overflow-hidden`}
+                  className={`bg-slate-700/50 border-l-4 ${rarityBorderColors[achievement.rarity]} rounded-lg p-3`}
                 >
-                  <div className="absolute top-2 right-2 text-xs bg-green-500 text-white px-2 py-1 rounded">
-                    ✓ Unlocked
-                  </div>
                   <div className="flex items-start gap-3">
-                    <div className="text-3xl">{achievement.icon}</div>
+                    <div className="text-2xl">{achievement.icon}</div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-white mb-1">{achievement.title}</h4>
-                      <p className="text-sm text-gray-400">{achievement.description}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <h4 className="font-bold text-white text-sm mb-1">{achievement.title}</h4>
+                      <p className="text-xs text-gray-400 mb-2">{achievement.description}</p>
+                      <div className="flex items-center gap-2">
                         <p className="text-xs text-gray-500">{categoryNames[achievement.category]}</p>
-                        <span className="text-xs">•</span>
+                        <span className="text-xs text-gray-600">•</span>
                         <p className={`text-xs font-bold ${rarityColors[achievement.rarity]}`}>{achievement.rarity}</p>
-                        <span className="text-xs">•</span>
+                        <span className="text-xs text-gray-600">•</span>
                         <p className="text-xs text-yellow-400 font-bold">+{achievement.points} pts</p>
                       </div>
                     </div>
@@ -228,14 +234,14 @@ export function Achievements({ stats }: AchievementsProps) {
             {lockedAchievements.map((achievement) => (
               <div
                 key={achievement.id}
-                className={`bg-slate-700/30 border-l-4 ${categoryColors[achievement.category]} rounded-lg p-4 opacity-60`}
+                className={`bg-slate-700/30 border-l-4 ${rarityBorderColors[achievement.rarity]} rounded-lg p-3 opacity-60`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="text-3xl grayscale">{achievement.icon}</div>
+                  <div className="text-2xl grayscale">{achievement.icon}</div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-gray-300 mb-1">{achievement.title}</h4>
-                    <p className="text-sm text-gray-500">{achievement.description}</p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <h4 className="font-bold text-gray-300 text-sm mb-1">{achievement.title}</h4>
+                    <p className="text-xs text-gray-500 mb-2">{achievement.description}</p>
+                    <div className="flex items-center gap-2">
                       <p className="text-xs text-gray-600">{categoryNames[achievement.category]}</p>
                       <span className="text-xs text-gray-600">•</span>
                       <p className={`text-xs font-bold ${rarityColors[achievement.rarity]} opacity-60`}>{achievement.rarity}</p>
