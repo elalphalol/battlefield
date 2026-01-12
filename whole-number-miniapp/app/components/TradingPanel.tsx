@@ -158,6 +158,8 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
     setClosingTradeId(tradeId);
     try {
+      console.log('🔄 Closing trade:', { tradeId, exitPrice: btcPrice });
+
       const response = await fetch(getApiUrl('api/trades/close'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -167,17 +169,22 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         })
       });
 
+      console.log('📡 Close response status:', response.status);
       const data = await response.json();
+      console.log('📊 Close response data:', data);
+
       if (data.success) {
         // Silently close position - no alert
+        console.log('✅ Trade closed successfully');
         fetchOpenTrades();
         onTradeComplete();
       } else {
+        console.error('❌ Close failed:', data.message);
         alert(`❌ ${data.message || 'Failed to close trade'}`);
       }
     } catch (error) {
-      console.error('Error closing trade:', error);
-      alert('❌ Failed to close trade');
+      console.error('💥 Error closing trade:', error);
+      alert(`❌ Failed to close trade: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setClosingTradeId(null);
     }
