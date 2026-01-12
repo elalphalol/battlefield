@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { getApiUrl } from '../config/api';
+import sdk from '@farcaster/frame-sdk';
 
 interface Trade {
   id: number;
@@ -34,6 +35,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [isOpening, setIsOpening] = useState(false);
   const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
+  const [userData, setUserData] = useState<{ army: 'bears' | 'bulls'; username?: string } | null>(null);
 
   // Calculate actual position size from percentage
   // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
@@ -56,11 +58,25 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   useEffect(() => {
     if (address) {
       fetchOpenTrades();
+      fetchUserData();
       // Refresh every 10 seconds
       const interval = setInterval(fetchOpenTrades, 10000);
       return () => clearInterval(interval);
     }
   }, [address]);
+
+  const fetchUserData = async () => {
+    if (!address) return;
+    try {
+      const response = await fetch(getApiUrl(`api/users/${address}`));
+      const data = await response.json();
+      if (data.success) {
+        setUserData(data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
   const fetchOpenTrades = async () => {
     if (!address) return;
@@ -192,6 +208,44 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const isNearLiquidation = (trade: Trade) => {
     const { percentage } = calculatePnL(trade);
     return percentage <= -90; // Warning at -90%
+  };
+
+  const handleCastOpenPosition = async (trade: Trade, pnl: number, percentage: number) => {
+    const army = userData?.army || 'bulls';
+    const armyEmoji = army === 'bears' ? '🐻' : '🐂';
+    const websiteUrl = window.location.origin;
+    const username = userData?.username || address?.slice(0, 8);
+    
+    // Create params for share card image
+    const params = new URLSearchParams({
+      army,
+      type: trade.position_type,
+      leverage: trade.leverage.toString(),
+      pnl: pnl.toFixed(2),
+      pnlPercent: percentage.toFixed(1),
+      username: username || 'Trader',
+      v: Date.now().toString()
+    });
+    const imageUrl = `${websiteUrl}/api/share-card?${params.toString()}`;
+    
+    // Open position text
+    const statusText = pnl >= 0 ? `up +$${Math.abs(pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : `down -$${Math.abs(pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    const shareText = `${armyEmoji} I have an OPEN position on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | Currently ${statusText} (${percentage >= 0 ? '+' : ''}${percentage.toFixed(1)}%)\n\n💭 Should I close it?\n\n⚔️ Bears vs Bulls`;
+
+    // Use Farcaster Frame SDK to open composer
+    try {
+      const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
+      await sdk.actions.openUrl(castUrl);
+    } catch (error) {
+      console.error('Error casting to Farcaster:', error);
+      // Fallback: try copying to clipboard
+      try {
+        await navigator.clipboard.writeText(shareText);
+        alert('✅ Cast text copied to clipboard!');
+      } catch (clipError) {
+        alert('❌ Unable to create cast. Please try again.');
+      }
+    }
   };
 
   if (!address) {
@@ -431,13 +485,21 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                     </div>
                   )}
 
-                  <button
-                    onClick={() => handleCloseTrade(trade.id)}
-                    disabled={closingTradeId === trade.id}
-                    className="w-full bg-slate-600 hover:bg-slate-500 text-white py-2 rounded text-sm font-semibold transition-all disabled:opacity-50"
-                  >
-                    {closingTradeId === trade.id ? 'Closing...' : 'Close'}
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleCloseTrade(trade.id)}
+                      disabled={closingTradeId === trade.id}
+                      className="bg-slate-600 hover:bg-slate-500 text-white py-2 rounded text-sm font-semibold transition-all disabled:opacity-50"
+                    >
+                      {closingTradeId === trade.id ? 'Closing...' : 'Close'}
+                    </button>
+                    <button
+                      onClick={() => handleCastOpenPosition(trade, pnl, percentage)}
+                      className="bg-purple-600 hover:bg-purple-500 text-white py-2 rounded text-sm font-semibold transition-all flex items-center justify-center gap-1"
+                    >
+                      🟪 Cast
+                    </button>
+                  </div>
                 </div>
               );
             })}

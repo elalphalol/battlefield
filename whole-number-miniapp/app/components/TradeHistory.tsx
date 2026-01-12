@@ -132,7 +132,7 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
             
             // Add liquidation status to share text
             const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
-            const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
+            const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
 
             // Use Farcaster Frame SDK to open composer
             try {
