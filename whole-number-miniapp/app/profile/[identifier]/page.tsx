@@ -470,7 +470,7 @@ export default function UserProfilePage() {
             <div className="p-4 border-b border-slate-700">
               <h2 className="text-xl font-bold text-yellow-400">📜 Recent Trades</h2>
             </div>
-            <div className="p-4 max-h-[600px] overflow-y-auto scrollbar-hide">
+            <div className="p-4 max-h-[600px] overflow-y-auto overflow-x-visible scrollbar-hide">
               {profile.recentHistory.length === 0 ? (
                 <p className="text-gray-400 text-center py-4">No trading history yet</p>
               ) : (
@@ -499,18 +499,28 @@ export default function UserProfilePage() {
                       });
                       const imageUrl = `${websiteUrl}/api/share-card?${params.toString()}`;
                       
-                      const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls`;
+                      // Add liquidation status to share text
+                      const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
+                      const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
 
                       if (platform === 'farcaster') {
-                        if (isMobile) {
-                          // Mobile: Use Warpcast with image embed
+                        // Use Farcaster SDK to create a cast with text and image embed
+                        try {
+                          if (typeof window !== 'undefined' && (window as any).sdk) {
+                            const sdk = (window as any).sdk;
+                            sdk.actions.openUrl(`https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`);
+                          } else {
+                            // Fallback to regular URL opening
+                            const encodedText = encodeURIComponent(shareText);
+                            const encodedImage = encodeURIComponent(imageUrl);
+                            window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
+                          }
+                        } catch (error) {
+                          console.error('Error sharing to Farcaster:', error);
+                          // Fallback
                           const encodedText = encodeURIComponent(shareText);
                           const encodedImage = encodeURIComponent(imageUrl);
                           window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
-                        } else {
-                          // Desktop: Open Warpcast with just text
-                          const encodedText = encodeURIComponent(shareText);
-                          window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
                         }
                       } else if (platform === 'twitter') {
                         const encodedText = encodeURIComponent(shareText + `\n\n${websiteUrl}`);
@@ -527,12 +537,12 @@ export default function UserProfilePage() {
                     return (
                       <div
                         key={trade.id}
-                        className={`border-2 rounded-lg p-3 relative overflow-hidden ${
+                        className={`border-2 rounded-lg p-3 relative ${
                           isLiquidated
-                            ? 'border-red-900 bg-red-950/30'
+                            ? 'border-red-900 bg-red-950/30 overflow-hidden'
                             : isProfit
-                            ? 'border-green-900 bg-green-950/30'
-                            : 'border-red-700 bg-red-950/20'
+                            ? 'border-green-900 bg-green-950/30 overflow-visible'
+                            : 'border-red-700 bg-red-950/20 overflow-visible'
                         }`}
                       >
                         {/* Liquidated Stamp Overlay */}
@@ -577,16 +587,16 @@ export default function UserProfilePage() {
                           <div className="text-xs text-gray-500">
                             {new Date(trade.closed_at).toLocaleString()}
                           </div>
-                          <div className="relative">
+                          <div className="relative z-50">
                             <button
                               onClick={() => setOpenShareMenuId(openShareMenuId === trade.id ? null : trade.id)}
-                              className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
+                              className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1 relative z-50"
                             >
                               📤 Share
                             </button>
                             
                             {openShareMenuId === trade.id && (
-                              <div className="absolute right-0 bottom-full mb-2 w-48 bg-slate-900 border-2 border-purple-500 rounded-lg shadow-xl z-50 overflow-hidden">
+                              <div className="absolute right-0 bottom-full mb-2 w-48 bg-slate-900 border-2 border-purple-500 rounded-lg shadow-xl z-[100] overflow-hidden">
                                 <button
                                   onClick={() => handleShare('farcaster')}
                                   className="w-full text-left px-4 py-3 hover:bg-purple-600 text-white text-sm font-bold transition-all flex items-center gap-2 border-b border-slate-700"
