@@ -176,6 +176,8 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       if (data.success) {
         // Silently close position - no alert
         console.log('✅ Trade closed successfully');
+        // Add small delay to ensure database commits before refreshing
+        await new Promise(resolve => setTimeout(resolve, 500));
         fetchOpenTrades();
         onTradeComplete();
       } else {
