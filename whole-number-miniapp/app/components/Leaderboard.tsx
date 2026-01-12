@@ -227,10 +227,10 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                     </div>
                   </div>
 
-                  {/* P&L */}
-                  <div className="hidden md:flex flex-col items-end gap-1">
-                    <div className={`text-2xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {Number(entry.total_pnl) >= 0 ? '+' : ''}${Number(entry.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  {/* P&L - Now visible on all screens */}
+                  <div className="flex flex-col items-end gap-1">
+                    <div className={`text-lg md:text-2xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {Number(entry.total_pnl) >= 0 ? '+' : ''}${Number(entry.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2})}
                     </div>
                     <div className="text-xs text-gray-400">
                       {entry.total_trades} trades
