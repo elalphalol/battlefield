@@ -556,7 +556,7 @@ export default function BattlefieldHome() {
               {/* Right Column - Trade History */}
               <div className="lg:col-span-3">
                 <div className="scale-90 origin-top">
-                  <TradeHistory />
+                  <TradeHistory walletAddress={address} />
                 </div>
               </div>
             </div>

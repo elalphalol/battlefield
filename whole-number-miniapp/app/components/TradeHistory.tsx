@@ -22,8 +22,14 @@ interface UserData {
   username?: string;
 }
 
-export function TradeHistory() {
-  const { address } = useAccount();
+interface TradeHistoryProps {
+  walletAddress?: string; // Add optional wallet address prop
+}
+
+export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
+  const { address: wagmiAddress } = useAccount();
+  // Use passed wallet address if available, otherwise fall back to wagmi
+  const address = walletAddress || wagmiAddress;
   const [history, setHistory] = useState<ClosedTrade[]>([]);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData | null>(null);
