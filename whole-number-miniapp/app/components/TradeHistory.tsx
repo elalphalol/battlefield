@@ -154,7 +154,7 @@ export function TradeHistory() {
           return (
             <div
               key={trade.id}
-              className={`border-2 rounded-lg p-3 ${
+              className={`border-2 rounded-lg p-3 relative overflow-hidden ${
                 isLiquidated
                   ? 'border-red-900 bg-red-950/30'
                   : isProfit
@@ -162,7 +162,16 @@ export function TradeHistory() {
                   : 'border-red-700 bg-red-950/20'
               }`}
             >
-              <div className="flex items-start justify-between mb-2">
+              {/* Liquidated Stamp Overlay */}
+              {isLiquidated && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                  <div className="text-red-500 font-black text-3xl opacity-20 rotate-[-15deg] border-4 border-red-500 px-4 py-2 rounded">
+                    LIQUIDATED
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-start justify-between mb-2 relative z-20">
                 <div className="flex items-center gap-2">
                   <span className={`text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
                     {trade.position_type === 'long' ? '📈' : '📉'}
@@ -170,11 +179,6 @@ export function TradeHistory() {
                   <span className="text-sm font-bold text-white">
                     {trade.position_type.toUpperCase()} {trade.leverage}x
                   </span>
-                  {isLiquidated && (
-                    <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded font-bold">
-                      LIQUIDATED
-                    </span>
-                  )}
                 </div>
                 <div className={`text-right ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
                   <div className="text-sm font-bold whitespace-nowrap">
