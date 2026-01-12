@@ -572,13 +572,21 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
     const feePercentage = leverage > 1 ? leverage * 0.05 : 0;
     const tradingFee = (feePercentage / 100) * collateral;
     
-    // Deduct fee from P&L (this is where fee is actually paid)
-    const pnlAfterFee = pnl - tradingFee;
+    // CRITICAL: Cap PnL at -100% of collateral (player can never lose more than they put in)
+    // The absolute maximum loss is the entire collateral
+    const maxLoss = -collateral;
+    const cappedPnl = Math.max(pnl, maxLoss);
+    
+    // Deduct fee from capped P&L (this is where fee is actually paid)
+    const pnlAfterFee = cappedPnl - tradingFee;
+    
+    // Final PnL can never be worse than losing entire collateral
+    const finalPnl = Math.max(pnlAfterFee, -collateral);
 
-    // Determine if liquidated (loss + fee is greater than or equal to 100% of collateral)
-    const isLiquidated = pnlAfterFee <= -collateral;
+    // Determine if liquidated (loss is 100% of collateral or more)
+    const isLiquidated = finalPnl <= -collateral;
     const status = isLiquidated ? 'liquidated' : 'closed';
-    const finalAmount = isLiquidated ? 0 : collateral + pnlAfterFee;
+    const finalAmount = isLiquidated ? 0 : collateral + finalPnl;
 
     console.log(`
 📊 Trade Close Details:
@@ -590,16 +598,18 @@ app.post('/api/trades/close', async (req: Request, res: Response) => {
 - Leverage: ${t.leverage}x
 - Collateral: $${t.position_size}
 - Leveraged Position: $${leveragedPositionSize.toLocaleString()}
-- P&L: $${pnl.toFixed(2)} (${((pnl / collateral) * 100).toFixed(2)}% of collateral)
-- Trading Fee: $${tradingFee.toFixed(2)} (paid upfront, ${feePercentage.toFixed(2)}%)
+- Raw P&L: $${pnl.toFixed(2)} (${((pnl / collateral) * 100).toFixed(2)}% of collateral)
+- Capped P&L: $${cappedPnl.toFixed(2)} (max loss = -100% collateral)
+- Trading Fee: $${tradingFee.toFixed(2)} (${feePercentage.toFixed(2)}%)
+- Final P&L (capped): $${finalPnl.toFixed(2)}
 - Final Amount: $${Number(finalAmount).toFixed(2)}
 - Status: ${status}
     `);
 
-    // Update trade (store P&L AFTER fees - this is what user actually gets/loses)
+    // Update trade (store CAPPED final P&L - player never loses more than collateral)
     await pool.query(
       'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_at = NOW() WHERE id = $4',
-      [exitPrice, pnlAfterFee, status, tradeId]
+      [exitPrice, finalPnl, status, tradeId]
     );
 
     // Update user balance (triggers will update stats)
@@ -693,12 +703,19 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
           // Deduct trading fee
           const feePercentage = leverage > 1 ? leverage * 0.05 : 0;
           const tradingFee = (feePercentage / 100) * collateral;
-          const pnlAfterFee = pnl - tradingFee;
+          
+          // CRITICAL: Cap PnL at -100% of collateral (player can never lose more than they put in)
+          const maxLoss = -collateral;
+          const cappedPnl = Math.max(pnl, maxLoss);
+          const pnlAfterFee = cappedPnl - tradingFee;
+          
+          // Final PnL can never be worse than losing entire collateral
+          const finalPnl = Math.max(pnlAfterFee, -collateral);
 
-          // Mark as liquidated
+          // Mark as liquidated (store capped final P&L)
           await pool.query(
             'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_at = NOW() WHERE id = $4',
-            [currentPrice, pnlAfterFee, 'liquidated', trade.id]
+            [currentPrice, finalPnl, 'liquidated', trade.id]
           );
 
           // No money returned on liquidation (user loses entire collateral)
