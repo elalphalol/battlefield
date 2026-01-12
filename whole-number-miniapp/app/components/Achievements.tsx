@@ -183,7 +183,7 @@ export function Achievements({ stats }: AchievementsProps) {
           className="w-full p-4 border-b border-slate-700 flex items-center justify-between hover:bg-slate-700/50 transition"
         >
           <h3 className="text-xl font-bold text-yellow-400">
-            🏆 Unlocked Achievements ({unlockedAchievements.length})
+            🏆 Achievements ({unlockedAchievements.length})
           </h3>
           <span className="text-2xl text-yellow-400">{showUnlocked ? '▼' : '▶'}</span>
         </button>
