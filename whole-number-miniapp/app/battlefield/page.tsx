@@ -277,6 +277,131 @@ export default function BattlefieldHome() {
           </div>
         </div>
 
+        {/* User Stats Bar (if logged in) */}
+        {userData && (
+          <div id="trading-section" className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
+              <div>
+                <div className="text-xs text-gray-400">Army</div>
+                <div className="text-lg font-bold">
+                  {userData.army === 'bears' ? '🐻 Bears' : '🐂 Bulls'}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Paper Balance</div>
+                <div className="text-lg font-bold text-green-400">
+                  ${Number(userData.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Total P&L</div>
+                <div className={`text-lg font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Win Rate</div>
+                <div className="text-lg font-bold text-blue-400">
+                  {userData.total_trades > 0 
+                    ? ((userData.winning_trades / userData.total_trades) * 100).toFixed(1)
+                    : 0}%
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">Streak</div>
+                <div className="text-lg font-bold text-yellow-400">
+                  🔥 {userData.current_streak}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-400">$BATTLE Tokens</div>
+                <div className="text-lg font-bold text-purple-400 flex items-center justify-center gap-1">
+                  <img src="/battlefield-logo.jpg" alt="$BATTLE" className="w-5 h-5 rounded-full" />
+                  {Number(userData.battle_tokens_earned).toLocaleString()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Trading Panel Section - Moved to top */}
+        {address && (
+          <div className="mb-6">
+            {/* Demo Mode Warning if no wallet */}
+            {!address && (
+              <div className="bg-yellow-900/30 border-2 border-yellow-500 rounded-lg p-6 mb-6">
+                <h3 className="text-2xl font-bold text-yellow-400 mb-2">📱 Connect Wallet to Play</h3>
+                <p className="text-gray-300 mb-4">
+                  This game requires wallet connection. Click &quot;Connect Wallet&quot; above to start with $10,000 paper money!
+                </p>
+                <p className="text-sm text-gray-400">
+                  Note: Full game requires Farcaster Frame integration for real user profiles.
+                </p>
+              </div>
+            )}
+
+            {/* If connected but no balance, show get started button */}
+            {address && userData && userData.paper_balance === 0 && (
+              <div className="bg-green-900/30 border-2 border-green-500 rounded-lg p-6 mb-6 text-center">
+                <h3 className="text-2xl font-bold text-green-400 mb-3">🎮 Get Started!</h3>
+                <p className="text-gray-300 mb-4">
+                  Click below to claim your starting $10,000 paper money
+                </p>
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(getApiUrl('api/claims'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ walletAddress: address })
+                      });
+                      const data = await response.json();
+                      if (data.success) {
+                        await fetchUserData(); // Refresh user data
+                        alert('✅ $1,000 added! Click 9 more times to reach $10k or start trading!');
+                      }
+                    } catch (error) {
+                      console.error('Error:', error);
+                    }
+                  }}
+                  className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-lg font-bold text-xl"
+                >
+                  💵 Claim $10,000 to Start Playing!
+                </button>
+              </div>
+            )}
+
+            <div className="grid lg:grid-cols-12 gap-4">
+              {/* Left Column - Claims & Stats */}
+              <div className="lg:col-span-3 space-y-4">
+                <PaperMoneyClaim 
+                  onClaim={handleClaim} 
+                  paperBalance={userData?.paper_balance || 0}
+                  walletAddress={address}
+                />
+                <UserStats userData={userData} />
+              </div>
+
+              {/* Middle Column - Trading Panel (Form Only) */}
+              <div className="lg:col-span-6 space-y-4">
+                <TradingPanel
+                  btcPrice={btcPrice}
+                  paperBalance={userData?.paper_balance || 0}
+                  onTradeComplete={handleTradeComplete}
+                  walletAddress={address}
+                />
+              </div>
+
+              {/* Right Column - Trade History */}
+              <div className="lg:col-span-3">
+                <div className="scale-90 origin-top">
+                  <TradeHistory walletAddress={address} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Battlefield Visual */}
         <div className="mb-6">
           <BattlefieldVisual
@@ -394,53 +519,6 @@ export default function BattlefieldHome() {
           <StrategyGuide />
         </div>
 
-        {/* User Stats Bar (if logged in) */}
-        {userData && (
-          <div id="trading-section" className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
-              <div>
-                <div className="text-xs text-gray-400">Army</div>
-                <div className="text-lg font-bold">
-                  {userData.army === 'bears' ? '🐻 Bears' : '🐂 Bulls'}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Paper Balance</div>
-                <div className="text-lg font-bold text-green-400">
-                  ${Number(userData.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Total P&L</div>
-                <div className={`text-lg font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Win Rate</div>
-                <div className="text-lg font-bold text-blue-400">
-                  {userData.total_trades > 0 
-                    ? ((userData.winning_trades / userData.total_trades) * 100).toFixed(1)
-                    : 0}%
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Streak</div>
-                <div className="text-lg font-bold text-yellow-400">
-                  🔥 {userData.current_streak}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">$BATTLE Tokens</div>
-                <div className="text-lg font-bold text-purple-400 flex items-center justify-center gap-1">
-                  <img src="/battlefield-logo.jpg" alt="$BATTLE" className="w-5 h-5 rounded-full" />
-                  {Number(userData.battle_tokens_earned).toLocaleString()}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6">
           <button
@@ -487,79 +565,9 @@ export default function BattlefieldHome() {
 
         {/* Content Based on Active Tab */}
         {activeTab === 'trade' ? (
-          <div>
-            {/* Demo Mode Warning if no wallet */}
-            {!address && (
-              <div className="bg-yellow-900/30 border-2 border-yellow-500 rounded-lg p-6 mb-6">
-                <h3 className="text-2xl font-bold text-yellow-400 mb-2">📱 Connect Wallet to Play</h3>
-                <p className="text-gray-300 mb-4">
-                  This game requires wallet connection. Click &quot;Connect Wallet&quot; above to start with $10,000 paper money!
-                </p>
-                <p className="text-sm text-gray-400">
-                  Note: Full game requires Farcaster Frame integration for real user profiles.
-                </p>
-              </div>
-            )}
-
-            {/* If connected but no balance, show get started button */}
-            {address && userData && userData.paper_balance === 0 && (
-              <div className="bg-green-900/30 border-2 border-green-500 rounded-lg p-6 mb-6 text-center">
-                <h3 className="text-2xl font-bold text-green-400 mb-3">🎮 Get Started!</h3>
-                <p className="text-gray-300 mb-4">
-                  Click below to claim your starting $10,000 paper money
-                </p>
-                <button
-                  onClick={async () => {
-                    try {
-                      const response = await fetch(getApiUrl('api/claims'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ walletAddress: address })
-                      });
-                      const data = await response.json();
-                      if (data.success) {
-                        await fetchUserData(); // Refresh user data
-                        alert('✅ $1,000 added! Click 9 more times to reach $10k or start trading!');
-                      }
-                    } catch (error) {
-                      console.error('Error:', error);
-                    }
-                  }}
-                  className="bg-green-600 hover:bg-green-500 text-white px-8 py-4 rounded-lg font-bold text-xl"
-                >
-                  💵 Claim $10,000 to Start Playing!
-                </button>
-              </div>
-            )}
-
-            <div className="grid lg:grid-cols-12 gap-4">
-              {/* Left Column - Claims & Stats */}
-              <div className="lg:col-span-3 space-y-4">
-                <PaperMoneyClaim 
-                  onClaim={handleClaim} 
-                  paperBalance={userData?.paper_balance || 0}
-                  walletAddress={address}
-                />
-                <UserStats userData={userData} />
-              </div>
-
-              {/* Middle Column - Trading Panel (Form Only) */}
-              <div className="lg:col-span-6 space-y-4">
-                <TradingPanel
-                  btcPrice={btcPrice}
-                  paperBalance={userData?.paper_balance || 0}
-                  onTradeComplete={handleTradeComplete}
-                  walletAddress={address}
-                />
-              </div>
-
-              {/* Right Column - Trade History */}
-              <div className="lg:col-span-3">
-                <div className="scale-90 origin-top">
-                  <TradeHistory walletAddress={address} />
-                </div>
-              </div>
-            </div>
+          <div className="text-center text-gray-400 py-8">
+            <p>⚔️ Trading panel is now at the top of the page</p>
+            <p className="text-sm mt-2">Scroll up to start trading!</p>
           </div>
         ) : activeTab === 'leaderboard' ? (
           <div>
