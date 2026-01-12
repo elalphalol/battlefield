@@ -207,10 +207,10 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                     </div>
                   )}
 
-                  {/* User Info */}
+                  {/* User Info - Clean and simple */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-bold text-white text-sm truncate">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-white text-base truncate">
                         {entry.username || `Trader${entry.fid}`}
                       </span>
                       {isUserEntry && (
@@ -219,19 +219,12 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                         </span>
                       )}
                     </div>
-                    
-                    {/* Mobile: Simplified info below name */}
-                    <div className="flex gap-3 text-xs text-gray-400">
-                      <span>{Number(entry.win_rate).toFixed(0)}% WR</span>
-                      <span>🔥{entry.current_streak}</span>
-                      <span>{entry.total_trades}T</span>
-                    </div>
                   </div>
 
-                  {/* P&L - Prominent on right */}
+                  {/* P&L - Clean, no + sign */}
                   <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                    <div className={`text-base md:text-xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {Number(entry.total_pnl) >= 0 ? '+' : ''}${Math.abs(Number(entry.total_pnl)).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                    <div className={`text-xl md:text-2xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      ${Math.abs(Number(entry.total_pnl)).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                     </div>
                     {entry.battle_tokens_earned > 0 && (
                       <div className="text-xs text-purple-400 flex items-center gap-1">
