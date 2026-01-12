@@ -112,6 +112,14 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
     setIsOpening(true);
     try {
+      console.log('🚀 Opening trade with:', {
+        walletAddress: address,
+        type: tradeType,
+        leverage,
+        size: positionSize,
+        entryPrice: btcPrice
+      });
+
       const response = await fetch(getApiUrl('api/trades/open'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,17 +132,22 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         })
       });
 
+      console.log('📡 Response status:', response.status);
       const data = await response.json();
+      console.log('📊 Response data:', data);
+
       if (data.success) {
         // Silently open position - no alert
+        console.log('✅ Trade opened successfully');
         fetchOpenTrades();
         onTradeComplete();
       } else {
+        console.error('❌ Trade failed:', data.message);
         alert(`❌ ${data.message || 'Failed to open trade'}`);
       }
     } catch (error) {
-      console.error('Error opening trade:', error);
-      alert('❌ Failed to open trade');
+      console.error('💥 Error opening trade:', error);
+      alert(`❌ Failed to open trade: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsOpening(false);
     }
