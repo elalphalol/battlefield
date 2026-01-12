@@ -780,7 +780,7 @@ app.get('/api/trades/:walletAddress/open', async (req: Request, res: Response) =
       `SELECT t.* 
        FROM trades t
        JOIN users u ON t.user_id = u.id
-       WHERE u.wallet_address = $1 AND t.status = 'open'
+       WHERE LOWER(u.wallet_address) = LOWER($1) AND t.status = 'open'
        ORDER BY t.opened_at DESC`,
       [walletAddress]
     );
@@ -802,7 +802,7 @@ app.get('/api/trades/:walletAddress/history', async (req: Request, res: Response
       `SELECT t.* 
        FROM trades t
        JOIN users u ON t.user_id = u.id
-       WHERE u.wallet_address = $1 AND t.status IN ('closed', 'liquidated')
+       WHERE LOWER(u.wallet_address) = LOWER($1) AND t.status IN ('closed', 'liquidated')
        ORDER BY t.closed_at DESC
        LIMIT $2`,
       [walletAddress, limit]
