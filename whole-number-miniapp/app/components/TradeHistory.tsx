@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { getApiUrl } from '../config/api';
+import sdk from '@farcaster/frame-sdk';
 
 interface ClosedTrade {
   id: number;
@@ -33,7 +34,6 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
   const [history, setHistory] = useState<ClosedTrade[]>([]);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [openShareMenuId, setOpenShareMenuId] = useState<number | null>(null);
 
   useEffect(() => {
     if (address) {
@@ -125,36 +125,29 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
             return `${window.location.origin}/api/share-card?${params.toString()}`;
           };
 
-          const handleShare = (platform: 'farcaster' | 'twitter' | 'copy') => {
+          const handleCast = async () => {
             const imageUrl = generateImageUrl();
-            const websiteUrl = window.location.origin;
             const army = userData?.army || 'bulls';
             const armyEmoji = army === 'bears' ? '🐻' : '🐂';
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
-            const shareText = `${armyEmoji} Just ${isProfit ? 'won' : 'lost'} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%\n\n⚔️ Bears vs Bulls`;
+            // Add liquidation status to share text
+            const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
+            const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
 
-            if (platform === 'farcaster') {
-              if (isMobile) {
-                // Mobile: Use Warpcast with image embed
-                const encodedText = encodeURIComponent(shareText);
-                const encodedImage = encodeURIComponent(imageUrl);
-                window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
-              } else {
-                // Desktop: Open Warpcast with just text
-                const encodedText = encodeURIComponent(shareText);
-                window.open(`https://warpcast.com/~/compose?text=${encodedText}`, '_blank');
+            // Use Farcaster Frame SDK to open composer
+            try {
+              const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
+              await sdk.actions.openUrl(castUrl);
+            } catch (error) {
+              console.error('Error casting to Farcaster:', error);
+              // Fallback: try copying to clipboard
+              try {
+                await navigator.clipboard.writeText(shareText);
+                alert('✅ Cast text copied to clipboard!');
+              } catch (clipError) {
+                alert('❌ Unable to create cast. Please try again.');
               }
-            } else if (platform === 'twitter') {
-              const encodedText = encodeURIComponent(shareText + `\n\n${websiteUrl}`);
-              window.open(`https://twitter.com/intent/tweet?text=${encodedText}`, '_blank');
-            } else if (platform === 'copy') {
-              // Just copy the image URL for easy sharing
-              navigator.clipboard.writeText(imageUrl);
-              alert('✅ Image URL copied! Paste in any app.');
             }
-            
-            setOpenShareMenuId(null);
           };
 
           return (
@@ -212,31 +205,12 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
                 <div className="text-xs text-gray-500">
                   {new Date(trade.closed_at).toLocaleString()}
                 </div>
-                <div className="relative">
-                  <button
-                    onClick={() => setOpenShareMenuId(openShareMenuId === trade.id ? null : trade.id)}
-                    className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
-                  >
-                    📤 Share
-                  </button>
-                  
-                  {openShareMenuId === trade.id && (
-                    <div className="absolute right-0 bottom-full mb-2 w-48 bg-slate-900 border-2 border-purple-500 rounded-lg shadow-xl z-50 overflow-hidden">
-                      <button
-                        onClick={() => handleShare('farcaster')}
-                        className="w-full text-left px-4 py-3 hover:bg-purple-600 text-white text-sm font-bold transition-all flex items-center gap-2 border-b border-slate-700"
-                      >
-                        <span className="text-lg">🟪</span> Farcaster
-                      </button>
-                      <button
-                        onClick={() => handleShare('copy')}
-                        className="w-full text-left px-4 py-3 hover:bg-green-600 text-white text-sm font-bold transition-all flex items-center gap-2"
-                      >
-                        <span className="text-lg">📋</span> Copy Link
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button
+                  onClick={handleCast}
+                  className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
+                >
+                  🟪 Cast
+                </button>
               </div>
             </div>
           );
