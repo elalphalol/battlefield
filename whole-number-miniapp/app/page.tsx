@@ -2,9 +2,20 @@
 
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import sdk from '@farcaster/frame-sdk';
 
 export default function LandingPage() {
   const router = useRouter();
+
+  const handleExternalLink = async (url: string) => {
+    try {
+      await sdk.actions.openUrl(url);
+    } catch (error) {
+      console.error('Error opening URL:', error);
+      // Fallback to regular window.open
+      window.open(url, '_blank');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center p-4">
@@ -67,25 +78,28 @@ export default function LandingPage() {
         <div className="pt-8 border-t border-slate-800 space-y-2">
           <p className="text-sm text-gray-500">
             Created by{' '}
-            <a 
-              href="https://elalpha.lol" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 font-bold underline"
+            <button
+              onClick={() => handleExternalLink('https://elalpha.lol')}
+              className="text-purple-400 hover:text-purple-300 font-bold underline cursor-pointer"
             >
               elalpha.lol
-            </a>
+            </button>
           </p>
           <p className="text-xs text-gray-600">
             Follow on Farcaster:{' '}
-            <a 
-              href="https://warpcast.com/elalpha.eth" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 font-mono"
+            <button
+              onClick={() => handleExternalLink('https://warpcast.com/elalpha.eth')}
+              className="text-purple-400 hover:text-purple-300 font-mono cursor-pointer"
             >
               @elalpha.eth
-            </a>
+            </button>
+            {' • '}
+            <button
+              onClick={() => handleExternalLink('https://warpcast.com/btcbattle')}
+              className="text-purple-400 hover:text-purple-300 font-mono cursor-pointer"
+            >
+              @btcbattle
+            </button>
           </p>
         </div>
 
