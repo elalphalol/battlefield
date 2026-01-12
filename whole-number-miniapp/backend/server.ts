@@ -1043,34 +1043,61 @@ app.get('/api/leaderboard/rank/:walletAddress', async (req: Request, res: Respon
 // Get army stats
 app.get('/api/army/stats', async (req: Request, res: Response) => {
   try {
-    // Calculate next Monday for weekly snapshot
-    const getNextMonday = () => {
+    // Get the most recent Monday at noon (start of current week)
+    const getCurrentWeekStart = () => {
       const now = new Date();
       const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-      const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek); // Days until next Monday
+      const currentHour = now.getHours();
       
-      const nextMonday = new Date(now);
-      nextMonday.setDate(now.getDate() + daysUntilMonday);
-      nextMonday.setHours(12, 0, 0, 0); // Set to 12:00 PM (noon) on Monday
+      let daysToSubtract;
+      if (dayOfWeek === 1 && currentHour < 12) {
+        // It's Monday before noon - go back to last Monday
+        daysToSubtract = 7;
+      } else if (dayOfWeek === 0) {
+        // It's Sunday - go back 6 days to last Monday
+        daysToSubtract = 6;
+      } else if (dayOfWeek === 1) {
+        // It's Monday after noon - this is the current week start
+        daysToSubtract = 0;
+      } else {
+        // Any other day - calculate days back to last Monday
+        daysToSubtract = dayOfWeek - 1;
+      }
       
-      return nextMonday;
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - daysToSubtract);
+      weekStart.setHours(12, 0, 0, 0);
+      
+      return weekStart;
     };
 
-    // Get last Monday (beginning of current week)
-    const getLastMonday = () => {
+    // Get next Monday at noon (end of current week / start of next week)
+    const getNextWeekStart = () => {
       const now = new Date();
       const dayOfWeek = now.getDay();
-      const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Days since last Monday
+      const currentHour = now.getHours();
       
-      const lastMonday = new Date(now);
-      lastMonday.setDate(now.getDate() - daysToSubtract);
-      lastMonday.setHours(12, 0, 0, 0); // Set to 12:00 PM (noon) on Monday
+      let daysToAdd;
+      if (dayOfWeek === 1 && currentHour < 12) {
+        // It's Monday before noon - snapshot is today at noon
+        daysToAdd = 0;
+      } else if (dayOfWeek === 0) {
+        // It's Sunday - next Monday is tomorrow
+        daysToAdd = 1;
+      } else {
+        // Calculate days until next Monday
+        daysToAdd = 8 - dayOfWeek;
+      }
       
-      return lastMonday;
+      const nextWeekStart = new Date(now);
+      nextWeekStart.setDate(now.getDate() + daysToAdd);
+      nextWeekStart.setHours(12, 0, 0, 0);
+      
+      return nextWeekStart;
     };
 
-    const weekStart = getLastMonday();
-    const weekEnd = getNextMonday();
+    const weekStart = getCurrentWeekStart();
+    const weekEnd = getNextWeekStart();
 
     // Calculate army membership dynamically based on ALL closed positions (not just this week)
     // Then sum only THIS WEEK's positive P&L for each army
