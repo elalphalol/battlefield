@@ -206,7 +206,7 @@ app.get('/api/users/:walletAddress', async (req: Request, res: Response) => {
 
   try {
     const result = await pool.query(
-      'SELECT * FROM users WHERE wallet_address = $1',
+      'SELECT * FROM users WHERE LOWER(wallet_address) = LOWER($1)',
       [walletAddress]
     );
 
@@ -232,7 +232,7 @@ app.patch('/api/users/:walletAddress/army', async (req: Request, res: Response) 
 
   try {
     const result = await pool.query(
-      'UPDATE users SET army = $1, last_active = NOW() WHERE wallet_address = $2 RETURNING *',
+      'UPDATE users SET army = $1, last_active = NOW() WHERE LOWER(wallet_address) = LOWER($2) RETURNING *',
       [army, walletAddress]
     );
 
@@ -415,7 +415,7 @@ app.post('/api/trades/open', async (req: Request, res: Response) => {
   try {
     // Get user
     const user = await pool.query(
-      'SELECT id, paper_balance FROM users WHERE wallet_address = $1',
+      'SELECT id, paper_balance FROM users WHERE LOWER(wallet_address) = LOWER($1)',
       [walletAddress]
     );
 
