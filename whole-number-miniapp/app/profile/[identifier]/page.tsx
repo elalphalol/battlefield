@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { getApiUrl } from '../../config/api';
 import { Achievements } from '../../components/Achievements';
 import { StickyNav } from '../../components/StickyNav';
+import sdk from '@farcaster/frame-sdk';
 
 interface UserProfile {
   user: {
@@ -480,7 +481,7 @@ export default function UserProfilePage() {
                     const isProfit = pnl >= 0;
                     const isLiquidated = trade.status === 'liquidated';
 
-                    const handleCast = () => {
+                    const handleCast = async () => {
                       const army = profile.user.army;
                       const armyEmoji = army === 'bears' ? '🐻' : '🐂';
                       const websiteUrl = window.location.origin;
@@ -501,23 +502,19 @@ export default function UserProfilePage() {
                       const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
                       const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @Battlefield!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
 
-                      // Use Farcaster SDK to create a cast with text and image embed
+                      // Use Farcaster Frame SDK to open composer
                       try {
-                        if (typeof window !== 'undefined' && (window as any).sdk) {
-                          const sdk = (window as any).sdk;
-                          sdk.actions.openUrl(`https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`);
-                        } else {
-                          // Fallback to regular URL opening
-                          const encodedText = encodeURIComponent(shareText);
-                          const encodedImage = encodeURIComponent(imageUrl);
-                          window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
-                        }
+                        const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
+                        await sdk.actions.openUrl(castUrl);
                       } catch (error) {
                         console.error('Error casting to Farcaster:', error);
-                        // Fallback
-                        const encodedText = encodeURIComponent(shareText);
-                        const encodedImage = encodeURIComponent(imageUrl);
-                        window.open(`https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedImage}`, '_blank');
+                        // Fallback: try copying to clipboard
+                        try {
+                          await navigator.clipboard.writeText(shareText);
+                          alert('✅ Cast text copied to clipboard!');
+                        } catch (clipError) {
+                          alert('❌ Unable to create cast. Please try again.');
+                        }
                       }
                     };
 
