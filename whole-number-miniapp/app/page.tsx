@@ -8,12 +8,19 @@ export default function LandingPage() {
   const router = useRouter();
 
   const handleExternalLink = async (url: string) => {
+    // Check if we're in a Farcaster frame
     try {
-      await sdk.actions.openUrl(url);
+      if (typeof window !== 'undefined' && (window as any).parent !== window) {
+        // Try Farcaster SDK first (for miniapp)
+        await sdk.actions.openUrl(url);
+      } else {
+        // Desktop browser - use regular window.open
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     } catch (error) {
       console.error('Error opening URL:', error);
       // Fallback to regular window.open
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 
