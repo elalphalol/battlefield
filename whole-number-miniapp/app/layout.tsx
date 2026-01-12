@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     siteName: 'Battlefield',
     images: [
       {
-        url: '/opengraph-image.jpg',
+        url: `${appUrl}/opengraph-image.jpg`,
         width: 1200,
         height: 630,
         alt: 'Battlefield - Bitcoin Trading Game',
@@ -31,15 +31,18 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Battlefield - Bitcoin Paper Trading',
     description: 'Paper trade Bitcoin with 200x leverage. Join Bulls or Bears army!',
-    images: ['/opengraph-image.jpg'],
+    images: [`${appUrl}/opengraph-image.jpg`],
   },
   other: {
     'fc:frame': 'vNext',
     'fc:frame:image': `${appUrl}/opengraph-image.jpg`,
     'fc:frame:image:aspect_ratio': '1.91:1',
-    'fc:frame:button:1': 'Play Battlefield',
+    'fc:frame:button:1': 'Play Battlefield ⚔️',
     'fc:frame:button:1:action': 'link',
     'fc:frame:button:1:target': appUrl,
+    'og:image': `${appUrl}/opengraph-image.jpg`,
+    'og:image:width': '1200',
+    'og:image:height': '630',
   },
 };
 
