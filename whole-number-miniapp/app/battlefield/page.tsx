@@ -163,6 +163,34 @@ export default function BattlefieldHome() {
     fetchUserData();
   }, [address, fetchUserData]);
 
+  // Auto-liquidate positions when price updates
+  useEffect(() => {
+    if (btcPrice > 0) {
+      const checkLiquidations = async () => {
+        try {
+          const response = await fetch(getApiUrl('api/trades/auto-liquidate'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPrice: btcPrice })
+          });
+          
+          const data = await response.json();
+          if (data.success && data.liquidatedCount > 0) {
+            console.log(`💥 Auto-liquidated ${data.liquidatedCount} position(s)`);
+            // Refresh user data if any liquidations occurred
+            if (address) {
+              fetchUserData();
+            }
+          }
+        } catch (error) {
+          console.error('Error checking liquidations:', error);
+        }
+      };
+      
+      checkLiquidations();
+    }
+  }, [btcPrice, address, fetchUserData]);
+
   const handleArmyChange = (army: 'bears' | 'bulls') => {
     if (userData) {
       setUserData({ ...userData, army });
