@@ -56,8 +56,8 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
   const fetchLeaderboard = async () => {
     try {
       const url = filter === 'all' 
-        ? getApiUrl('api/leaderboard?limit=100')
-        : getApiUrl(`api/leaderboard?army=${filter}&limit=100`);
+        ? getApiUrl('api/leaderboard?limit=20')
+        : getApiUrl(`api/leaderboard?army=${filter}&limit=20`);
       
       const response = await fetch(url);
       const data = await response.json();
@@ -137,8 +137,8 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
         <h2 className="text-3xl font-bold text-yellow-400 text-center">🏆 Top Traders</h2>
       </div>
 
-      {/* Leaderboard List */}
-      <div className="divide-y divide-slate-700 max-h-[600px] overflow-y-auto">
+      {/* Leaderboard List - No scrollbar, top 20 only */}
+      <div className="divide-y divide-slate-700">
         {leaderboard.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
             <p className="text-lg mb-2">No traders yet</p>
@@ -149,12 +149,19 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
             const rank = index + 1;
             const isUserEntry = address && entry.wallet_address.toLowerCase() === address.toLowerCase();
             
+            // Border colors for top 3
+            let borderClass = '';
+            if (rank === 1) borderClass = 'border-l-4 border-yellow-400';
+            else if (rank === 2) borderClass = 'border-l-4 border-gray-400';
+            else if (rank === 3) borderClass = 'border-l-4 border-orange-600';
+            else if (isUserEntry) borderClass = 'border-l-4 border-blue-500';
+            
             return (
               <div
                 key={entry.wallet_address}
                 onClick={() => router.push(`/profile/${entry.fid || entry.wallet_address}`)}
-                className={`p-4 hover:bg-slate-700/50 transition-colors cursor-pointer ${
-                  isUserEntry ? 'bg-blue-900/20 border-l-4 border-blue-500' : ''
+                className={`p-4 hover:bg-slate-700/50 transition-colors cursor-pointer ${borderClass} ${
+                  isUserEntry ? 'bg-blue-900/20' : ''
                 }`}
               >
                 <div className="flex items-center gap-4">
