@@ -359,34 +359,42 @@ export default function BattlefieldHome() {
               </div>
             )}
 
-            <div className="grid lg:grid-cols-12 gap-4">
-              {/* Left Column - Claims & Stats */}
-              <div className="lg:col-span-3 space-y-4">
-                <PaperMoneyClaim 
-                  onClaim={handleClaim} 
-                  paperBalance={userData?.paper_balance || 0}
-                  walletAddress={address}
-                />
-                <UserStats userData={userData} />
-              </div>
+            {/* Trading Panel - FRONT AND CENTER */}
+            <div className="max-w-3xl mx-auto mb-6">
+              <TradingPanel
+                btcPrice={btcPrice}
+                paperBalance={userData?.paper_balance || 0}
+                onTradeComplete={handleTradeComplete}
+                walletAddress={address}
+              />
+            </div>
 
-              {/* Middle Column - Trading Panel (Form Only) */}
-              <div className="lg:col-span-6 space-y-4">
-                <TradingPanel
-                  btcPrice={btcPrice}
-                  paperBalance={userData?.paper_balance || 0}
-                  onTradeComplete={handleTradeComplete}
-                  walletAddress={address}
-                />
-              </div>
-
-              {/* Right Column - Trade History */}
-              <div className="lg:col-span-3">
-                <div className="scale-90 origin-top">
-                  <TradeHistory walletAddress={address} />
+            {/* Balance & Quick Stats - Small bar below trading */}
+            {userData && (
+              <div className="bg-slate-800/50 rounded-lg p-3 mb-6 max-w-3xl mx-auto">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <div className="text-xs text-gray-400">Balance</div>
+                      <div className="text-lg font-bold text-green-400">
+                        ${Number(userData.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-400">P&L</div>
+                      <div className={`text-lg font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </div>
+                    </div>
+                  </div>
+                  <PaperMoneyClaim 
+                    onClaim={handleClaim} 
+                    paperBalance={userData?.paper_balance || 0}
+                    walletAddress={address}
+                  />
                 </div>
               </div>
-            </div>
+            )}
           </div>
         ) : activeTab === 'leaderboard' ? (
           <div>
