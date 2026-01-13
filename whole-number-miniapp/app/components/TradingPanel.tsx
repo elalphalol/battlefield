@@ -36,6 +36,8 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const [isOpening, setIsOpening] = useState(false);
   const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
   const [userData, setUserData] = useState<{ army: 'bears' | 'bulls'; username?: string } | null>(null);
+  const [addingCollateralTradeId, setAddingCollateralTradeId] = useState<number | null>(null);
+  const [collateralAmount, setCollateralAmount] = useState('');
 
   // Calculate actual position size from percentage
   // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
@@ -234,6 +236,56 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const isNearLiquidation = (trade: Trade) => {
     const { percentage } = calculatePnL(trade);
     return percentage <= -90; // Warning at -90%
+  };
+
+  const handleAddCollateral = async (tradeId: number) => {
+    if (!address) return;
+
+    const amount = prompt('Enter additional collateral amount (in $):');
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      if (amount !== null) { // Only show error if user didn't cancel
+        alert('❌ Please enter a valid amount greater than 0');
+      }
+      return;
+    }
+
+    const additionalCollateral = Number(amount);
+    
+    if (additionalCollateral > Number(paperBalance)) {
+      alert(`❌ Insufficient balance. Available: $${Number(paperBalance).toFixed(2)}`);
+      return;
+    }
+
+    setAddingCollateralTradeId(tradeId);
+    try {
+      const response = await fetch(getApiUrl('api/trades/add-collateral'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tradeId,
+          additionalCollateral,
+          walletAddress: address
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`✅ Added $${additionalCollateral.toFixed(2)} collateral!\n\n` +
+              `Old Liquidation: $${data.oldLiquidationPrice.toFixed(2)}\n` +
+              `New Liquidation: $${data.newLiquidationPrice.toFixed(2)}\n` +
+              `New Effective Leverage: ${data.newEffectiveLeverage}x`);
+        fetchOpenTrades();
+        onTradeComplete();
+      } else {
+        alert(`❌ ${data.message || 'Failed to add collateral'}`);
+      }
+    } catch (error) {
+      console.error('Error adding collateral:', error);
+      alert(`❌ Failed to add collateral: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setAddingCollateralTradeId(null);
+    }
   };
 
   const handleCastOpenPosition = async (trade: Trade, pnl: number, percentage: number) => {
@@ -521,17 +573,25 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => handleAddCollateral(trade.id)}
+                      disabled={addingCollateralTradeId === trade.id}
+                      className="bg-blue-600 hover:bg-blue-500 text-white py-2 rounded text-xs font-semibold transition-all disabled:opacity-50"
+                      title="Add collateral to lower liquidation price"
+                    >
+                      {addingCollateralTradeId === trade.id ? '...' : '💰 +Margin'}
+                    </button>
                     <button
                       onClick={() => handleCloseTrade(trade.id)}
                       disabled={closingTradeId === trade.id}
-                      className="bg-slate-600 hover:bg-slate-500 text-white py-2 rounded text-sm font-semibold transition-all disabled:opacity-50"
+                      className="bg-slate-600 hover:bg-slate-500 text-white py-2 rounded text-xs font-semibold transition-all disabled:opacity-50"
                     >
-                      {closingTradeId === trade.id ? 'Closing...' : 'Close'}
+                      {closingTradeId === trade.id ? '...' : 'Close'}
                     </button>
                     <button
                       onClick={() => handleCastOpenPosition(trade, pnl, percentage)}
-                      className="bg-purple-600 hover:bg-purple-500 text-white py-2 rounded text-sm font-semibold transition-all flex items-center justify-center gap-1"
+                      className="bg-purple-600 hover:bg-purple-500 text-white py-2 rounded text-xs font-semibold transition-all flex items-center justify-center gap-1"
                     >
                       🟪 Cast
                     </button>
