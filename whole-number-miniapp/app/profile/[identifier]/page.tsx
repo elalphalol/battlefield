@@ -709,29 +709,54 @@ export default function UserProfilePage() {
           </div>
         )}
         {/* Footer */}
-        <footer className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6 text-center space-y-3 mb-20">
-          <div className="flex items-center justify-center gap-4 text-sm">
-            <a 
-              href="https://warpcast.com/pounish" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 transition font-bold"
-            >
-              @pounish
-            </a>
-            <span className="text-gray-600">•</span>
-            <a 
-              href="https://warpcast.com/elalpha" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 transition font-bold"
-            >
-              @elalpha
-            </a>
+        <footer className="border-t border-slate-700 mt-12 py-8 text-center text-gray-400 space-y-3 mb-20">
+          <p className="text-sm font-bold">⚔️ <strong>BATTLEFIELD</strong> ⚔️</p>
+          
+          <div className="space-y-2">
+            <p className="text-sm">
+              Created by{' '}
+              <a
+                href="https://elalpha.lol"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:text-purple-300 underline font-semibold"
+              >
+                elalpha.lol
+              </a>
+            </p>
+            <p className="text-sm">
+              Follow on Farcaster:{' '}
+              <a
+                href="https://warpcast.com/elalpha.eth"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:text-purple-300"
+              >
+                @elalpha.eth
+              </a>
+              {' • '}
+              <a
+                href="https://warpcast.com/btcbattle"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:text-purple-300"
+              >
+                @btcbattle
+              </a>
+            </p>
+            <p className="text-sm text-purple-400 font-semibold">
+              Launching on Clanker.world
+            </p>
           </div>
-          <p className="text-xs text-gray-500 max-w-2xl mx-auto">
-            Disclaimer: This is a paper trading simulation for educational purposes only. No real money is involved. Trading involves risk and may not be suitable for all investors.
-          </p>
+          
+          <div className="pt-4 border-t border-slate-800">
+            <p className="text-xs text-gray-500">
+              ⚠️ Paper trading only. No real funds at risk. High leverage trading is educational.
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              This is a game. Trade responsibly. DYOR.
+            </p>
+          </div>
         </footer>
       </div>
 
