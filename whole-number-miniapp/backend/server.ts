@@ -811,14 +811,14 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
   }
 });
 
-// Add collateral to open position
+// Add collateral to open position (averaging into position)
 app.post('/api/trades/add-collateral', async (req: Request, res: Response) => {
-  const { tradeId, additionalCollateral, walletAddress } = req.body;
+  const { tradeId, additionalCollateral, walletAddress, currentPrice } = req.body;
 
-  if (!tradeId || !additionalCollateral || !walletAddress) {
+  if (!tradeId || !additionalCollateral || !walletAddress || !currentPrice) {
     return res.status(400).json({ 
       success: false, 
-      message: 'Trade ID, additional collateral, and wallet address required' 
+      message: 'Trade ID, additional collateral, wallet address, and current price required' 
     });
   }
 
@@ -859,18 +859,20 @@ app.post('/api/trades/add-collateral', async (req: Request, res: Response) => {
     }
 
     const oldCollateral = Number(t.position_size);
-    const newCollateral = oldCollateral + additionalCollateral;
-    const entryPrice = Number(t.entry_price);
+    const oldEntryPrice = Number(t.entry_price);
     const leverage = Number(t.leverage);
-
-    // Recalculate liquidation price with new collateral
-    // New effective leverage = (old collateral * leverage) / new collateral
-    const leveragedPosition = oldCollateral * leverage;
-    const newEffectiveLeverage = leveragedPosition / newCollateral;
     
+    // Calculate weighted average entry price
+    // Old position value + New position value / Total collateral
+    const oldPositionValue = oldCollateral * oldEntryPrice;
+    const newPositionValue = additionalCollateral * currentPrice;
+    const totalCollateral = oldCollateral + additionalCollateral;
+    const newEntryPrice = (oldPositionValue + newPositionValue) / totalCollateral;
+    
+    // Recalculate liquidation price with SAME leverage but new entry price
     const newLiquidationPrice = t.position_type === 'long'
-      ? entryPrice * (1 - 1 / newEffectiveLeverage)
-      : entryPrice * (1 + 1 / newEffectiveLeverage);
+      ? newEntryPrice * (1 - 1 / leverage)
+      : newEntryPrice * (1 + 1 / leverage);
 
     // Deduct additional collateral from balance
     await pool.query(
@@ -878,23 +880,24 @@ app.post('/api/trades/add-collateral', async (req: Request, res: Response) => {
       [additionalCollateral, t.user_id]
     );
 
-    // Update trade with new collateral and liquidation price
+    // Update trade with new collateral, new entry price, and new liquidation price
     const updatedTrade = await pool.query(
-      'UPDATE trades SET position_size = $1, liquidation_price = $2 WHERE id = $3 RETURNING *',
-      [newCollateral, newLiquidationPrice, tradeId]
+      'UPDATE trades SET position_size = $1, entry_price = $2, liquidation_price = $3 WHERE id = $4 RETURNING *',
+      [totalCollateral, newEntryPrice, newLiquidationPrice, tradeId]
     );
 
     await pool.query('COMMIT');
 
     console.log(`
-💰 Collateral Added:
+💰 Collateral Added (Position Averaging):
 - Trade ID: ${tradeId}
 - Position: ${t.position_type.toUpperCase()} ${leverage}x
 - Old Collateral: $${oldCollateral.toFixed(2)}
-- Added: $${additionalCollateral.toFixed(2)}
-- New Collateral: $${newCollateral.toFixed(2)}
-- Old Effective Leverage: ${leverage}x
-- New Effective Leverage: ${newEffectiveLeverage.toFixed(2)}x
+- Added: $${additionalCollateral.toFixed(2)} at $${currentPrice.toFixed(2)}
+- New Collateral: $${totalCollateral.toFixed(2)}
+- Old Entry Price: $${oldEntryPrice.toFixed(2)}
+- New Entry Price: $${newEntryPrice.toFixed(2)} (weighted average)
+- Leverage: ${leverage}x (unchanged)
 - Old Liquidation Price: $${Number(t.liquidation_price).toFixed(2)}
 - New Liquidation Price: $${newLiquidationPrice.toFixed(2)}
     `);
@@ -903,10 +906,12 @@ app.post('/api/trades/add-collateral', async (req: Request, res: Response) => {
       success: true, 
       trade: updatedTrade.rows[0],
       oldCollateral,
-      newCollateral,
+      newCollateral: totalCollateral,
+      oldEntryPrice,
+      newEntryPrice,
       oldLiquidationPrice: Number(t.liquidation_price),
       newLiquidationPrice,
-      newEffectiveLeverage: Number(newEffectiveLeverage.toFixed(2))
+      leverage // Same leverage, not effective
     });
   } catch (error) {
     await pool.query('ROLLBACK');

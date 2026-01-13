@@ -264,17 +264,20 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         body: JSON.stringify({
           tradeId,
           additionalCollateral,
-          walletAddress: address
+          walletAddress: address,
+          currentPrice: btcPrice
         })
       });
 
       const data = await response.json();
 
       if (data.success) {
-        alert(`✅ Added $${additionalCollateral.toFixed(2)} collateral!\n\n` +
-              `Old Liquidation: $${data.oldLiquidationPrice.toFixed(2)}\n` +
-              `New Liquidation: $${data.newLiquidationPrice.toFixed(2)}\n` +
-              `New Effective Leverage: ${data.newEffectiveLeverage}x`);
+        alert(`✅ Added $${additionalCollateral.toFixed(2)} at $${btcPrice.toFixed(2)}!\n\n` +
+              `Old Entry: $${data.oldEntryPrice.toFixed(2)}\n` +
+              `New Entry: $${data.newEntryPrice.toFixed(2)} (avg)\n` +
+              `Old Liq: $${data.oldLiquidationPrice.toFixed(2)}\n` +
+              `New Liq: $${data.newLiquidationPrice.toFixed(2)}\n` +
+              `Leverage: ${data.leverage}x (unchanged)`);
         fetchOpenTrades();
         onTradeComplete();
       } else {
