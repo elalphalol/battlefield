@@ -37,7 +37,9 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const [closingTradeId, setClosingTradeId] = useState<number | null>(null);
   const [userData, setUserData] = useState<{ army: 'bears' | 'bulls'; username?: string } | null>(null);
   const [addingCollateralTradeId, setAddingCollateralTradeId] = useState<number | null>(null);
+  const [showCollateralModal, setShowCollateralModal] = useState(false);
   const [collateralAmount, setCollateralAmount] = useState('');
+  const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
 
   // Calculate actual position size from percentage
   // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
@@ -238,31 +240,36 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     return percentage <= -90; // Warning at -90%
   };
 
-  const handleAddCollateral = async (tradeId: number) => {
-    if (!address) return;
+  const openCollateralModal = (tradeId: number) => {
+    setSelectedTradeId(tradeId);
+    setCollateralAmount('');
+    setShowCollateralModal(true);
+  };
 
-    const amount = prompt('Enter additional collateral amount (in $):');
-    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-      if (amount !== null) { // Only show error if user didn't cancel
-        alert('❌ Please enter a valid amount greater than 0');
-      }
+  const handleAddCollateral = async () => {
+    if (!address || !selectedTradeId) return;
+
+    const additionalCollateral = Number(collateralAmount);
+    
+    if (!additionalCollateral || additionalCollateral <= 0) {
+      alert('❌ Enter valid amount');
       return;
     }
-
-    const additionalCollateral = Number(amount);
     
     if (additionalCollateral > Number(paperBalance)) {
-      alert(`❌ Insufficient balance. Available: $${Number(paperBalance).toFixed(2)}`);
+      alert(`❌ Insufficient balance: $${Number(paperBalance).toFixed(0)}`);
       return;
     }
 
-    setAddingCollateralTradeId(tradeId);
+    setAddingCollateralTradeId(selectedTradeId);
+    setShowCollateralModal(false);
+    
     try {
       const response = await fetch(getApiUrl('api/trades/add-collateral'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tradeId,
+          tradeId: selectedTradeId,
           additionalCollateral,
           walletAddress: address,
           currentPrice: btcPrice
@@ -272,22 +279,18 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       const data = await response.json();
 
       if (data.success) {
-        alert(`✅ Added $${additionalCollateral.toFixed(2)} at $${btcPrice.toFixed(2)}!\n\n` +
-              `Old Entry: $${data.oldEntryPrice.toFixed(2)}\n` +
-              `New Entry: $${data.newEntryPrice.toFixed(2)} (avg)\n` +
-              `Old Liq: $${data.oldLiquidationPrice.toFixed(2)}\n` +
-              `New Liq: $${data.newLiquidationPrice.toFixed(2)}\n` +
-              `Leverage: ${data.leverage}x (unchanged)`);
+        alert(`✅ +$${additionalCollateral.toFixed(0)}\nNew Liq: $${data.newLiquidationPrice.toFixed(0)}`);
         fetchOpenTrades();
         onTradeComplete();
       } else {
-        alert(`❌ ${data.message || 'Failed to add collateral'}`);
+        alert(`❌ ${data.message || 'Failed'}`);
       }
     } catch (error) {
       console.error('Error adding collateral:', error);
-      alert(`❌ Failed to add collateral: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`❌ Failed to add margin`);
     } finally {
       setAddingCollateralTradeId(null);
+      setSelectedTradeId(null);
     }
   };
 
@@ -578,7 +581,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
                   <div className="grid grid-cols-3 gap-2">
                     <button
-                      onClick={() => handleAddCollateral(trade.id)}
+                      onClick={() => openCollateralModal(trade.id)}
                       disabled={addingCollateralTradeId === trade.id}
                       className="bg-blue-600 hover:bg-blue-500 text-white py-2 rounded text-xs font-semibold transition-all disabled:opacity-50"
                       title="Add collateral to lower liquidation price"
@@ -602,6 +605,45 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Add Collateral Modal */}
+      {showCollateralModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 border-2 border-blue-500 rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-bold text-white mb-4">Add Margin</h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm text-gray-400 mb-2">Amount ($)</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={collateralAmount}
+                onChange={(e) => setCollateralAmount(e.target.value)}
+                className="w-full bg-slate-700 text-white px-4 py-3 rounded border border-slate-600 focus:border-blue-500 focus:outline-none text-lg"
+                placeholder="100"
+                autoFocus
+              />
+              <p className="text-xs text-gray-500 mt-1">Balance: ${Number(paperBalance).toFixed(0)}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowCollateralModal(false)}
+                className="bg-slate-600 hover:bg-slate-500 text-white py-3 rounded font-semibold transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddCollateral}
+                className="bg-blue-600 hover:bg-blue-500 text-white py-3 rounded font-semibold transition-all"
+              >
+                Add
+              </button>
+            </div>
           </div>
         </div>
       )}
