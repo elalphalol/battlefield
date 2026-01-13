@@ -811,6 +811,110 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
   }
 });
 
+// Add collateral to open position
+app.post('/api/trades/add-collateral', async (req: Request, res: Response) => {
+  const { tradeId, additionalCollateral, walletAddress } = req.body;
+
+  if (!tradeId || !additionalCollateral || !walletAddress) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Trade ID, additional collateral, and wallet address required' 
+    });
+  }
+
+  if (additionalCollateral <= 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Additional collateral must be greater than 0' 
+    });
+  }
+
+  try {
+    await pool.query('BEGIN');
+
+    // Get trade details
+    const trade = await pool.query(
+      'SELECT t.*, u.paper_balance FROM trades t JOIN users u ON t.user_id = u.id WHERE t.id = $1 AND t.status = $2 AND LOWER(u.wallet_address) = LOWER($3)',
+      [tradeId, 'open', walletAddress]
+    );
+
+    if (trade.rows.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Trade not found or already closed' 
+      });
+    }
+
+    const t = trade.rows[0];
+    const currentBalance = Number(t.paper_balance);
+
+    // Check if user has enough balance
+    if (currentBalance < additionalCollateral) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({ 
+        success: false, 
+        message: `Insufficient balance. Available: $${currentBalance.toFixed(2)}` 
+      });
+    }
+
+    const oldCollateral = Number(t.position_size);
+    const newCollateral = oldCollateral + additionalCollateral;
+    const entryPrice = Number(t.entry_price);
+    const leverage = Number(t.leverage);
+
+    // Recalculate liquidation price with new collateral
+    // New effective leverage = (old collateral * leverage) / new collateral
+    const leveragedPosition = oldCollateral * leverage;
+    const newEffectiveLeverage = leveragedPosition / newCollateral;
+    
+    const newLiquidationPrice = t.position_type === 'long'
+      ? entryPrice * (1 - 1 / newEffectiveLeverage)
+      : entryPrice * (1 + 1 / newEffectiveLeverage);
+
+    // Deduct additional collateral from balance
+    await pool.query(
+      'UPDATE users SET paper_balance = paper_balance - $1, last_active = NOW() WHERE id = $2',
+      [additionalCollateral, t.user_id]
+    );
+
+    // Update trade with new collateral and liquidation price
+    const updatedTrade = await pool.query(
+      'UPDATE trades SET position_size = $1, liquidation_price = $2 WHERE id = $3 RETURNING *',
+      [newCollateral, newLiquidationPrice, tradeId]
+    );
+
+    await pool.query('COMMIT');
+
+    console.log(`
+💰 Collateral Added:
+- Trade ID: ${tradeId}
+- Position: ${t.position_type.toUpperCase()} ${leverage}x
+- Old Collateral: $${oldCollateral.toFixed(2)}
+- Added: $${additionalCollateral.toFixed(2)}
+- New Collateral: $${newCollateral.toFixed(2)}
+- Old Effective Leverage: ${leverage}x
+- New Effective Leverage: ${newEffectiveLeverage.toFixed(2)}x
+- Old Liquidation Price: $${Number(t.liquidation_price).toFixed(2)}
+- New Liquidation Price: $${newLiquidationPrice.toFixed(2)}
+    `);
+
+    res.json({ 
+      success: true, 
+      trade: updatedTrade.rows[0],
+      oldCollateral,
+      newCollateral,
+      oldLiquidationPrice: Number(t.liquidation_price),
+      newLiquidationPrice,
+      newEffectiveLeverage: Number(newEffectiveLeverage.toFixed(2))
+    });
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    console.error('Error adding collateral:', error);
+    res.status(500).json({ success: false, message: 'Failed to add collateral' });
+  }
+});
+
 // Get user's open trades
 app.get('/api/trades/:walletAddress/open', async (req: Request, res: Response) => {
   const { walletAddress } = req.params;
