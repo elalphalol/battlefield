@@ -427,38 +427,34 @@ export default function BattlefieldHome() {
                   
                   <div className="space-y-4">
                     <div className={`bg-slate-900/50 rounded-lg p-4 border-2 ${
-                      direction === 'BULLISH' ? 'border-green-500/50' : 
-                      direction === 'BEARISH' ? 'border-red-500/50' : 
+                      direction === 'bullish' ? 'border-green-500/50' : 
+                      direction === 'bearish' ? 'border-red-500/50' : 
                       'border-gray-500/50'
                     }`}>
                       <h4 className="font-bold text-white mb-2">Market Direction</h4>
                       <div className={`text-2xl font-bold ${
-                        direction === 'BULLISH' ? 'text-green-400' : 
-                        direction === 'BEARISH' ? 'text-red-400' : 
+                        direction === 'bullish' ? 'text-green-400' : 
+                        direction === 'bearish' ? 'text-red-400' : 
                         'text-gray-400'
                       }`}>
-                        {direction === 'BULLISH' && '🐂 BULLISH'}
-                        {direction === 'BEARISH' && '🐻 BEARISH'}
-                        {direction === 'NEUTRAL' && '⚖️ NEUTRAL'}
+                        {direction === 'bullish' && '🐂 BULLISH'}
+                        {direction === 'bearish' && '🐻 BEARISH'}
+                        {direction === 'neutral' && '⚖️ NEUTRAL'}
                       </div>
                     </div>
 
                     <div className="bg-slate-900/50 rounded-lg p-4">
                       <h4 className="font-bold text-white mb-2">Recommended Action</h4>
-                      <p className={`text-lg font-semibold ${
-                        recommendation.includes('LONG') ? 'text-green-400' : 
-                        recommendation.includes('SHORT') ? 'text-red-400' : 
-                        'text-yellow-400'
-                      }`}>
-                        {recommendation}
+                      <p className="text-lg font-semibold text-yellow-400">
+                        {recommendation.action}
                       </p>
                     </div>
 
                     <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
                       <h4 className="font-bold text-blue-400 mb-2">Current Zone</h4>
                       <p className="text-sm text-gray-300">
-                        <strong>Zone:</strong> {zoneInfo.zone}<br />
-                        <strong>Bias:</strong> {zoneInfo.bias}
+                        <strong>Zone:</strong> {zoneInfo.name}<br />
+                        <strong>Description:</strong> {zoneInfo.description}
                       </p>
                     </div>
                   </div>
