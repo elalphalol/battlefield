@@ -1,10 +1,66 @@
 'use client';
 
+import { useState, useEffect, useMemo } from 'react';
+import { useAccount } from 'wagmi';
 import { ArmyBattleStatus } from '../components/ArmyBattleStatus';
 import { ArmySelection } from '../components/ArmySelection';
 import { BattleAlerts } from '../components/BattleAlerts';
+import { useBTCPrice } from '../hooks/useBTCPrice';
+import { WholeNumberStrategy } from '../lib/strategy';
+import { getApiUrl } from '../config/api';
+
+interface UserData {
+  army: 'bears' | 'bulls';
+  [key: string]: any;
+}
 
 export default function BattlePage() {
+  const { address } = useAccount();
+  const { price: btcPrice } = useBTCPrice(5000);
+  const [strategy] = useState(() => new WholeNumberStrategy());
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  // Update strategy with new price
+  useEffect(() => {
+    if (btcPrice > 0) {
+      strategy.updatePrice(btcPrice);
+    }
+  }, [btcPrice, strategy]);
+
+  // Calculate strategy values
+  const coordinate = useMemo(() => strategy.getCoordinate(btcPrice), [btcPrice, strategy]);
+  const wholeNumber = useMemo(() => strategy.getWholeNumber(btcPrice), [btcPrice, strategy]);
+
+  // Check beams
+  useEffect(() => {
+    if (btcPrice > 0) {
+      strategy.checkBeams(coordinate, wholeNumber);
+    }
+  }, [btcPrice, coordinate, wholeNumber, strategy]);
+
+  // Fetch user data
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!address) return;
+      try {
+        const response = await fetch(getApiUrl(`api/users/${address}`));
+        const data = await response.json();
+        if (data.success) {
+          setUserData(data.user);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+    fetchUser();
+  }, [address]);
+
+  const handleArmyChange = (army: 'bears' | 'bulls') => {
+    if (userData) {
+      setUserData({ ...userData, army });
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
       {/* Header */}
@@ -31,12 +87,19 @@ export default function BattlePage() {
         
         {/* Army Selection */}
         <div className="mb-6">
-          <ArmySelection />
+          <ArmySelection 
+            currentArmy={userData?.army}
+            onArmyChange={handleArmyChange}
+          />
         </div>
 
         {/* Battle Alerts */}
         <div className="mb-6">
-          <BattleAlerts />
+          <BattleAlerts 
+            btcPrice={btcPrice}
+            coordinate={coordinate}
+            beamsBroken={strategy.beamsBroken}
+          />
         </div>
 
         {/* Army Battle Status */}
