@@ -43,6 +43,7 @@ export default function BattlefieldHome() {
   const { price: btcPrice, isLoading } = useBTCPrice(5000);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'learn'>('trade');
+  const [learnSection, setLearnSection] = useState<'strategy' | 'cycles' | 'glossary' | 'ranking' | 'tips'>('strategy');
   const [strategy] = useState(() => new WholeNumberStrategy());
   const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
   
