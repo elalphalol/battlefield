@@ -393,7 +393,7 @@ export default function BattlefieldHome() {
                     : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                 }`}
               >
-                📊 Prediction Market
+                🎯 Battlefield
               </button>
               <button
                 onClick={() => setBattleSection('status')}
@@ -437,17 +437,25 @@ export default function BattlefieldHome() {
                         direction === 'bearish' ? 'text-red-400' : 
                         'text-gray-400'
                       }`}>
-                        {direction === 'bullish' && '🐂 BULLISH'}
-                        {direction === 'bearish' && '🐻 BEARISH'}
-                        {direction === 'neutral' && '⚖️ NEUTRAL'}
+                        {direction === 'bullish' && 'BULLISH'}
+                        {direction === 'bearish' && 'BEARISH'}
+                        {direction === 'neutral' && 'NEUTRAL'}
                       </div>
                     </div>
 
-                    <div className="bg-slate-900/50 rounded-lg p-4">
+                    <div className={`bg-slate-900/50 rounded-lg p-4 border-2 ${
+                      recommendation.action.toLowerCase().includes('long') ? 'border-green-500/50' : 
+                      recommendation.action.toLowerCase().includes('short') ? 'border-red-500/50' : 
+                      'border-yellow-500/50'
+                    }`}>
                       <h4 className="font-bold text-white mb-2">Recommended Action</h4>
-                      <p className="text-lg font-semibold text-yellow-400">
-                        {recommendation.action}
-                      </p>
+                      <div className={`text-2xl font-bold ${
+                        recommendation.action.toLowerCase().includes('long') ? 'text-green-400' : 
+                        recommendation.action.toLowerCase().includes('short') ? 'text-red-400' : 
+                        'text-yellow-400'
+                      }`}>
+                        {recommendation.action.toUpperCase()}
+                      </div>
                     </div>
 
                     <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
