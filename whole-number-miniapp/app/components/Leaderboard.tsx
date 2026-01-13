@@ -118,8 +118,8 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Your Rank - Awesome Box */}
-      {userRank && address && (
+      {/* Your Rank - Awesome Box - Show if user has rank */}
+      {userRank && (
         <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500 rounded-xl p-8 shadow-2xl">
           <div className="text-center">
             <div className="text-sm font-semibold text-purple-300 uppercase tracking-widest mb-2">Your Global Rank</div>
@@ -149,20 +149,20 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
             const rank = index + 1;
             const isUserEntry = address && entry.wallet_address.toLowerCase() === address.toLowerCase();
             
-            // Full border with glow for top 3
+            // Thick left border only for top 3, like achievements
             let borderClass = '';
             let bgClass = '';
             if (rank === 1) {
-              borderClass = 'border-2 border-yellow-400 shadow-lg shadow-yellow-400/50';
+              borderClass = 'border-l-4 border-yellow-400';
               bgClass = 'bg-yellow-900/10';
             } else if (rank === 2) {
-              borderClass = 'border-2 border-gray-400 shadow-lg shadow-gray-400/50';
+              borderClass = 'border-l-4 border-gray-400';
               bgClass = 'bg-gray-900/10';
             } else if (rank === 3) {
-              borderClass = 'border-2 border-orange-600 shadow-lg shadow-orange-600/50';
+              borderClass = 'border-l-4 border-orange-600';
               bgClass = 'bg-orange-900/10';
             } else if (isUserEntry) {
-              borderClass = 'border-2 border-blue-500 shadow-lg shadow-blue-500/50';
+              borderClass = 'border-l-4 border-blue-500';
               bgClass = 'bg-blue-900/20';
             }
             
