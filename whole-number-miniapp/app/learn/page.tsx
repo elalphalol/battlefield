@@ -1,11 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import { getApiUrl } from '../config/api';
 import { WholeNumberStrategy } from '../components/WholeNumberStrategy';
 import { MarketCycle } from '../components/MarketCycle';
 
 export default function LearnPage() {
+  const { address: wagmiAddress } = useAccount();
   const [activeSection, setActiveSection] = useState<'strategy' | 'cycles' | 'glossary' | 'ranking' | 'tips'>('strategy');
+  const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
+  const [userData, setUserData] = useState<any>(null);
+  
+  const address = farcasterWallet || wagmiAddress;
+
+  // Get Farcaster wallet
+  useEffect(() => {
+    const getFarcasterWallet = async () => {
+      try {
+        const { farcasterAuth } = await import('../lib/farcaster');
+        if (farcasterAuth.isInFarcasterFrame()) {
+          const signInResult = await farcasterAuth.signInWithFarcaster();
+          if (signInResult?.walletAddress) {
+            setFarcasterWallet(signInResult.walletAddress);
+          }
+        }
+      } catch (error) {
+        console.error('Error getting Farcaster wallet:', error);
+      }
+    };
+    getFarcasterWallet();
+  }, []);
+
+  // Fetch user data
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!address) return;
+      try {
+        const response = await fetch(getApiUrl(`api/users/${address}`));
+        const data = await response.json();
+        if (data.success) {
+          setUserData(data.user);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      }
+    };
+    if (address) fetchUser();
+  }, [address]);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
@@ -492,13 +534,15 @@ export default function LearnPage() {
               <span className="text-xs font-bold">Battle</span>
             </button>
             
-            <button
-              onClick={() => window.location.href = '/profile'}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
-            >
-              <span className="text-2xl">👤</span>
-              <span className="text-xs font-bold">Profile</span>
-            </button>
+            {address && userData && (
+              <button
+                onClick={() => window.location.href = `/profile/${userData.fid || userData.wallet_address}`}
+                className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+              >
+                <span className="text-2xl">👤</span>
+                <span className="text-xs font-bold">Profile</span>
+              </button>
+            )}
             
             <button
               onClick={() => window.location.href = '/battlefield'}

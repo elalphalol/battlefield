@@ -190,13 +190,15 @@ export default function BattlePage() {
               <span className="text-xs font-bold">Battle</span>
             </button>
             
-            <button
-              onClick={() => window.location.href = '/profile'}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
-            >
-              <span className="text-2xl">👤</span>
-              <span className="text-xs font-bold">Profile</span>
-            </button>
+            {address && userData && (
+              <button
+                onClick={() => window.location.href = `/profile/${userData.fid || address}`}
+                className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+              >
+                <span className="text-2xl">👤</span>
+                <span className="text-xs font-bold">Profile</span>
+              </button>
+            )}
             
             <button
               onClick={() => window.location.href = '/battlefield'}

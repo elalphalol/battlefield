@@ -462,23 +462,13 @@ export default function BattlefieldHome() {
         )}
       </div>
 
-      {/* Bottom Navigation Bar */}
+      {/* Bottom Navigation Bar - Order: Leaders, Battle, Profile, Trade, Learn */}
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t-2 border-slate-700 z-50">
         <div className="container mx-auto px-2">
           <div className="flex justify-around items-center py-2">
             <button
-              onClick={() => setActiveTab('trade')}
-              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
-                activeTab === 'trade' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
-              }`}
-            >
-              <span className="text-2xl">🎯</span>
-              <span className="text-xs font-bold">Trade</span>
-            </button>
-            
-            <button
               onClick={() => setActiveTab('leaderboard')}
-              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
+              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${
                 activeTab === 'leaderboard' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
@@ -487,16 +477,8 @@ export default function BattlefieldHome() {
             </button>
             
             <button
-              onClick={() => window.location.href = '/learn'}
-              className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
-            >
-              <span className="text-2xl">📚</span>
-              <span className="text-xs font-bold">Learn</span>
-            </button>
-            
-            <button
               onClick={() => window.location.href = '/battle'}
-              className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">⚔️</span>
               <span className="text-xs font-bold">Battle</span>
@@ -505,12 +487,30 @@ export default function BattlefieldHome() {
             {address && userData && (
               <button
                 onClick={() => window.location.href = `/profile/${userData.fid || userData.wallet_address}`}
-                className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+                className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
               >
                 <span className="text-2xl">👤</span>
                 <span className="text-xs font-bold">Profile</span>
               </button>
             )}
+            
+            <button
+              onClick={() => setActiveTab('trade')}
+              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${
+                activeTab === 'trade' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <span className="text-2xl">🎯</span>
+              <span className="text-xs font-bold">Trade</span>
+            </button>
+            
+            <button
+              onClick={() => window.location.href = '/learn'}
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+            >
+              <span className="text-2xl">📚</span>
+              <span className="text-xs font-bold">Learn</span>
+            </button>
           </div>
         </div>
       </nav>
