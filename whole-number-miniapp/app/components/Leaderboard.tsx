@@ -29,12 +29,34 @@ interface LeaderboardProps {
 }
 
 export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
-  const { address } = useAccount();
+  const { address: wagmiAddress } = useAccount();
   const router = useRouter();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'bears' | 'bulls'>(filterArmy);
   const [userRank, setUserRank] = useState<number | null>(null);
+  const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
+  
+  // Use Farcaster wallet if available, otherwise use wagmi wallet
+  const address = farcasterWallet || wagmiAddress;
+
+  // Get Farcaster wallet on mount
+  useEffect(() => {
+    const getFarcasterWallet = async () => {
+      try {
+        const { farcasterAuth } = await import('../lib/farcaster');
+        if (farcasterAuth.isInFarcasterFrame()) {
+          const signInResult = await farcasterAuth.signInWithFarcaster();
+          if (signInResult?.walletAddress) {
+            setFarcasterWallet(signInResult.walletAddress);
+          }
+        }
+      } catch (error) {
+        console.error('Error getting Farcaster wallet:', error);
+      }
+    };
+    getFarcasterWallet();
+  }, []);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -138,7 +160,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
       </div>
 
       {/* Leaderboard List - No scrollbar, top 20 only */}
-      <div className="divide-y divide-slate-700">
+      <div>
         {leaderboard.length === 0 ? (
           <div className="p-8 text-center text-gray-400">
             <p className="text-lg mb-2">No traders yet</p>
@@ -170,7 +192,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
               <div
                 key={entry.wallet_address}
                 onClick={() => router.push(`/profile/${entry.fid || entry.wallet_address}`)}
-                className={`p-4 hover:bg-slate-700/50 transition-all cursor-pointer ${borderClass} ${bgClass}`}
+                className={`p-4 m-2 rounded-lg hover:bg-slate-700/50 transition-all cursor-pointer ${borderClass} ${bgClass}`}
               >
                 <div className="flex items-center gap-4">
                   {/* Profile Picture */}
