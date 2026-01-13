@@ -381,8 +381,106 @@ export default function BattlefieldHome() {
           </div>
         ) : activeTab === 'battle' ? (
           <div>
+            {/* Army Selection */}
+            <div className="mb-6">
+              <ArmySelection 
+                currentArmy={userData?.army}
+                onArmyChange={handleArmyChange}
+              />
+            </div>
+
+            {/* Battle Alerts */}
+            <div className="mb-6">
+              <BattleAlerts 
+                btcPrice={btcPrice}
+                coordinate={coordinate}
+                beamsBroken={strategy.beamsBroken}
+              />
+            </div>
+
             {/* Army Battle Status */}
-            <ArmyBattleStatus />
+            <div className="mb-6">
+              <ArmyBattleStatus />
+            </div>
+
+            {/* Battlefield Visual */}
+            <div className="mb-6">
+              <BattlefieldVisual 
+                coordinate={coordinate}
+                wholeNumber={wholeNumber}
+                nextWholeNumber={nextWholeNumber}
+                zoneInfo={zoneInfo}
+                beamsBroken={strategy.beamsBroken}
+              />
+            </div>
+
+            {/* Strategy Guide */}
+            <div className="mb-6">
+              <StrategyGuide />
+            </div>
+
+            {/* Army Battle Info */}
+            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 mb-6">
+              <h3 className="text-2xl font-bold text-purple-400 mb-4 text-center">💎 Weekly Army Airdrop</h3>
+              
+              <div className="space-y-4 text-gray-300">
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <h4 className="font-bold text-white mb-2">How It Works:</h4>
+                  <p className="text-sm">
+                    Every week, the combined P&L of all Bulls is compared to all Bears. 
+                    The winning army shares a massive $BATTLE token airdrop! ALL players in the winning army receive rewards.
+                  </p>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <h4 className="font-bold text-white mb-2">📅 Weekly Snapshot:</h4>
+                  <p className="text-sm">
+                    Every Monday, we take a snapshot and announce the winning army. 
+                    Your army is determined by comparing your total positive P&L from longs vs shorts.
+                  </p>
+                </div>
+
+                <div className="bg-yellow-900/20 rounded p-4 border border-yellow-500/30">
+                  <strong className="text-yellow-400">⚡ Strategic Army Switching:</strong>
+                  <p className="text-sm mt-1">
+                    You can switch armies by closing winning positions in the opposite direction! 
+                    Only profitable trades count toward army assignment. Watch the standings and 
+                    strategically switch before Monday snapshots!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Battle Strategy Tips */}
+            <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+              <h3 className="text-xl font-bold text-yellow-400 mb-4">📊 Battle Strategy Tips</h3>
+              
+              <div className="space-y-3">
+                <div className="bg-green-900/20 rounded-lg p-3 border border-green-500/30">
+                  <h4 className="font-bold text-green-400 mb-1">🐂 Bulls Strategy</h4>
+                  <p className="text-sm text-gray-300">
+                    Long the dips! Look for entries around +800 coordinates. 
+                    Hold through consolidation. Bulls win when market trends up.
+                  </p>
+                </div>
+
+                <div className="bg-red-900/20 rounded-lg p-3 border border-red-500/30">
+                  <h4 className="font-bold text-red-400 mb-1">🐻 Bears Strategy</h4>
+                  <p className="text-sm text-gray-300">
+                    Short the pumps! Look for entries around +150 coordinates. 
+                    Take profit quickly. Bears win when market trends down or consolidates.
+                  </p>
+                </div>
+
+                <div className="bg-blue-900/20 rounded-lg p-3 border border-blue-500/30">
+                  <h4 className="font-bold text-blue-400 mb-1">🔄 Switching Armies</h4>
+                  <p className="text-sm text-gray-300">
+                    Want to switch? Close winning positions in the opposite direction. 
+                    If you&apos;re Bulls but Bears are winning, close some long wins and open/close winning shorts!
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div>
