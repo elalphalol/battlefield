@@ -149,20 +149,28 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
             const rank = index + 1;
             const isUserEntry = address && entry.wallet_address.toLowerCase() === address.toLowerCase();
             
-            // Border colors for top 3
+            // Full border with glow for top 3
             let borderClass = '';
-            if (rank === 1) borderClass = 'border-l-4 border-yellow-400';
-            else if (rank === 2) borderClass = 'border-l-4 border-gray-400';
-            else if (rank === 3) borderClass = 'border-l-4 border-orange-600';
-            else if (isUserEntry) borderClass = 'border-l-4 border-blue-500';
+            let bgClass = '';
+            if (rank === 1) {
+              borderClass = 'border-2 border-yellow-400 shadow-lg shadow-yellow-400/50';
+              bgClass = 'bg-yellow-900/10';
+            } else if (rank === 2) {
+              borderClass = 'border-2 border-gray-400 shadow-lg shadow-gray-400/50';
+              bgClass = 'bg-gray-900/10';
+            } else if (rank === 3) {
+              borderClass = 'border-2 border-orange-600 shadow-lg shadow-orange-600/50';
+              bgClass = 'bg-orange-900/10';
+            } else if (isUserEntry) {
+              borderClass = 'border-2 border-blue-500 shadow-lg shadow-blue-500/50';
+              bgClass = 'bg-blue-900/20';
+            }
             
             return (
               <div
                 key={entry.wallet_address}
                 onClick={() => router.push(`/profile/${entry.fid || entry.wallet_address}`)}
-                className={`p-4 hover:bg-slate-700/50 transition-colors cursor-pointer ${borderClass} ${
-                  isUserEntry ? 'bg-blue-900/20' : ''
-                }`}
+                className={`p-4 hover:bg-slate-700/50 transition-all cursor-pointer ${borderClass} ${bgClass}`}
               >
                 <div className="flex items-center gap-4">
                   {/* Profile Picture */}
