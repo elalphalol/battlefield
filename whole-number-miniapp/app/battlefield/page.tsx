@@ -515,7 +515,7 @@ export default function BattlefieldHome() {
                   <ArmyBattleStatus />
                 </div>
 
-                {/* Army Battle Info */}
+                {/* Weekly Army Airdrop */}
                 <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 mb-6">
                   <h3 className="text-2xl font-bold text-purple-400 mb-4 text-center">💎 Weekly Army Airdrop</h3>
                   
@@ -544,6 +544,44 @@ export default function BattlefieldHome() {
                         strategically switch before Monday snapshots!
                       </p>
                     </div>
+                  </div>
+                </div>
+
+                {/* Prediction Markets */}
+                <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+                  <h3 className="text-2xl font-bold text-yellow-400 mb-4 text-center">🎯 Army Prediction Market</h3>
+                  <p className="text-sm text-gray-400 text-center mb-6">Predict which army will win the weekly battle! (Coming Soon)</p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Bulls Prediction */}
+                    <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-2 border-green-500/50 rounded-lg p-6 opacity-60 cursor-not-allowed">
+                      <div className="text-center">
+                        <div className="text-4xl mb-3">🐂</div>
+                        <h4 className="text-xl font-bold text-green-400 mb-2">Bulls Win</h4>
+                        <p className="text-sm text-gray-400 mb-4">Place prediction</p>
+                        <div className="bg-slate-900/50 rounded-lg p-3">
+                          <p className="text-xs text-gray-500">Functionality coming soon</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bears Prediction */}
+                    <div className="bg-gradient-to-br from-red-900/30 to-red-800/20 border-2 border-red-500/50 rounded-lg p-6 opacity-60 cursor-not-allowed">
+                      <div className="text-center">
+                        <div className="text-4xl mb-3">🐻</div>
+                        <h4 className="text-xl font-bold text-red-400 mb-2">Bears Win</h4>
+                        <p className="text-sm text-gray-400 mb-4">Place prediction</p>
+                        <div className="bg-slate-900/50 rounded-lg p-3">
+                          <p className="text-xs text-gray-500">Functionality coming soon</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
+                    <p className="text-sm text-gray-300 text-center">
+                      <strong className="text-blue-400">💡 How it works:</strong> Soon you&apos;ll be able to predict which army will win the weekly P&L battle and earn rewards for correct predictions!
+                    </p>
                   </div>
                 </div>
               </div>
