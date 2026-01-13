@@ -196,7 +196,13 @@ export default function BattlePage() {
         <div className="container mx-auto px-2">
           <div className="flex justify-around items-center py-2">
             <button
-              onClick={() => window.location.href = '/battlefield'}
+              onClick={() => {
+                window.location.href = '/battlefield';
+                setTimeout(() => {
+                  const leaderboardTab = document.querySelector('[data-tab="leaderboard"]') as HTMLElement;
+                  leaderboardTab?.click();
+                }, 100);
+              }}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">🏆</span>
@@ -210,15 +216,19 @@ export default function BattlePage() {
               <span className="text-xs font-bold">Battle</span>
             </button>
             
-            {address && userData && (
-              <button
-                onClick={() => window.location.href = `/profile/${userData.fid || address}`}
-                className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
-              >
-                <span className="text-2xl">👤</span>
-                <span className="text-xs font-bold">Profile</span>
-              </button>
-            )}
+            <button
+              onClick={() => {
+                if (address && userData) {
+                  window.location.href = `/profile/${userData.fid || address}`;
+                } else if (address) {
+                  window.location.href = `/profile/${address}`;
+                }
+              }}
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+            >
+              <span className="text-2xl">👤</span>
+              <span className="text-xs font-bold">Profile</span>
+            </button>
             
             <button
               onClick={() => window.location.href = '/battlefield'}
