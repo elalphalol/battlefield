@@ -10,9 +10,31 @@ import { MarketCycle } from '../components/MarketCycle';
 
 export default function LearnPage() {
   const router = useRouter();
-  const { address } = useAccount();
+  const { address: wagmiAddress } = useAccount();
   const [activeSection, setActiveSection] = useState<'strategy' | 'cycles' | 'glossary' | 'ranking' | 'tips'>('strategy');
   const [userData, setUserData] = useState<any>(null);
+  const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
+  
+  // Use Farcaster wallet if available, otherwise use wagmi wallet
+  const address = farcasterWallet || wagmiAddress;
+
+  // Get cached Farcaster wallet if in Farcaster frame
+  useEffect(() => {
+    const getCachedWallet = async () => {
+      try {
+        const { farcasterAuth } = await import('../lib/farcaster');
+        if (farcasterAuth.isInFarcasterFrame()) {
+          const user = await farcasterAuth.getFarcasterUser();
+          if (user && user.verifications && user.verifications.length > 0) {
+            setFarcasterWallet(user.verifications[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error getting cached wallet:', error);
+      }
+    };
+    getCachedWallet();
+  }, []);
 
   // Fetch user data
   useEffect(() => {
