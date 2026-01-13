@@ -67,6 +67,7 @@ export default function UserProfilePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceLoaded, setPriceLoaded] = useState(false);
+  const [achievementTab, setAchievementTab] = useState<'unlocked' | 'locked'>('unlocked');
 
   // Fetch BTC price
   useEffect(() => {
@@ -290,13 +291,29 @@ export default function UserProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Back Button */}
-        <button
-          onClick={() => router.back()}
-          className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition"
-        >
-          ← Back
-        </button>
+        {/* Achievement Tab Navigation */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setAchievementTab('unlocked')}
+            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+              achievementTab === 'unlocked'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+            }`}
+          >
+            🏆 Achievements
+          </button>
+          <button
+            onClick={() => setAchievementTab('locked')}
+            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+              achievementTab === 'locked'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+            }`}
+          >
+            🔒 Locked
+          </button>
+        </div>
 
         {/* Profile Header */}
         <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 sm:p-6">
@@ -322,8 +339,8 @@ export default function UserProfilePage() {
                   <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white truncate">{profile.user.username}</h1>
                 </div>
                 <p className="text-gray-400 text-xs sm:text-sm mb-1 sm:mb-2">FID: {profile.user.fid}</p>
-                <p className="text-gray-500 text-[10px] sm:text-xs font-mono truncate">
-                  {profile.user.wallet_address}
+                <p className="text-gray-500 text-[10px] sm:text-xs font-mono">
+                  {profile.user.wallet_address.slice(0, 6)}...{profile.user.wallet_address.slice(-4)}
                 </p>
               </div>
             </div>
