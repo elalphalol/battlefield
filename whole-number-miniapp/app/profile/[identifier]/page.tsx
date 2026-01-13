@@ -589,7 +589,7 @@ export default function UserProfilePage() {
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
             }`}
           >
-            🏆 Achievements
+            Achievements
           </button>
           <button
             onClick={() => setAchievementTab('titles')}
@@ -599,7 +599,7 @@ export default function UserProfilePage() {
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
             }`}
           >
-            👑 Titles
+            Titles
           </button>
           <button
             onClick={() => setAchievementTab('locked')}
@@ -609,7 +609,7 @@ export default function UserProfilePage() {
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
             }`}
           >
-            🔒 Locked
+            Locked
           </button>
         </div>
 
@@ -708,6 +708,31 @@ export default function UserProfilePage() {
             </div>
           </div>
         )}
+        {/* Footer */}
+        <footer className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6 text-center space-y-3 mb-20">
+          <div className="flex items-center justify-center gap-4 text-sm">
+            <a 
+              href="https://warpcast.com/pounish" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-purple-400 hover:text-purple-300 transition font-bold"
+            >
+              @pounish
+            </a>
+            <span className="text-gray-600">•</span>
+            <a 
+              href="https://warpcast.com/elalpha" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-purple-400 hover:text-purple-300 transition font-bold"
+            >
+              @elalpha
+            </a>
+          </div>
+          <p className="text-xs text-gray-500 max-w-2xl mx-auto">
+            Disclaimer: This is a paper trading simulation for educational purposes only. No real money is involved. Trading involves risk and may not be suitable for all investors.
+          </p>
+        </footer>
       </div>
 
       {/* Bottom Navigation - 5 buttons: Leaders, Battle, Profile, Trade, Learn */}
