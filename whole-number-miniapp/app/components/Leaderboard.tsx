@@ -118,51 +118,23 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
-      {/* Header */}
-      <div className="p-6 border-b border-slate-700">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-yellow-400">🏆 Leaderboard</h2>
-          {userRank && (
-            <div className="bg-blue-900/30 border border-blue-500/50 rounded px-3 py-1">
-              <span className="text-blue-400 text-sm font-bold">Your Rank: #{userRank}</span>
+      {/* Your Rank - Awesome Box */}
+      {userRank && address && (
+        <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500 rounded-xl p-8 shadow-2xl">
+          <div className="text-center">
+            <div className="text-sm font-semibold text-purple-300 uppercase tracking-widest mb-2">Your Global Rank</div>
+            <div className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-400 mb-2">
+              #{userRank}
             </div>
-          )}
+            <div className="text-gray-400 text-sm">Keep trading to climb higher!</div>
+          </div>
         </div>
-        
-        {/* Filter Tabs */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filter === 'all'
-                ? 'bg-yellow-500 text-slate-900'
-                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-            }`}
-          >
-            All Warriors
-          </button>
-          <button
-            onClick={() => setFilter('bears')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filter === 'bears'
-                ? 'bg-red-500 text-white'
-                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-            }`}
-          >
-            🐻 Bears
-          </button>
-          <button
-            onClick={() => setFilter('bulls')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-              filter === 'bulls'
-                ? 'bg-green-500 text-white'
-                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-            }`}
-          >
-            🐂 Bulls
-          </button>
-        </div>
+      )}
+
+      <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
+      {/* Header - Simple */}
+      <div className="p-6 border-b border-slate-700">
+        <h2 className="text-3xl font-bold text-yellow-400 text-center">🏆 Top Traders</h2>
       </div>
 
       {/* Leaderboard List */}
@@ -186,44 +158,39 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                 }`}
               >
                 <div className="flex items-center gap-4">
-                  {/* Rank */}
-                  <div className="text-2xl font-bold w-12 text-center flex-shrink-0">
-                    {getRankBadge(rank)}
-                  </div>
-
                   {/* Profile Picture */}
                   {entry.pfp_url ? (
                     <img 
                       src={entry.pfp_url} 
                       alt={entry.username || `Trader ${entry.fid}`}
-                      className="w-12 h-12 rounded-full border-2 border-slate-600 flex-shrink-0"
+                      className="w-14 h-14 rounded-full border-2 border-slate-600 flex-shrink-0"
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}
                     />
                   ) : (
-                    <div className={`w-12 h-12 rounded-full border-2 ${entry.army === 'bears' ? 'border-red-500 bg-red-900/30' : 'border-green-500 bg-green-900/30'} flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-2xl">{getArmyEmoji(entry.army)}</span>
+                    <div className={`w-14 h-14 rounded-full border-2 ${entry.army === 'bears' ? 'border-red-500 bg-red-900/30' : 'border-green-500 bg-green-900/30'} flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-3xl">{getArmyEmoji(entry.army)}</span>
                     </div>
                   )}
 
                   {/* User Info - Clean and simple */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-white text-base truncate">
+                      <span className="font-bold text-white text-lg truncate">
                         {entry.username || `Trader${entry.fid}`}
                       </span>
                       {isUserEntry && (
-                        <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">
+                        <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded font-bold">
                           YOU
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* P&L - Clean, no + sign */}
+                  {/* P&L - Clean */}
                   <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                    <div className={`text-xl md:text-2xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`text-2xl md:text-3xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       ${Math.abs(Number(entry.total_pnl)).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                     </div>
                     {entry.battle_tokens_earned > 0 && (
