@@ -5,6 +5,8 @@ import { useAccount } from 'wagmi';
 import { ArmyBattleStatus } from '../components/ArmyBattleStatus';
 import { ArmySelection } from '../components/ArmySelection';
 import { BattleAlerts } from '../components/BattleAlerts';
+import { BattlefieldVisual } from '../components/BattlefieldVisual';
+import { WholeNumberStrategy as StrategyGuide } from '../components/WholeNumberStrategy';
 import { useBTCPrice } from '../hooks/useBTCPrice';
 import { WholeNumberStrategy } from '../lib/strategy';
 import { getApiUrl } from '../config/api';
@@ -30,6 +32,8 @@ export default function BattlePage() {
   // Calculate strategy values
   const coordinate = useMemo(() => strategy.getCoordinate(btcPrice), [btcPrice, strategy]);
   const wholeNumber = useMemo(() => strategy.getWholeNumber(btcPrice), [btcPrice, strategy]);
+  const nextWholeNumber = useMemo(() => strategy.getNextWholeNumber(btcPrice), [btcPrice, strategy]);
+  const zoneInfo = useMemo(() => strategy.getZoneInfo(coordinate), [coordinate, strategy]);
 
   // Check beams
   useEffect(() => {
@@ -105,6 +109,22 @@ export default function BattlePage() {
         {/* Army Battle Status */}
         <div className="mb-6">
           <ArmyBattleStatus />
+        </div>
+
+        {/* Battlefield Visual */}
+        <div className="mb-6">
+          <BattlefieldVisual 
+            coordinate={coordinate}
+            wholeNumber={wholeNumber}
+            nextWholeNumber={nextWholeNumber}
+            zoneInfo={zoneInfo}
+            beamsBroken={strategy.beamsBroken}
+          />
+        </div>
+
+        {/* Strategy Guide */}
+        <div className="mb-6">
+          <StrategyGuide />
         </div>
 
         {/* Army Battle Info */}

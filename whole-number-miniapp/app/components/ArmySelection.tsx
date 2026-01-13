@@ -46,12 +46,19 @@ export function ArmySelection({ currentArmy, onArmyChange }: ArmySelectionProps)
   return (
     <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
       <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">
-        ⚔️ Choose Your Army ⚔️
+        🎯 Army Prediction Market 🎯
       </h2>
       
       <p className="text-center text-gray-300 mb-6">
-        Pick your side in the eternal battle
+        Predict which army will win the weekly battle!
       </p>
+
+      <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+        <p className="text-xs text-blue-300 text-center">
+          <strong>Note:</strong> Your actual army is auto-assigned based on your P&L. 
+          This is for predicting the winning army. Coming soon: bet $BATTLE tokens on your prediction!
+        </p>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         {/* BEAR ARMY */}
