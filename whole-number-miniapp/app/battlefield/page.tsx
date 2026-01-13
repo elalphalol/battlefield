@@ -254,205 +254,19 @@ export default function BattlefieldHome() {
       </header>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* BTC Price & Details */}
+      <div className="container mx-auto px-4 py-6 max-w-7xl pb-24">
+        {/* BTC Price - SIMPLIFIED */}
         <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
           <div className="text-center">
             <div className="text-sm text-gray-400 mb-2">BITCOIN PRICE</div>
             <div className="text-5xl md:text-6xl font-bold text-yellow-400 mb-2">
               {isLoading ? 'Loading...' : `$${strategy.formatNumber(btcPrice)}`}
             </div>
-            <div className="text-sm text-gray-500">
-              Live • Updates every 5s
-            </div>
-          </div>
-
-          {/* Whole Number Info */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-6">
-            <div className="bg-slate-900 rounded-lg p-2 sm:p-4 text-center overflow-hidden">
-              <div className="text-xs text-gray-400 mb-1">Current Whole</div>
-              <div className="text-sm sm:text-xl font-bold text-blue-400 break-words">
-                ${strategy.formatNumber(wholeNumber)}
-              </div>
-            </div>
-            <div className="bg-slate-900 rounded-lg p-2 sm:p-4 text-center overflow-hidden">
-              <div className="text-xs text-gray-400 mb-1">Coordinate</div>
-              <div className="text-xl sm:text-2xl font-bold text-yellow-400">
-                {coordinate.toString().padStart(3, '0')}
-              </div>
-            </div>
-            <div className="bg-slate-900 rounded-lg p-2 sm:p-4 text-center overflow-hidden">
-              <div className="text-xs text-gray-400 mb-1">Next Whole</div>
-              <div className="text-sm sm:text-xl font-bold text-green-400 break-words">
-                ${strategy.formatNumber(nextWholeNumber)}
-              </div>
+            <div className="text-sm text-gray-400 mt-3">
+              📍 Coordinate: <span className="text-yellow-400 font-bold text-xl">{coordinate.toString().padStart(3, '0')}</span> → <span className="text-green-400 font-bold">{(coordinate + 1).toString().padStart(3, '0')}</span>
             </div>
           </div>
         </div>
-
-        {/* Battlefield Visual */}
-        <div className="mb-6">
-          <BattlefieldVisual
-            coordinate={coordinate}
-            wholeNumber={wholeNumber}
-            nextWholeNumber={nextWholeNumber}
-            beamsBroken={strategy.beamsBroken}
-            zoneInfo={zoneInfo}
-          />
-        </div>
-
-        {/* Battle Strategy - Clean 4-card layout */}
-        <div className="bg-slate-800/50 rounded-lg p-6 mb-6 border border-slate-700">
-          <h2 className="text-xl sm:text-2xl font-bold text-yellow-400 mb-6 text-center flex items-center justify-center gap-2 flex-wrap">
-            <span>⚔️</span>
-            <span>BATTLE STRATEGY</span>
-            <span>⚔️</span>
-          </h2>
-          
-          <div className="grid md:grid-cols-4 gap-4">
-            {/* Market Direction */}
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">🧭</span>
-                <h3 className="font-bold text-white">MARKET DIRECTION</h3>
-              </div>
-              <div className={`text-3xl font-bold text-center py-3 rounded ${
-                direction === 'bullish' ? 'bg-green-900/30 text-green-400' :
-                direction === 'bearish' ? 'bg-red-900/30 text-red-400' :
-                'bg-slate-700 text-gray-400'
-              }`}>
-                {direction === 'bullish' ? '⬆️ BULLISH' :
-                 direction === 'bearish' ? '⬇️ BEARISH' :
-                 '↔️ NEUTRAL'}
-              </div>
-            </div>
-
-            {/* Recommended Action */}
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">⚡</span>
-                <h3 className="font-bold text-white">RECOMMENDED ACTION</h3>
-              </div>
-              <div className={`text-2xl font-bold text-center py-3 rounded mb-2 ${
-                recommendation.action === 'long' ? 'bg-green-600' :
-                recommendation.action === 'short' ? 'bg-red-600' :
-                recommendation.action === 'caution' ? 'bg-yellow-600' :
-                'bg-gray-600'
-              }`}>
-                {recommendation.action.toUpperCase()}
-              </div>
-              <p className="text-xs text-gray-400 text-center leading-relaxed">
-                {recommendation.description}
-              </p>
-            </div>
-
-            {/* Entry Zones */}
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">🎯</span>
-                <h3 className="font-bold text-white">ENTRY ZONES</h3>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 rounded border border-green-600 bg-green-900/20">
-                  <span className="text-sm text-white">LONG ENTRY:</span>
-                  <span className="text-sm font-bold text-green-400">${strategy.formatNumber(wholeNumber + 800)}</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded border border-red-600 bg-red-900/20">
-                  <span className="text-sm text-white">SHORT ENTRY:</span>
-                  <span className="text-sm font-bold text-red-400">${strategy.formatNumber(nextWholeNumber + 150)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* The Beams */}
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">🔨</span>
-                <h3 className="font-bold text-white">THE BEAMS</h3>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">226 BEAM:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">${strategy.formatNumber(wholeNumber + 226)}</span>
-                    <span className="text-lg">{strategy.beamsBroken.beam226 ? '🔴' : '🟢'}</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">113 BEAM:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">${strategy.formatNumber(wholeNumber + 113)}</span>
-                    <span className="text-lg">{strategy.beamsBroken.beam113 ? '🔴' : '🟢'}</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">086 BEAM:</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">${strategy.formatNumber(wholeNumber + 86)}</span>
-                    <span className="text-lg">{strategy.beamsBroken.beam086 ? '🔴' : '🟢'}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Market Cycle - NYC Time */}
-        <div className="mb-6">
-          <MarketCycle />
-        </div>
-
-        {/* Strategy Guide - Expandable */}
-        <div className="mb-6">
-          <StrategyGuide />
-        </div>
-
-        {/* User Stats Bar (if logged in) */}
-        {userData && (
-          <div id="trading-section" className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 mb-6">
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
-              <div>
-                <div className="text-xs text-gray-400">Army</div>
-                <div className="text-lg font-bold">
-                  {userData.army === 'bears' ? '🐻 Bears' : '🐂 Bulls'}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Paper Balance</div>
-                <div className="text-lg font-bold text-green-400">
-                  ${Number(userData.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Total P&L</div>
-                <div className={`text-lg font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Win Rate</div>
-                <div className="text-lg font-bold text-blue-400">
-                  {userData.total_trades > 0 
-                    ? ((userData.winning_trades / userData.total_trades) * 100).toFixed(1)
-                    : 0}%
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">Streak</div>
-                <div className="text-lg font-bold text-yellow-400">
-                  🔥 {userData.current_streak}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-400">$BATTLE Tokens</div>
-                <div className="text-lg font-bold text-purple-400 flex items-center justify-center gap-1">
-                  <img src="/battlefield-logo.jpg" alt="$BATTLE" className="w-5 h-5 rounded-full" />
-                  {Number(userData.battle_tokens_earned).toLocaleString()}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6">
@@ -727,42 +541,52 @@ export default function BattlefieldHome() {
         )}
       </div>
 
-      {/* Sticky Navigation Buttons */}
-      <div className="fixed bottom-8 right-8 z-40 flex flex-col gap-3">
-        {/* Profile Button */}
-        {address && userData && (
-          <button
-            onClick={() => window.location.href = `/profile/${userData.fid || userData.wallet_address}`}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
-            aria-label="My Profile"
-          >
-            <span className="text-2xl">👤</span>
-            <span className="hidden sm:inline">Profile</span>
-          </button>
-        )}
-        
-        {/* Back to Battlefield Button */}
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
-          aria-label="Scroll to top"
-        >
-          <span className="text-2xl">⚔️</span>
-          <span className="hidden sm:inline">Battlefield</span>
-        </button>
-        
-        {/* Trade Now Button - Only show on trade tab */}
-        {activeTab === 'trade' && (
-          <button
-            onClick={scrollToTrading}
-            className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-slate-900 p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
-            aria-label="Scroll to trading section"
-          >
-            <span className="text-2xl">⚡</span>
-            <span className="hidden sm:inline">Trade Now</span>
-          </button>
-        )}
-      </div>
+      {/* Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t-2 border-slate-700 z-50">
+        <div className="container mx-auto px-2">
+          <div className="flex justify-around items-center py-2">
+            <button
+              onClick={() => setActiveTab('trade')}
+              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
+                activeTab === 'trade' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <span className="text-2xl">🎯</span>
+              <span className="text-xs font-bold">Trade</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('leaderboard')}
+              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
+                activeTab === 'leaderboard' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <span className="text-2xl">🏆</span>
+              <span className="text-xs font-bold">Leaders</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('battle')}
+              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
+                activeTab === 'battle' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <span className="text-2xl">⚔️</span>
+              <span className="text-xs font-bold">Battle</span>
+            </button>
+            
+            {address && userData && (
+              <button
+                onClick={() => window.location.href = `/profile/${userData.fid || userData.wallet_address}`}
+                className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+              >
+                <span className="text-2xl">👤</span>
+                <span className="text-xs font-bold">Profile</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </nav>
 
       {/* Footer */}
       <footer className="border-t border-slate-700 mt-12 py-6 text-center text-gray-500 text-sm space-y-3">
