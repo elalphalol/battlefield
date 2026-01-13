@@ -671,10 +671,16 @@ export default function UserProfilePage() {
             </button>
             
             <button
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-yellow-400"
+              className="flex flex-col items-center gap-1 px-2 py-1 -mt-4"
             >
-              <span className="text-2xl">👤</span>
-              <span className="text-xs font-bold">Profile</span>
+              <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
+                {profile.user.pfp_url ? (
+                  <img src={profile.user.pfp_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <img src="/battlefield-logo.jpg" alt="Profile" className="w-full h-full object-cover" />
+                )}
+              </div>
+              <span className="text-[10px] font-bold text-yellow-400">Profile</span>
             </button>
             
             <button
