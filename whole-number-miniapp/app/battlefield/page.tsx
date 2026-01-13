@@ -566,10 +566,16 @@ export default function BattlefieldHome() {
             </button>
             
             <button
-              onClick={() => setActiveTab('battle')}
-              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all ${
-                activeTab === 'battle' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
-              }`}
+              onClick={() => window.location.href = '/learn'}
+              className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+            >
+              <span className="text-2xl">📚</span>
+              <span className="text-xs font-bold">Learn</span>
+            </button>
+            
+            <button
+              onClick={() => window.location.href = '/battle'}
+              className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">⚔️</span>
               <span className="text-xs font-bold">Battle</span>
