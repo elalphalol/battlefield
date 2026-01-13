@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getApiUrl } from '../../config/api';
 import { Achievements } from '../../components/Achievements';
-import { StickyNav } from '../../components/StickyNav';
 import sdk from '@farcaster/frame-sdk';
 
 interface UserProfile {
@@ -651,8 +650,51 @@ export default function UserProfilePage() {
         )}
       </div>
 
-      {/* Sticky Navigation */}
-      <StickyNav />
+      {/* Bottom Navigation - 5 buttons: Leaders, Battle, Profile, Trade, Learn */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t-2 border-slate-700 z-50">
+        <div className="container mx-auto px-2">
+          <div className="flex justify-around items-center py-2">
+            <button
+              onClick={() => window.location.href = '/battlefield'}
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+            >
+              <span className="text-2xl">🏆</span>
+              <span className="text-xs font-bold">Leaders</span>
+            </button>
+            
+            <button
+              onClick={() => window.location.href = '/battle'}
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+            >
+              <span className="text-2xl">⚔️</span>
+              <span className="text-xs font-bold">Battle</span>
+            </button>
+            
+            <button
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-yellow-400"
+            >
+              <span className="text-2xl">👤</span>
+              <span className="text-xs font-bold">Profile</span>
+            </button>
+            
+            <button
+              onClick={() => window.location.href = '/battlefield'}
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+            >
+              <span className="text-2xl">🎯</span>
+              <span className="text-xs font-bold">Trade</span>
+            </button>
+            
+            <button
+              onClick={() => window.location.href = '/learn'}
+              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+            >
+              <span className="text-2xl">📚</span>
+              <span className="text-xs font-bold">Learn</span>
+            </button>
+          </div>
+        </div>
+      </nav>
     </div>
   );
 }
