@@ -583,7 +583,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                       className="bg-blue-600 hover:bg-blue-500 text-white py-2 rounded text-xs font-semibold transition-all disabled:opacity-50"
                       title="Add collateral to lower liquidation price"
                     >
-                      {addingCollateralTradeId === trade.id ? '...' : '💰 +Margin'}
+                      {addingCollateralTradeId === trade.id ? '...' : '+Margin'}
                     </button>
                     <button
                       onClick={() => handleCloseTrade(trade.id)}
