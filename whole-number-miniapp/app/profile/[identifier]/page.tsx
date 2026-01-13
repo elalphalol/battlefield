@@ -622,16 +622,16 @@ export default function UserProfilePage() {
               {achievementTab === 'locked' && '🔒 Locked Achievements'}
             </h2>
           </div>
-          <div className="p-4">
+          <div className="p-4 max-h-[600px] overflow-y-auto">
             {achievementTab === 'achievements' && (
-              <div className="text-gray-300">
-                <p>Unlocked Achievements Component (simplified, no dropdown)</p>
+              <div>
                 <Achievements stats={profile.stats} />
               </div>
             )}
             {achievementTab === 'titles' && (
-              <div className="text-center">
-                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6">
+              <div className="space-y-4">
+                {/* Current Title */}
+                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 text-center">
                   <p className="text-gray-400 text-sm mb-3">Current Title</p>
                   <div className="flex items-center justify-center gap-3 mb-4">
                     <span className="text-4xl">{getPlayerTitle(profile.stats).badge}</span>
@@ -641,12 +641,31 @@ export default function UserProfilePage() {
                   </div>
                   <p className="text-sm text-gray-400">Rarity: <span className={getPlayerTitle(profile.stats).color}>{getPlayerTitle(profile.stats).rarity}</span></p>
                 </div>
+
+                {/* All Title Tiers */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-bold text-yellow-400 text-center">All Title Tiers</h3>
+                  {titleRankings.map((tier, index) => (
+                    <div key={index} className={`${tier.color} rounded-lg p-4`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`font-bold text-lg ${tier.textColor}`}>{tier.rarity}</span>
+                      </div>
+                      <div className="space-y-1">
+                        {tier.titles.map((title, idx) => (
+                          <div key={idx} className="text-sm text-white/90">• {title}</div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {achievementTab === 'locked' && (
-              <div className="text-gray-300">
-                <p>Locked Achievements Component (simplified, no dropdown)</p>
-                <Achievements stats={profile.stats} />
+              <div className="text-gray-400">
+                <p className="text-center mb-4">These achievements are locked. Complete the requirements to unlock them!</p>
+                <div className="opacity-50">
+                  <Achievements stats={profile.stats} />
+                </div>
               </div>
             )}
           </div>
