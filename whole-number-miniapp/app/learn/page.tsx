@@ -127,70 +127,195 @@ export default function LearnPage() {
         )}
 
         {activeSection === 'glossary' && (
-          <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
-            <h2 className="text-2xl font-bold text-yellow-400 mb-6">📖 Trading Glossary</h2>
-            
-            <div className="space-y-4">
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <h3 className="font-bold text-green-400 text-lg mb-2">LONG 🐂</h3>
-                <p className="text-sm text-gray-300">
-                  Betting that the price will go UP. You profit when Bitcoin rises.
-                </p>
-              </div>
+          <div className="space-y-6">
+            {/* Trading Terms */}
+            <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+              <h2 className="text-2xl font-bold text-yellow-400 mb-6">📖 Trading Glossary</h2>
+              
+              <div className="space-y-4">
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-green-400 text-lg mb-2">LONG 🐂</h3>
+                  <p className="text-sm text-gray-300">
+                    Betting that the price will go UP. You profit when Bitcoin rises.
+                  </p>
+                </div>
 
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <h3 className="font-bold text-red-400 text-lg mb-2">SHORT 🐻</h3>
-                <p className="text-sm text-gray-300">
-                  Betting that the price will go DOWN. You profit when Bitcoin falls.
-                </p>
-              </div>
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-red-400 text-lg mb-2">SHORT 🐻</h3>
+                  <p className="text-sm text-gray-300">
+                    Betting that the price will go DOWN. You profit when Bitcoin falls.
+                  </p>
+                </div>
 
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <h3 className="font-bold text-yellow-400 text-lg mb-2">Leverage ⚡</h3>
-                <p className="text-sm text-gray-300">
-                  Multiplier for your position. 10x leverage = 10x profits OR 10x losses. 
-                  Higher leverage = higher risk of liquidation. Range: 1x-200x
-                </p>
-              </div>
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-yellow-400 text-lg mb-2">Leverage ⚡</h3>
+                  <p className="text-sm text-gray-300">
+                    Multiplier for your position. 10x leverage = 10x profits OR 10x losses. 
+                    Higher leverage = higher risk of liquidation. Range: 1x-200x
+                  </p>
+                </div>
 
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <h3 className="font-bold text-orange-400 text-lg mb-2">Liquidation 💥</h3>
-                <p className="text-sm text-gray-300">
-                  When your position loses 100% of your collateral. Your position is automatically closed. 
-                  With 100x leverage, a 1% move against you = liquidation!
-                </p>
-              </div>
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-orange-400 text-lg mb-2">Liquidation 💥</h3>
+                  <p className="text-sm text-gray-300">
+                    When your position loses 100% of your collateral. Your position is automatically closed. 
+                    With 100x leverage, a 1% move against you = liquidation!
+                  </p>
+                </div>
 
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <h3 className="font-bold text-blue-400 text-lg mb-2">P&L (Profit & Loss) 💰</h3>
-                <p className="text-sm text-gray-300">
-                  Your profit or loss on a trade. Positive P&L = profit, Negative P&L = loss. 
-                  Used to rank players on the leaderboard.
-                </p>
-              </div>
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-blue-400 text-lg mb-2">P&L (Profit & Loss) 💰</h3>
+                  <p className="text-sm text-gray-300">
+                    Your profit or loss on a trade. Positive P&L = profit, Negative P&L = loss. 
+                    Used to rank players on the leaderboard.
+                  </p>
+                </div>
 
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <h3 className="font-bold text-purple-400 text-lg mb-2">Whole Number 🎯</h3>
-                <p className="text-sm text-gray-300">
-                  A thousand-dollar level (e.g., $94,000, $95,000). These act as psychological barriers 
-                  where price often bounces or breaks through.
-                </p>
-              </div>
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-purple-400 text-lg mb-2">Whole Number 🎯</h3>
+                  <p className="text-sm text-gray-300">
+                    A thousand-dollar level (e.g., $94,000, $95,000). These act as psychological barriers 
+                    where price often bounces or breaks through.
+                  </p>
+                </div>
 
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <h3 className="font-bold text-cyan-400 text-lg mb-2">Coordinate 📍</h3>
-                <p className="text-sm text-gray-300">
-                  The last 3 digits of the Bitcoin price (e.g., $94,536 = coordinate 536). 
-                  Used in the Whole Number Strategy to identify optimal entry/exit points.
-                </p>
-              </div>
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-cyan-400 text-lg mb-2">Coordinate 📍</h3>
+                  <p className="text-sm text-gray-300">
+                    The last 3 digits of the Bitcoin price (e.g., $94,536 = coordinate 536). 
+                    Used in the Whole Number Strategy to identify optimal entry/exit points.
+                  </p>
+                </div>
 
-              <div className="bg-slate-900/50 rounded-lg p-4">
-                <h3 className="font-bold text-pink-400 text-lg mb-2">The Beams 🔨</h3>
-                <p className="text-sm text-gray-300">
-                  Support levels at +86, +113, +226 above the whole number. Breaking these beams 
-                  signals potential for larger moves (Dwarf Toss setup).
-                </p>
+                <div className="bg-slate-900/50 rounded-lg p-4">
+                  <h3 className="font-bold text-pink-400 text-lg mb-2">The Beams 🔨</h3>
+                  <p className="text-sm text-gray-300">
+                    Support levels at +86, +113, +226 above the whole number. Breaking these beams 
+                    signals potential for larger moves (Dwarf Toss setup).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Trading Fees & Mechanics */}
+            <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+              <h2 className="text-2xl font-bold text-red-400 mb-4">⚙️ Trading Mechanics & Fees</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-bold text-yellow-400 mb-2 text-lg">📊 How Trading Fees Work</h3>
+                  <div className="bg-slate-700/50 rounded-lg p-4 space-y-2 text-sm text-gray-300">
+                    <p>
+                      <span className="font-semibold text-white">Trading Fee Formula:</span> Leverage × 0.05%
+                    </p>
+                    <ul className="ml-4 space-y-1">
+                      <li>• 10x leverage = 0.5% fee</li>
+                      <li>• 50x leverage = 2.5% fee</li>
+                      <li>• 100x leverage = 5% fee</li>
+                      <li>• 200x leverage = 10% fee</li>
+                    </ul>
+                    <p className="pt-2 text-yellow-300">
+                      <span className="font-semibold">⚠️ Important:</span> Fees are deducted from your P&L when closing a position, not when opening.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-cyan-400 mb-2 text-lg">💡 Why Positions Start in Negative P&L</h3>
+                  <div className="bg-slate-700/50 rounded-lg p-4 space-y-2 text-sm text-gray-300">
+                    <p>
+                      When you open a position, you'll notice it starts with <span className="text-red-400 font-semibold">negative P&L</span>. This is normal!
+                    </p>
+                    <p className="pt-2">
+                      <span className="font-semibold text-white">Why?</span> The trading fee is already calculated into your unrealized profit/loss. This shows you the <span className="text-green-400 font-semibold">real break-even point</span> you need to reach to become profitable.
+                    </p>
+                    <p className="pt-2 text-yellow-300">
+                      <span className="font-semibold">Example:</span> Open a 100x position with $100. Fee = 5% ($5). Your position starts at -$5. The price needs to move favorably by $5 for you to break even.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Player Achievements */}
+            <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+              <h2 className="text-2xl font-bold text-purple-400 mb-4">🏆 Player Achievements & Titles</h2>
+              <p className="text-sm text-gray-400 mb-6">All achievements and their unlock requirements. Your highest rarity title is displayed on your profile!</p>
+              
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-bold text-blue-400 mb-3 text-lg">📊 Trading Volume Achievements</h3>
+                  <ul className="text-sm text-gray-300 space-y-2 ml-4">
+                    <li>⚔️ <span className="font-semibold">First Blood</span> - Complete 1 trade</li>
+                    <li>📈 <span className="font-semibold">Apprentice Trader</span> - Complete 10 trades</li>
+                    <li>💹 <span className="font-semibold">Skilled Trader</span> - Complete 50 trades</li>
+                    <li>🏅 <span className="font-semibold">Veteran Trader</span> - Complete 100 trades</li>
+                    <li>👑 <span className="font-semibold">Elite Trader</span> - Complete 500 trades</li>
+                    <li>🌟 <span className="font-semibold">Master Trader</span> - Complete 1,000 trades</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-green-400 mb-3 text-lg">💰 Profit & Loss Achievements</h3>
+                  <ul className="text-sm text-gray-300 space-y-2 ml-4">
+                    <li>💰 <span className="font-semibold">First Profit</span> - Reach $100 total P&L</li>
+                    <li>💎 <span className="font-semibold">Profitable Trader</span> - Reach $1,000 total P&L</li>
+                    <li>🔥 <span className="font-semibold">Hot Streak</span> - Reach $5,000 total P&L</li>
+                    <li>🚀 <span className="font-semibold">To The Moon</span> - Reach $10,000 total P&L</li>
+                    <li>🐋 <span className="font-semibold">Whale Status</span> - Reach $50,000 total P&L</li>
+                    <li>🏆 <span className="font-semibold">Legendary Profit</span> - Reach $100,000 total P&L</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-purple-400 mb-3 text-lg">🎯 Win Rate Achievements</h3>
+                  <ul className="text-sm text-gray-300 space-y-2 ml-4">
+                    <li>⚖️ <span className="font-semibold">Balanced</span> - Maintain 50%+ win rate (min 20 trades)</li>
+                    <li>✨ <span className="font-semibold">Consistent Winner</span> - Maintain 60%+ win rate (min 50 trades)</li>
+                    <li>🎯 <span className="font-semibold">Sharpshooter</span> - Maintain 70%+ win rate (min 100 trades)</li>
+                    <li>💫 <span className="font-semibold">Elite Precision</span> - Maintain 80%+ win rate (min 200 trades)</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-orange-400 mb-3 text-lg">🔥 Win Streak Achievements</h3>
+                  <ul className="text-sm text-gray-300 space-y-2 ml-4">
+                    <li>🔥 <span className="font-semibold">On Fire</span> - Achieve 3-win streak</li>
+                    <li>🌡️ <span className="font-semibold">Heating Up</span> - Achieve 5-win streak</li>
+                    <li>💥 <span className="font-semibold">Unstoppable</span> - Achieve 10-win streak</li>
+                    <li>⚡ <span className="font-semibold">Lightning</span> - Achieve 20-win streak</li>
+                    <li>🌪️ <span className="font-semibold">Legendary Streak</span> - Achieve 50-win streak</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-yellow-400 mb-3 text-lg">🏅 Ranking Achievements</h3>
+                  <ul className="text-sm text-gray-300 space-y-2 ml-4">
+                    <li>🏅 <span className="font-semibold">Top 100</span> - Reach Top 100 on leaderboard</li>
+                    <li>🥉 <span className="font-semibold">Top 50</span> - Reach Top 50 on leaderboard</li>
+                    <li>🥈 <span className="font-semibold">Top 10 Elite</span> - Reach Top 10 on leaderboard</li>
+                    <li>🥇 <span className="font-semibold">Legendary Conqueror</span> - Reach Top 3 on leaderboard</li>
+                    <li>👑 <span className="font-semibold">Battlefield Champion</span> - Reach #1 on leaderboard</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-cyan-400 mb-3 text-lg">🛡️ Survival Achievements</h3>
+                  <ul className="text-sm text-gray-300 space-y-2 ml-4">
+                    <li>🛡️ <span className="font-semibold">Survivor</span> - Complete 50 trades without liquidation</li>
+                    <li>🏰 <span className="font-semibold">Fortress</span> - Complete 100 trades without liquidation</li>
+                    <li>💎 <span className="font-semibold">Diamond Hands</span> - Complete 500 trades without liquidation</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-pink-400 mb-3 text-lg">✨ Special Achievements</h3>
+                  <ul className="text-sm text-gray-300 space-y-2 ml-4">
+                    <li>🎭 <span className="font-semibold">The Comeback</span> - Recover from negative P&L to reach $1,000 profit (requires at least 1 liquidation)</li>
+                    <li>🎲 <span className="font-semibold">High Roller</span> - Survive 10+ liquidations and still be profitable</li>
+                    <li>💯 <span className="font-semibold">Perfect Score</span> - Maintain 100% win rate with 10+ trades</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
