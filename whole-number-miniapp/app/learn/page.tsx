@@ -375,7 +375,7 @@ export default function LearnPage() {
             </button>
             
             <button
-              onClick={() => window.location.href = '/battlefield'}
+              onClick={() => window.location.href = '/battle'}
               className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">⚔️</span>
@@ -384,6 +384,55 @@ export default function LearnPage() {
           </div>
         </div>
       </nav>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-700 mt-12 py-8 text-center text-gray-400 space-y-3">
+        <div className="space-y-2">
+          <p className="text-sm">
+            Created by{' '}
+            <a
+              href="https://elalpha.lol"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-purple-400 hover:text-purple-300 underline font-semibold"
+            >
+              elalpha.lol
+            </a>
+          </p>
+          <p className="text-sm">
+            Follow on Farcaster:{' '}
+            <a
+              href="https://warpcast.com/elalpha.eth"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-purple-400 hover:text-purple-300"
+            >
+              @elalpha.eth
+            </a>
+            {' • '}
+            <a
+              href="https://warpcast.com/btcbattle"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-purple-400 hover:text-purple-300"
+            >
+              @btcbattle
+            </a>
+          </p>
+          <p className="text-sm text-purple-400 font-semibold">
+            Launching on Clanker.world
+          </p>
+        </div>
+        
+        <div className="pt-4 border-t border-slate-800">
+          <p className="text-xs text-gray-500">
+            ⚠️ Paper trading only. No real funds at risk. High leverage trading is educational.
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            This is a game. Trade responsibly. DYOR.
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }

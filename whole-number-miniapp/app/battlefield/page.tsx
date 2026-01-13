@@ -567,33 +567,44 @@ export default function BattlefieldHome() {
       </nav>
 
       {/* Footer */}
-      <footer className="border-t border-slate-700 mt-12 py-6 text-center text-gray-500 text-sm space-y-3">
-        <p className="mb-2">⚔️ <strong>BATTLEFIELD</strong> ⚔️</p>
-        <p className="text-xs">⚠️ Paper money only. No real funds at risk. High leverage trading is educational.</p>
-        <p className="text-xs">Powered by $BATTLE token • Launching on Clanker.world</p>
-        <div className="pt-4 border-t border-slate-800 space-y-1">
-          <p className="text-xs">
+      <footer className="border-t border-slate-700 mt-12 py-8 text-center text-gray-400 space-y-3">
+        <div className="space-y-2">
+          <p className="text-sm">
             Created by{' '}
             <button
               onClick={() => handleExternalLink('https://elalpha.lol')}
-              className="text-purple-400 hover:text-purple-300 underline cursor-pointer"
+              className="text-purple-400 hover:text-purple-300 underline cursor-pointer font-semibold"
             >
               elalpha.lol
             </button>
-            {' '}• Follow:{' '}
+          </p>
+          <p className="text-sm">
+            Follow on Farcaster:{' '}
             <button
               onClick={() => handleExternalLink('https://warpcast.com/elalpha.eth')}
               className="text-purple-400 hover:text-purple-300 cursor-pointer"
             >
               @elalpha.eth
             </button>
-            {' '}•{' '}
+            {' • '}
             <button
               onClick={() => handleExternalLink('https://warpcast.com/btcbattle')}
               className="text-purple-400 hover:text-purple-300 cursor-pointer"
             >
               @btcbattle
             </button>
+          </p>
+          <p className="text-sm text-purple-400 font-semibold">
+            Launching on Clanker.world
+          </p>
+        </div>
+        
+        <div className="pt-4 border-t border-slate-800">
+          <p className="text-xs text-gray-500">
+            ⚠️ Paper trading only. No real funds at risk. High leverage trading is educational.
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            This is a game. Trade responsibly. DYOR.
           </p>
         </div>
       </footer>
