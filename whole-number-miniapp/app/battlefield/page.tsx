@@ -510,21 +510,13 @@ export default function BattlefieldHome() {
               </div>
             ) : (
               <div>
-                {/* Army Selection */}
-                <div className="mb-6">
-                  <ArmySelection 
-                    currentArmy={userData?.army}
-                    onArmyChange={handleArmyChange}
-                  />
-                </div>
-
-                {/* Army Battle Status */}
+                {/* Army Battle Status - TOP */}
                 <div className="mb-6">
                   <ArmyBattleStatus />
                 </div>
 
                 {/* Army Battle Info */}
-                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6">
+                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 mb-6">
                   <h3 className="text-2xl font-bold text-purple-400 mb-4 text-center">💎 Weekly Army Airdrop</h3>
                   
                   <div className="space-y-4 text-gray-300">
