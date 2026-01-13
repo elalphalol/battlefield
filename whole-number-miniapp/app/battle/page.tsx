@@ -216,26 +216,17 @@ export default function BattlePage() {
             </button>
             
             <button
-              onClick={() => {
-                if (userData) {
-                  const identifier = userData.fid || userData.wallet_address;
-                  console.log('🔍 Navigate to profile:', identifier);
-                  router.push(`/profile/${identifier}`);
-                } else {
-                  console.warn('⚠️ No user data, redirecting to battlefield');
-                  router.push('/battlefield');
-                }
-              }}
+              onClick={() => router.push('/battlefield')}
               className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
             >
               <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
                 {userData?.pfp_url ? (
-                  <img src={userData.pfp_url} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={userData.pfp_url} alt="Home" className="w-full h-full object-cover" />
                 ) : (
-                  <img src="/battlefield-logo.jpg" alt="Profile" className="w-full h-full object-cover" />
+                  <img src="/battlefield-logo.jpg" alt="Home" className="w-full h-full object-cover" />
                 )}
               </div>
-              <span className="text-[10px] font-bold text-yellow-400">Profile</span>
+              <span className="text-[10px] font-bold text-yellow-400">Home</span>
             </button>
             
             <button
