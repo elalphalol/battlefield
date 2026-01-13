@@ -415,7 +415,7 @@ export default function UserProfilePage() {
         </div>
 
         {/* Volume Tracker */}
-        <VolumeTracker walletAddress={profile.user.wallet_address} showUserVolume={true} />
+        <VolumeTracker walletAddress={profile.user.wallet_address} showUserVolume={true} showExplanation={false} />
 
         {/* Open Positions & Trading History Side by Side */}
         <div className="grid md:grid-cols-2 gap-4">

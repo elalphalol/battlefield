@@ -6,9 +6,11 @@ import { getApiUrl } from '../config/api';
 interface VolumeTrackerProps {
   walletAddress?: string;
   showUserVolume?: boolean;
+  showExplanation?: boolean;
+  minimal?: boolean;
 }
 
-export function VolumeTracker({ walletAddress, showUserVolume = false }: VolumeTrackerProps) {
+export function VolumeTracker({ walletAddress, showUserVolume = false, showExplanation = true, minimal = false }: VolumeTrackerProps) {
   const [volumeStats, setVolumeStats] = useState<{
     globalVolume: number;
     totalTraders: number;
@@ -66,6 +68,22 @@ export function VolumeTracker({ walletAddress, showUserVolume = false }: VolumeT
     return `$${volume.toLocaleString()}`;
   };
 
+  // Minimal mode: Simple inline display
+  if (minimal) {
+    return (
+      <div className="text-center">
+        <p className="text-sm text-gray-400 mb-1">Global Trading Volume</p>
+        <p className="text-xl font-bold text-blue-400">
+          {formatVolume(volumeStats.globalVolume)}
+        </p>
+        <p className="text-xs text-gray-500 mt-0.5">
+          {volumeStats.totalTraders} traders
+        </p>
+      </div>
+    );
+  }
+
+  // Full mode: Card with border
   return (
     <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border-2 border-blue-500/50 rounded-lg p-4 sm:p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -94,12 +112,14 @@ export function VolumeTracker({ walletAddress, showUserVolume = false }: VolumeT
         )}
       </div>
 
-      {/* Info/Flex Message */}
-      <div className="mt-4 pt-4 border-t border-blue-500/30">
-        <p className="text-xs text-center text-gray-400">
-          💪 <strong className="text-blue-400">Volume = Position Size × Leverage</strong> • Real trading power being moved!
-        </p>
-      </div>
+      {/* Info/Flex Message - Only show if showExplanation is true */}
+      {showExplanation && (
+        <div className="mt-4 pt-4 border-t border-blue-500/30">
+          <p className="text-xs text-center text-gray-400">
+            💪 <strong className="text-blue-400">Volume = Position Size × Leverage</strong> • Real trading power being moved!
+          </p>
+        </div>
+      )}
     </div>
   );
 }

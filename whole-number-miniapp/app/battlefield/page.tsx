@@ -270,28 +270,18 @@ export default function BattlefieldHome() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-7xl pb-24">
-        {/* BTC Price & Volume - Only show on Trade tab */}
+        {/* BTC Price with Volume - Only show on Trade tab */}
         {activeTab === 'trade' && (
-          <>
-            <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
-              <div className="text-center">
-                <div className="text-sm text-gray-400 mb-2">BITCOIN PRICE</div>
-                <div className="text-5xl md:text-6xl font-bold text-yellow-400 mb-3">
-                  {isLoading ? 'Loading...' : `$${Math.floor(btcPrice).toLocaleString()}`}
-                </div>
-                <div className={`text-4xl font-bold ${
-                  coordinate < 500 ? 'text-red-400' : 'text-green-400'
-                }`}>
-                  {coordinate.toString().padStart(3, '0')}
-                </div>
+          <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
+            <div className="text-center">
+              <div className="text-sm text-gray-400 mb-2">BITCOIN PRICE</div>
+              <div className="text-5xl md:text-6xl font-bold text-yellow-400 mb-4">
+                {isLoading ? 'Loading...' : `$${Math.floor(btcPrice).toLocaleString()}`}
               </div>
+              {/* Minimal Volume Display */}
+              <VolumeTracker walletAddress={address} showUserVolume={false} showExplanation={false} minimal={true} />
             </div>
-
-            {/* Global Trading Volume */}
-            <div className="mb-6">
-              <VolumeTracker walletAddress={address} showUserVolume={false} />
-            </div>
-          </>
+          </div>
         )}
 
         {/* Content Based on Active Tab */}
