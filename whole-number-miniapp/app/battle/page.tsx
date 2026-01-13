@@ -20,32 +20,10 @@ interface UserData {
 
 export default function BattlePage() {
   const router = useRouter();
-  const { address: wagmiAddress } = useAccount();
+  const { address } = useAccount();
   const { price: btcPrice } = useBTCPrice(5000);
   const [strategy] = useState(() => new WholeNumberStrategy());
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
-  
-  // Use Farcaster wallet if available, otherwise use wagmi wallet
-  const address = farcasterWallet || wagmiAddress;
-
-  // Initialize Farcaster and get wallet address
-  useEffect(() => {
-    const initFarcaster = async () => {
-      try {
-        const { farcasterAuth } = await import('../lib/farcaster');
-        if (farcasterAuth.isInFarcasterFrame()) {
-          const signInResult = await farcasterAuth.signInWithFarcaster();
-          if (signInResult?.walletAddress) {
-            setFarcasterWallet(signInResult.walletAddress);
-          }
-        }
-      } catch (error) {
-        console.error('Error getting Farcaster wallet:', error);
-      }
-    };
-    initFarcaster();
-  }, []);
 
   // Update strategy with new price
   useEffect(() => {
