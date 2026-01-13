@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
+import { WalletConnect } from '../components/WalletConnect';
 import { getApiUrl } from '../config/api';
 import { WholeNumberStrategy } from '../components/WholeNumberStrategy';
 import { MarketCycle } from '../components/MarketCycle';
@@ -70,6 +71,9 @@ export default function LearnPage() {
               <h1 className="text-2xl md:text-4xl font-bold text-yellow-400">
                 📚 Learn to Trade
               </h1>
+            </div>
+            <div className="flex-shrink-0">
+              <WalletConnect />
             </div>
           </div>
         </div>
@@ -539,19 +543,31 @@ export default function LearnPage() {
               <span className="text-xs font-bold">Battle</span>
             </button>
             
-            <button
-              onClick={() => router.push('/battlefield')}
-              className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
-            >
-              <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
-                {userData?.pfp_url ? (
-                  <img src={userData.pfp_url} alt="Home" className="w-full h-full object-cover" />
-                ) : (
+            {address && userData ? (
+              <button
+                onClick={() => router.push(`/profile/${userData.fid || userData.wallet_address}`)}
+                className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
+              >
+                <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
+                  {userData?.pfp_url ? (
+                    <img src={userData.pfp_url} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <img src="/battlefield-logo.jpg" alt="Profile" className="w-full h-full object-cover" />
+                  )}
+                </div>
+                <span className="text-[10px] font-bold text-yellow-400">Profile</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => router.push('/battlefield')}
+                className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
+              >
+                <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
                   <img src="/battlefield-logo.jpg" alt="Home" className="w-full h-full object-cover" />
-                )}
-              </div>
-              <span className="text-[10px] font-bold text-yellow-400">Home</span>
-            </button>
+                </div>
+                <span className="text-[10px] font-bold text-yellow-400">Home</span>
+              </button>
+            )}
             
             <button
               onClick={() => router.push('/battlefield')}

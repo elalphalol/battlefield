@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
+import { WalletConnect } from '../components/WalletConnect';
 import { ArmyBattleStatus } from '../components/ArmyBattleStatus';
 import { ArmySelection } from '../components/ArmySelection';
 import { BattleAlerts } from '../components/BattleAlerts';
@@ -19,10 +20,32 @@ interface UserData {
 
 export default function BattlePage() {
   const router = useRouter();
-  const { address } = useAccount();
+  const { address: wagmiAddress } = useAccount();
   const { price: btcPrice } = useBTCPrice(5000);
   const [strategy] = useState(() => new WholeNumberStrategy());
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
+  
+  // Use Farcaster wallet if available, otherwise use wagmi wallet
+  const address = farcasterWallet || wagmiAddress;
+
+  // Initialize Farcaster and get wallet address
+  useEffect(() => {
+    const initFarcaster = async () => {
+      try {
+        const { farcasterAuth } = await import('../lib/farcaster');
+        if (farcasterAuth.isInFarcasterFrame()) {
+          const signInResult = await farcasterAuth.signInWithFarcaster();
+          if (signInResult?.walletAddress) {
+            setFarcasterWallet(signInResult.walletAddress);
+          }
+        }
+      } catch (error) {
+        console.error('Error getting Farcaster wallet:', error);
+      }
+    };
+    initFarcaster();
+  }, []);
 
   // Update strategy with new price
   useEffect(() => {
@@ -86,6 +109,9 @@ export default function BattlePage() {
               <h1 className="text-2xl md:text-4xl font-bold text-yellow-400">
                 ⚔️ Bulls vs Bears Battle
               </h1>
+            </div>
+            <div className="flex-shrink-0">
+              <WalletConnect />
             </div>
           </div>
         </div>
@@ -215,19 +241,31 @@ export default function BattlePage() {
               <span className="text-xs font-bold">Battle</span>
             </button>
             
-            <button
-              onClick={() => router.push('/battlefield')}
-              className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
-            >
-              <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
-                {userData?.pfp_url ? (
-                  <img src={userData.pfp_url} alt="Home" className="w-full h-full object-cover" />
-                ) : (
+            {address && userData ? (
+              <button
+                onClick={() => router.push(`/profile/${userData.fid || userData.wallet_address}`)}
+                className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
+              >
+                <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
+                  {userData?.pfp_url ? (
+                    <img src={userData.pfp_url} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <img src="/battlefield-logo.jpg" alt="Profile" className="w-full h-full object-cover" />
+                  )}
+                </div>
+                <span className="text-[10px] font-bold text-yellow-400">Profile</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => router.push('/battlefield')}
+                className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
+              >
+                <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
                   <img src="/battlefield-logo.jpg" alt="Home" className="w-full h-full object-cover" />
-                )}
-              </div>
-              <span className="text-[10px] font-bold text-yellow-400">Home</span>
-            </button>
+                </div>
+                <span className="text-[10px] font-bold text-yellow-400">Home</span>
+              </button>
+            )}
             
             <button
               onClick={() => router.push('/battlefield')}
