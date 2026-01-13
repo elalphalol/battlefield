@@ -327,32 +327,33 @@ export default function BattlefieldHome() {
 
             {/* Account Info Bar - Clean Design */}
             {userData && (
-              <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-xl p-4 mb-6 max-w-3xl mx-auto border-2 border-slate-600 shadow-lg">
-                <div className="grid grid-cols-3 gap-4 items-center">
+              <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-xl p-5 mb-6 max-w-3xl mx-auto border-2 border-slate-600 shadow-lg">
+                {/* Balance & P&L Row */}
+                <div className="grid grid-cols-2 gap-6 mb-4">
                   {/* Balance */}
                   <div className="text-center">
                     <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Balance</div>
-                    <div className="text-xl font-bold text-green-400">
+                    <div className="text-2xl font-bold text-green-400">
                       ${Number(userData.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                     </div>
                   </div>
                   
                   {/* P&L */}
-                  <div className="text-center border-x border-slate-600">
+                  <div className="text-center">
                     <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total P&L</div>
-                    <div className={`text-xl font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`text-2xl font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                     </div>
                   </div>
-                  
-                  {/* Claim Button */}
-                  <div className="text-center">
-                    <PaperMoneyClaim 
-                      onClaim={handleClaim} 
-                      paperBalance={userData?.paper_balance || 0}
-                      walletAddress={address}
-                    />
-                  </div>
+                </div>
+                
+                {/* Claim Button - Full Width Below */}
+                <div className="pt-3 border-t border-slate-600">
+                  <PaperMoneyClaim 
+                    onClaim={handleClaim} 
+                    paperBalance={userData?.paper_balance || 0}
+                    walletAddress={address}
+                  />
                 </div>
               </div>
             )}
