@@ -196,13 +196,7 @@ export default function BattlePage() {
         <div className="container mx-auto px-2">
           <div className="flex justify-around items-center py-2">
             <button
-              onClick={() => {
-                window.location.href = '/battlefield';
-                setTimeout(() => {
-                  const leaderboardTab = document.querySelector('[data-tab="leaderboard"]') as HTMLElement;
-                  leaderboardTab?.click();
-                }, 100);
-              }}
+              onClick={() => window.location.href = '/battlefield?tab=leaderboard'}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">🏆</span>
@@ -218,10 +212,9 @@ export default function BattlePage() {
             
             <button
               onClick={() => {
-                if (address && userData) {
-                  window.location.href = `/profile/${userData.fid || address}`;
-                } else if (address) {
-                  window.location.href = `/profile/${address}`;
+                const identifier = (userData?.fid || address || '').toString();
+                if (identifier) {
+                  window.location.href = `/profile/${identifier}`;
                 }
               }}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"

@@ -43,6 +43,15 @@ export default function BattlefieldHome() {
   const [strategy] = useState(() => new WholeNumberStrategy());
   const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
   
+  // Check URL params on mount to set initial tab
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'leaderboard') {
+      setActiveTab('leaderboard');
+    }
+  }, []);
+  
   // Use Farcaster wallet if available, otherwise use wagmi wallet
   const address = farcasterWallet || wagmiAddress;
 
