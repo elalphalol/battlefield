@@ -64,6 +64,46 @@ pool.connect(async (err, client, release) => {
     console.error('⚠️  Migration check failed (non-critical):', migrationError);
   }
   
+  // Auto-run volume tracking migration
+  try {
+    console.log('📊 Checking volume tracking...');
+    
+    // Check if total_volume column exists
+    const columnCheck = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'total_volume'
+    `);
+    
+    if (columnCheck.rows.length === 0) {
+      console.log('🚀 Adding volume tracking...');
+      
+      // Add total_volume column
+      await client.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS total_volume DECIMAL(18, 2) DEFAULT 0.00');
+      
+      // Backfill existing volumes
+      await client.query(`
+        UPDATE users u
+        SET total_volume = COALESCE(
+          (SELECT SUM(position_size * leverage) 
+           FROM trades 
+           WHERE user_id = u.id 
+           AND status IN ('closed', 'liquidated')),
+          0
+        )
+      `);
+      
+      // Create index
+      await client.query('CREATE INDEX IF NOT EXISTS idx_users_volume ON users(total_volume DESC)');
+      
+      console.log('✅ Volume tracking added and backfilled successfully!');
+    } else {
+      console.log('✅ Volume tracking already enabled');
+    }
+  } catch (volumeError) {
+    console.error('⚠️  Volume tracking setup failed (non-critical):', volumeError);
+  }
+  
   release();
 });
 
