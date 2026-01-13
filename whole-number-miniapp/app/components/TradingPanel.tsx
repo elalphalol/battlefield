@@ -289,7 +289,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
         <h3 className="text-xl font-bold text-yellow-400 mb-4">📈 Open Position</h3>
 
-        {/* Trade Type Selection - BIGGER TABS */}
+        {/* Trade Type Selection - CLEAN TABS */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button
             onClick={() => setTradeType('long')}
@@ -299,7 +299,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                 : 'border-slate-600 bg-slate-700/30 text-gray-400 hover:border-green-400'
             }`}
           >
-            🐂 LONG
+            LONG
           </button>
           <button
             onClick={() => setTradeType('short')}
@@ -309,7 +309,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                 : 'border-slate-600 bg-slate-700/30 text-gray-400 hover:border-red-400'
             }`}
           >
-            🐻 SHORT
+            SHORT
           </button>
         </div>
 
@@ -431,6 +431,14 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
         {/* Trade Summary */}
         <div className="bg-slate-700/50 rounded-lg p-4 mb-4 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-400">Collateral:</span>
+            <span className="text-cyan-400 font-bold">${positionSize.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Total Size ({leverage}x):</span>
+            <span className="text-purple-400 font-bold">${(positionSize * leverage).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+          </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Entry Price:</span>
             <span className="text-white font-bold">${btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>

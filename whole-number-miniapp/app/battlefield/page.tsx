@@ -255,7 +255,7 @@ export default function BattlefieldHome() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-7xl pb-24">
-        {/* BTC Price - SIMPLIFIED */}
+        {/* BTC Price - CLEAN */}
         <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
           <div className="text-center">
             <div className="text-sm text-gray-400 mb-2">BITCOIN PRICE</div>
@@ -263,7 +263,7 @@ export default function BattlefieldHome() {
               {isLoading ? 'Loading...' : `$${strategy.formatNumber(btcPrice)}`}
             </div>
             <div className="text-sm text-gray-400 mt-3">
-              📍 Coordinate: <span className="text-yellow-400 font-bold text-xl">{coordinate.toString().padStart(3, '0')}</span> → <span className="text-green-400 font-bold">{(coordinate + 1).toString().padStart(3, '0')}</span>
+              Coordinate: <span className="text-yellow-400 font-bold text-xl">{coordinate.toString().padStart(3, '0')}</span>
             </div>
           </div>
         </div>
@@ -325,29 +325,34 @@ export default function BattlefieldHome() {
               />
             </div>
 
-            {/* Balance & Quick Stats - Small bar below trading */}
+            {/* Account Info Bar - Clean Design */}
             {userData && (
-              <div className="bg-slate-800/50 rounded-lg p-3 mb-6 max-w-3xl mx-auto">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <div className="text-xs text-gray-400">Balance</div>
-                      <div className="text-lg font-bold text-green-400">
-                        ${Number(userData.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-400">P&L</div>
-                      <div className={`text-lg font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </div>
+              <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-xl p-4 mb-6 max-w-3xl mx-auto border-2 border-slate-600 shadow-lg">
+                <div className="grid grid-cols-3 gap-4 items-center">
+                  {/* Balance */}
+                  <div className="text-center">
+                    <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Balance</div>
+                    <div className="text-xl font-bold text-green-400">
+                      ${Number(userData.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                     </div>
                   </div>
-                  <PaperMoneyClaim 
-                    onClaim={handleClaim} 
-                    paperBalance={userData?.paper_balance || 0}
-                    walletAddress={address}
-                  />
+                  
+                  {/* P&L */}
+                  <div className="text-center border-x border-slate-600">
+                    <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total P&L</div>
+                    <div className={`text-xl font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                    </div>
+                  </div>
+                  
+                  {/* Claim Button */}
+                  <div className="text-center">
+                    <PaperMoneyClaim 
+                      onClaim={handleClaim} 
+                      paperBalance={userData?.paper_balance || 0}
+                      walletAddress={address}
+                    />
+                  </div>
                 </div>
               </div>
             )}
