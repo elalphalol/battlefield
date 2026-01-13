@@ -211,6 +211,8 @@ export default function BattlePage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-700 mt-12 py-8 text-center text-gray-400 space-y-3">
+        <p className="text-sm font-bold">⚔️ <strong>BATTLEFIELD</strong> ⚔️</p>
+        
         <div className="space-y-2">
           <p className="text-sm">
             Created by{' '}

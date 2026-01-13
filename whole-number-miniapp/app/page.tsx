@@ -103,6 +103,9 @@ export default function LandingPage() {
               @btcbattle
             </button>
           </p>
+          <p className="text-sm text-purple-400 font-semibold mt-2">
+            Launching on Clanker.world
+          </p>
         </div>
 
         {/* Footer Legal */}
