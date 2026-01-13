@@ -1227,6 +1227,50 @@ app.get('/api/army/stats', async (req: Request, res: Response) => {
 });
 
 // ============================================
+// VOLUME STATS ENDPOINT
+// ============================================
+
+// Get global and user volume stats
+app.get('/api/volume/stats', async (req: Request, res: Response) => {
+  const walletAddress = req.query.walletAddress as string;
+
+  try {
+    // Get global volume (sum of all users' total_volume)
+    const globalVolumeResult = await pool.query(
+      'SELECT COALESCE(SUM(total_volume), 0) as global_volume FROM users'
+    );
+
+    // Get total number of traders
+    const traderCountResult = await pool.query(
+      'SELECT COUNT(*) as trader_count FROM users WHERE total_trades > 0'
+    );
+
+    const stats: any = {
+      globalVolume: Number(globalVolumeResult.rows[0].global_volume),
+      totalTraders: Number(traderCountResult.rows[0].trader_count)
+    };
+
+    // If wallet address provided, get user-specific volume
+    if (walletAddress) {
+      const userVolumeResult = await pool.query(
+        'SELECT total_volume, total_trades FROM users WHERE LOWER(wallet_address) = LOWER($1)',
+        [walletAddress]
+      );
+
+      if (userVolumeResult.rows.length > 0) {
+        stats.userVolume = Number(userVolumeResult.rows[0].total_volume);
+        stats.userTrades = userVolumeResult.rows[0].total_trades;
+      }
+    }
+
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('Error fetching volume stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch volume stats' });
+  }
+});
+
+// ============================================
 // ADMIN ENDPOINTS
 // ============================================
 

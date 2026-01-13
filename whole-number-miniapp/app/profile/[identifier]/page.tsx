@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getApiUrl } from '../../config/api';
 import { Achievements } from '../../components/Achievements';
+import { VolumeTracker } from '../../components/VolumeTracker';
 import sdk from '@farcaster/frame-sdk';
 
 interface UserProfile {
@@ -412,6 +413,9 @@ export default function UserProfilePage() {
             </p>
           </div>
         </div>
+
+        {/* Volume Tracker */}
+        <VolumeTracker walletAddress={profile.user.wallet_address} showUserVolume={true} />
 
         {/* Open Positions & Trading History Side by Side */}
         <div className="grid md:grid-cols-2 gap-4">
