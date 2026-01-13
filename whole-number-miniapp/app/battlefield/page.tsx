@@ -44,7 +44,7 @@ export default function BattlefieldHome() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'learn'>('trade');
   const [learnSection, setLearnSection] = useState<'strategy' | 'cycles' | 'glossary' | 'ranking' | 'tips'>('strategy');
-  const [battleSection, setBattleSection] = useState<'market' | 'status'>('market');
+  const [battleSection, setBattleSection] = useState<'market' | 'status' | 'predictions'>('market');
   const [strategy] = useState(() => new WholeNumberStrategy());
   const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
   
@@ -384,7 +384,7 @@ export default function BattlefieldHome() {
         ) : activeTab === 'battle' ? (
           <div>
             {/* Section Navigation */}
-            <div className="grid grid-cols-2 gap-2 mb-6">
+            <div className="grid grid-cols-3 gap-2 mb-6">
               <button
                 onClick={() => setBattleSection('market')}
                 className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
@@ -404,6 +404,16 @@ export default function BattlefieldHome() {
                 }`}
               >
                 ⚔️ Army Status
+              </button>
+              <button
+                onClick={() => setBattleSection('predictions')}
+                className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+                  battleSection === 'predictions'
+                    ? 'bg-yellow-500 text-slate-900'
+                    : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                }`}
+              >
+                🔮 Predictions
               </button>
             </div>
 
@@ -508,7 +518,7 @@ export default function BattlefieldHome() {
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : battleSection === 'status' ? (
               <div>
                 {/* Army Battle Status - TOP */}
                 <div className="mb-6">
@@ -516,7 +526,7 @@ export default function BattlefieldHome() {
                 </div>
 
                 {/* Weekly Army Airdrop */}
-                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 mb-6">
+                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6">
                   <h3 className="text-2xl font-bold text-purple-400 mb-4 text-center">💎 Weekly Army Airdrop</h3>
                   
                   <div className="space-y-4 text-gray-300">
@@ -547,6 +557,9 @@ export default function BattlefieldHome() {
                   </div>
                 </div>
 
+              </div>
+            ) : (
+              <div>
                 {/* Prediction Markets */}
                 <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
                   <h3 className="text-2xl font-bold text-yellow-400 mb-4 text-center">🎯 Army Prediction Market</h3>
