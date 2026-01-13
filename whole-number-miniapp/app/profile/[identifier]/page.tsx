@@ -624,49 +624,34 @@ export default function UserProfilePage() {
           </div>
           <div className="p-4 max-h-[600px] overflow-y-auto">
             {achievementTab === 'achievements' && (
-              <div>
-                <Achievements stats={profile.stats} />
-              </div>
+              <Achievements stats={profile.stats} showOnlyUnlocked={true} />
             )}
             {achievementTab === 'titles' && (
-              <div className="space-y-4">
-                {/* Current Title */}
-                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 text-center">
-                  <p className="text-gray-400 text-sm mb-3">Current Title</p>
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <span className="text-4xl">{getPlayerTitle(profile.stats).badge}</span>
-                    <p className={`text-2xl font-bold ${getPlayerTitle(profile.stats).color}`}>
-                      {getPlayerTitle(profile.stats).title}
-                    </p>
-                  </div>
-                  <p className="text-sm text-gray-400">Rarity: <span className={getPlayerTitle(profile.stats).color}>{getPlayerTitle(profile.stats).rarity}</span></p>
+              <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 text-center">
+                <h3 className="text-sm text-gray-400 mb-2">Current Title</h3>
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <span className="text-4xl">{getPlayerTitle(profile.stats).badge}</span>
+                  <h2 className={`text-3xl font-bold ${getPlayerTitle(profile.stats).color}`}>{getPlayerTitle(profile.stats).title}</h2>
                 </div>
-
-                {/* All Title Tiers */}
-                <div className="space-y-3">
-                  <h3 className="text-lg font-bold text-yellow-400 text-center">All Title Tiers</h3>
-                  {titleRankings.map((tier, index) => (
-                    <div key={index} className={`${tier.color} rounded-lg p-4`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`font-bold text-lg ${tier.textColor}`}>{tier.rarity}</span>
-                      </div>
-                      <div className="space-y-1">
-                        {tier.titles.map((title, idx) => (
-                          <div key={idx} className="text-sm text-white/90">• {title}</div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-center gap-4 text-sm mb-3">
+                  <p className="text-gray-400">
+                    {calculateAchievementPoints(profile.stats)} / 1485 Achievements (
+                    {((calculateAchievementPoints(profile.stats) / 1485) * 100).toFixed(1)}%)
+                  </p>
+                  <p className="text-yellow-400 font-bold">
+                    ⭐ {calculateAchievementPoints(profile.stats)} / 1485 Points
+                  </p>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${(calculateAchievementPoints(profile.stats) / 1485) * 100}%` }}
+                  />
                 </div>
               </div>
             )}
             {achievementTab === 'locked' && (
-              <div className="text-gray-400">
-                <p className="text-center mb-4">These achievements are locked. Complete the requirements to unlock them!</p>
-                <div className="opacity-50">
-                  <Achievements stats={profile.stats} />
-                </div>
-              </div>
+              <Achievements stats={profile.stats} showOnlyLocked={true} />
             )}
           </div>
         </div>
