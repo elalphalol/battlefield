@@ -259,11 +259,13 @@ export default function BattlefieldHome() {
         <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
           <div className="text-center">
             <div className="text-sm text-gray-400 mb-2">BITCOIN PRICE</div>
-            <div className="text-5xl md:text-6xl font-bold text-yellow-400 mb-2">
-              {isLoading ? 'Loading...' : `$${strategy.formatNumber(btcPrice)}`}
+            <div className="text-5xl md:text-6xl font-bold text-yellow-400 mb-3">
+              {isLoading ? 'Loading...' : `$${Math.floor(btcPrice).toLocaleString()}`}
             </div>
-            <div className="text-sm text-gray-400 mt-3">
-              Coordinate: <span className="text-yellow-400 font-bold text-xl">{coordinate.toString().padStart(3, '0')}</span>
+            <div className={`text-4xl font-bold ${
+              coordinate < 500 ? 'text-red-400' : 'text-green-400'
+            }`}>
+              {coordinate.toString().padStart(3, '0')}
             </div>
           </div>
         </div>
