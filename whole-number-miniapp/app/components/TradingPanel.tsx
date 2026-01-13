@@ -289,27 +289,27 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
         <h3 className="text-xl font-bold text-yellow-400 mb-4">📈 Open Position</h3>
 
-        {/* Trade Type Selection */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* Trade Type Selection - BIGGER TABS */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
           <button
             onClick={() => setTradeType('long')}
-            className={`p-4 rounded-lg border-2 font-bold transition-all ${
+            className={`py-5 px-6 rounded-xl border-4 font-bold text-xl transition-all transform hover:scale-105 ${
               tradeType === 'long'
-                ? 'border-green-500 bg-green-900/30 text-green-400'
-                : 'border-slate-600 bg-slate-700/30 text-gray-400'
+                ? 'border-green-500 bg-green-600 text-white shadow-lg shadow-green-500/50'
+                : 'border-slate-600 bg-slate-700/30 text-gray-400 hover:border-green-400'
             }`}
           >
-            📈 LONG
+            🐂 LONG
           </button>
           <button
             onClick={() => setTradeType('short')}
-            className={`p-4 rounded-lg border-2 font-bold transition-all ${
+            className={`py-5 px-6 rounded-xl border-4 font-bold text-xl transition-all transform hover:scale-105 ${
               tradeType === 'short'
-                ? 'border-red-500 bg-red-900/30 text-red-400'
-                : 'border-slate-600 bg-slate-700/30 text-gray-400'
+                ? 'border-red-500 bg-red-600 text-white shadow-lg shadow-red-500/50'
+                : 'border-slate-600 bg-slate-700/30 text-gray-400 hover:border-red-400'
             }`}
           >
-            📉 SHORT
+            🐻 SHORT
           </button>
         </div>
 
@@ -445,19 +445,19 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
           </div>
         </div>
 
-        {/* Open Button */}
+        {/* Open Button - ENLARGED */}
         <button
           onClick={handleOpenTrade}
           disabled={isOpening || positionSize < 1 || positionSize > Number(paperBalance)}
-          className={`w-full py-4 rounded-lg font-bold text-lg transition-all ${
+          className={`w-full py-6 rounded-xl font-bold text-2xl transition-all transform hover:scale-105 shadow-xl ${
             tradeType === 'long'
-              ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500'
-              : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500'
+              ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-green-500/50'
+              : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 shadow-red-500/50'
           } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {isOpening ? '⏳ Opening...' : 
            positionSize < 1 ? 'Enter Position Size' :
-           `Open ${tradeType.toUpperCase()} ${leverage}x`}
+           `🚀 OPEN ${tradeType.toUpperCase()} ${leverage}x`}
         </button>
       </div>
 
