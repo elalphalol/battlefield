@@ -16,6 +16,7 @@ import { WholeNumberStrategy as StrategyGuide } from '../components/WholeNumberS
 import { MarketCycle } from '../components/MarketCycle';
 import { BattleAlerts } from '../components/BattleAlerts';
 import { ArmyBattleStatus } from '../components/ArmyBattleStatus';
+import { ArmySelection } from '../components/ArmySelection';
 import { useBTCPrice } from '../hooks/useBTCPrice';
 import { WholeNumberStrategy } from '../lib/strategy';
 
@@ -41,7 +42,7 @@ export default function BattlefieldHome() {
   const { address: wagmiAddress } = useAccount();
   const { price: btcPrice, isLoading } = useBTCPrice(5000);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'ranking'>('trade');
+  const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'learn'>('trade');
   const [strategy] = useState(() => new WholeNumberStrategy());
   const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
   
@@ -488,8 +489,10 @@ export default function BattlefieldHome() {
             </button>
             
             <button
-              onClick={() => router.push('/battle')}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+              onClick={() => setActiveTab('battle')}
+              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${
+                activeTab === 'battle' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
+              }`}
             >
               <span className="text-2xl">⚔️</span>
               <span className="text-xs font-bold">Battle</span>
@@ -522,8 +525,10 @@ export default function BattlefieldHome() {
             </button>
             
             <button
-              onClick={() => router.push('/learn')}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+              onClick={() => setActiveTab('learn')}
+              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${
+                activeTab === 'learn' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
+              }`}
             >
               <span className="text-2xl">📚</span>
               <span className="text-xs font-bold">Learn</span>
