@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAccount } from 'wagmi';
+import { useRouter } from 'next/navigation';
 import { ArmyBattleStatus } from '../components/ArmyBattleStatus';
 import { ArmySelection } from '../components/ArmySelection';
 import { BattleAlerts } from '../components/BattleAlerts';
@@ -17,6 +18,7 @@ interface UserData {
 }
 
 export default function BattlePage() {
+  const router = useRouter();
   const { address } = useAccount();
   const { price: btcPrice } = useBTCPrice(5000);
   const [strategy] = useState(() => new WholeNumberStrategy());
@@ -196,7 +198,7 @@ export default function BattlePage() {
         <div className="container mx-auto px-2">
           <div className="flex justify-around items-center py-2">
             <button
-              onClick={() => window.location.href = '/battlefield?tab=leaderboard'}
+              onClick={() => router.push('/battlefield?tab=leaderboard')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">🏆</span>
@@ -214,7 +216,10 @@ export default function BattlePage() {
               onClick={() => {
                 const identifier = (userData?.fid || address || '').toString();
                 if (identifier) {
-                  window.location.href = `/profile/${identifier}`;
+                  router.push(`/profile/${identifier}`);
+                } else {
+                  // Fallback to battlefield if no identifier available
+                  router.push('/battlefield');
                 }
               }}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
@@ -224,7 +229,7 @@ export default function BattlePage() {
             </button>
             
             <button
-              onClick={() => window.location.href = '/battlefield'}
+              onClick={() => router.push('/battlefield')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">🎯</span>
@@ -232,7 +237,7 @@ export default function BattlePage() {
             </button>
             
             <button
-              onClick={() => window.location.href = '/learn'}
+              onClick={() => router.push('/learn')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">📚</span>

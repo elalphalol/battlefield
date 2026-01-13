@@ -655,7 +655,7 @@ export default function UserProfilePage() {
         <div className="container mx-auto px-2">
           <div className="flex justify-around items-center py-2">
             <button
-              onClick={() => window.location.href = '/battlefield'}
+              onClick={() => router.push('/battlefield?tab=leaderboard')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">🏆</span>
@@ -663,7 +663,7 @@ export default function UserProfilePage() {
             </button>
             
             <button
-              onClick={() => window.location.href = '/battle'}
+              onClick={() => router.push('/battle')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">⚔️</span>
@@ -678,7 +678,7 @@ export default function UserProfilePage() {
             </button>
             
             <button
-              onClick={() => window.location.href = '/battlefield'}
+              onClick={() => router.push('/battlefield')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">🎯</span>
@@ -686,7 +686,7 @@ export default function UserProfilePage() {
             </button>
             
             <button
-              onClick={() => window.location.href = '/learn'}
+              onClick={() => router.push('/learn')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">📚</span>
