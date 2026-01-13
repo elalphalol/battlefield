@@ -67,7 +67,7 @@ export default function UserProfilePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceLoaded, setPriceLoaded] = useState(false);
-  const [achievementTab, setAchievementTab] = useState<'unlocked' | 'locked'>('unlocked');
+  const [achievementTab, setAchievementTab] = useState<'achievements' | 'titles' | 'locked'>('achievements');
 
   // Fetch BTC price
   useEffect(() => {
@@ -579,17 +579,27 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* Achievement Tab Navigation */}
-        <div className="grid grid-cols-2 gap-2">
+        {/* Achievement Tab Navigation - 3 Tabs */}
+        <div className="grid grid-cols-3 gap-2">
           <button
-            onClick={() => setAchievementTab('unlocked')}
+            onClick={() => setAchievementTab('achievements')}
             className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
-              achievementTab === 'unlocked'
+              achievementTab === 'achievements'
                 ? 'bg-yellow-500 text-slate-900'
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
             }`}
           >
             🏆 Achievements
+          </button>
+          <button
+            onClick={() => setAchievementTab('titles')}
+            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+              achievementTab === 'titles'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+            }`}
+          >
+            👑 Titles
           </button>
           <button
             onClick={() => setAchievementTab('locked')}
@@ -607,11 +617,38 @@ export default function UserProfilePage() {
         <div className="bg-slate-800 border-2 border-purple-500 rounded-lg">
           <div className="p-4 border-b border-slate-700">
             <h2 className="text-xl font-bold text-yellow-400">
-              {achievementTab === 'unlocked' ? '🏆 Achievements & Milestones' : '🔒 Locked Achievements'}
+              {achievementTab === 'achievements' && '🏆 Achievements'}
+              {achievementTab === 'titles' && '👑 Player Titles'}
+              {achievementTab === 'locked' && '🔒 Locked Achievements'}
             </h2>
           </div>
           <div className="p-4">
-            <Achievements stats={profile.stats} />
+            {achievementTab === 'achievements' && (
+              <div className="text-gray-300">
+                <p>Unlocked Achievements Component (simplified, no dropdown)</p>
+                <Achievements stats={profile.stats} />
+              </div>
+            )}
+            {achievementTab === 'titles' && (
+              <div className="text-center">
+                <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6">
+                  <p className="text-gray-400 text-sm mb-3">Current Title</p>
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <span className="text-4xl">{getPlayerTitle(profile.stats).badge}</span>
+                    <p className={`text-2xl font-bold ${getPlayerTitle(profile.stats).color}`}>
+                      {getPlayerTitle(profile.stats).title}
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-400">Rarity: <span className={getPlayerTitle(profile.stats).color}>{getPlayerTitle(profile.stats).rarity}</span></p>
+                </div>
+              </div>
+            )}
+            {achievementTab === 'locked' && (
+              <div className="text-gray-300">
+                <p>Locked Achievements Component (simplified, no dropdown)</p>
+                <Achievements stats={profile.stats} />
+              </div>
+            )}
           </div>
         </div>
 
