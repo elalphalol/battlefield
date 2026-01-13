@@ -43,6 +43,9 @@ export default function LearnPage() {
         const data = await response.json();
         if (data.success) {
           setUserData(data.user);
+          console.log('✅ User data loaded:', data.user);
+        } else {
+          console.warn('⚠️ User not found in database');
         }
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -538,11 +541,12 @@ export default function LearnPage() {
             
             <button
               onClick={() => {
-                const identifier = (userData?.fid || userData?.wallet_address || address || '').toString();
-                if (identifier) {
+                if (userData) {
+                  const identifier = userData.fid || userData.wallet_address;
+                  console.log('🔍 Navigate to profile:', identifier);
                   router.push(`/profile/${identifier}`);
                 } else {
-                  // Fallback to battlefield if no identifier available
+                  console.warn('⚠️ No user data, redirecting to battlefield');
                   router.push('/battlefield');
                 }
               }}
