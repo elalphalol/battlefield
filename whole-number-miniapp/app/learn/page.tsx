@@ -63,7 +63,7 @@ export default function LearnPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => window.location.href = '/battlefield'}
+                onClick={() => router.push('/battlefield')}
                 className="text-2xl hover:scale-110 transition-transform"
               >
                 ⬅️

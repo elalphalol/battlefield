@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
+import { useRouter } from 'next/navigation';
 import { getApiUrl } from '../config/api';
 import sdk from '@farcaster/frame-sdk';
 import { WalletConnect } from '../components/WalletConnect';
@@ -36,6 +37,7 @@ interface UserData {
 }
 
 export default function BattlefieldHome() {
+  const router = useRouter();
   const { address: wagmiAddress } = useAccount();
   const { price: btcPrice, isLoading } = useBTCPrice(5000);
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -486,7 +488,7 @@ export default function BattlefieldHome() {
             </button>
             
             <button
-              onClick={() => window.location.href = '/battle'}
+              onClick={() => router.push('/battle')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">⚔️</span>
@@ -495,7 +497,7 @@ export default function BattlefieldHome() {
             
             {address && userData && (
               <button
-                onClick={() => window.location.href = `/profile/${userData.fid || userData.wallet_address}`}
+                onClick={() => router.push(`/profile/${userData.fid || userData.wallet_address}`)}
                 className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
               >
                 <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
@@ -520,7 +522,7 @@ export default function BattlefieldHome() {
             </button>
             
             <button
-              onClick={() => window.location.href = '/learn'}
+              onClick={() => router.push('/learn')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">📚</span>
