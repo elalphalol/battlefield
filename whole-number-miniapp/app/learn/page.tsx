@@ -543,9 +543,15 @@ export default function LearnPage() {
               <span className="text-xs font-bold">Battle</span>
             </button>
             
-            {address && userData ? (
+            {address ? (
               <button
-                onClick={() => router.push(`/profile/${userData.fid || userData.wallet_address}`)}
+                onClick={() => {
+                  if (userData) {
+                    router.push(`/profile/${userData.fid || userData.wallet_address}`);
+                  } else {
+                    router.push('/battlefield');
+                  }
+                }}
                 className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
               >
                 <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
