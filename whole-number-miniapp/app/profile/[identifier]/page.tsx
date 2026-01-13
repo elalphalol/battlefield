@@ -291,30 +291,6 @@ export default function UserProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Achievement Tab Navigation */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setAchievementTab('unlocked')}
-            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
-              achievementTab === 'unlocked'
-                ? 'bg-yellow-500 text-slate-900'
-                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-            }`}
-          >
-            🏆 Achievements
-          </button>
-          <button
-            onClick={() => setAchievementTab('locked')}
-            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
-              achievementTab === 'locked'
-                ? 'bg-yellow-500 text-slate-900'
-                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-            }`}
-          >
-            🔒 Locked
-          </button>
-        </div>
-
         {/* Profile Header */}
         <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4 sm:p-6">
           <div className="flex flex-col gap-4">
@@ -603,10 +579,36 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* Achievements & Milestones - Always Visible */}
+        {/* Achievement Tab Navigation */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setAchievementTab('unlocked')}
+            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+              achievementTab === 'unlocked'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+            }`}
+          >
+            🏆 Achievements
+          </button>
+          <button
+            onClick={() => setAchievementTab('locked')}
+            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+              achievementTab === 'locked'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+            }`}
+          >
+            🔒 Locked
+          </button>
+        </div>
+
+        {/* Achievements Content */}
         <div className="bg-slate-800 border-2 border-purple-500 rounded-lg">
           <div className="p-4 border-b border-slate-700">
-            <h2 className="text-xl font-bold text-yellow-400">🏆 Achievements & Milestones</h2>
+            <h2 className="text-xl font-bold text-yellow-400">
+              {achievementTab === 'unlocked' ? '🏆 Achievements & Milestones' : '🔒 Locked Achievements'}
+            </h2>
           </div>
           <div className="p-4">
             <Achievements stats={profile.stats} />
