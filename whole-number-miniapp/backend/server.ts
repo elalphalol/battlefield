@@ -196,6 +196,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// Admin authentication middleware
+const adminAuth = (req: Request, res: Response, next: NextFunction) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (!process.env.ADMIN_API_KEY) {
+    console.error('ADMIN_API_KEY environment variable not set');
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+  if (adminKey !== process.env.ADMIN_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+};
+
 // ============================================
 // HEALTH CHECK
 // ============================================
@@ -212,6 +225,20 @@ app.get('/health', async (req: Request, res: Response) => {
       status: 'unhealthy',
       database: 'disconnected',
       error: 'Database connection failed'
+    });
+  }
+});
+
+// Sentry test endpoint
+app.get('/api/sentry-test', (req: Request, res: Response) => {
+  try {
+    throw new Error("Sentry test error from BATTLEFIELD Backend API");
+  } catch (error) {
+    Sentry.captureException(error);
+    res.json({
+      success: true,
+      message: "Test error sent to Sentry",
+      timestamp: new Date().toISOString()
     });
   }
 });
@@ -1503,7 +1530,7 @@ app.get('/api/volume/stats', async (req: Request, res: Response) => {
 // ============================================
 
 // Update a specific user's Farcaster profile data
-app.post('/api/admin/update-user-profile', async (req: Request, res: Response) => {
+app.post('/api/admin/update-user-profile', adminAuth, async (req: Request, res: Response) => {
   const { walletAddress, fid, username, pfpUrl } = req.body;
 
   if (!walletAddress || !fid || !username) {
@@ -1541,7 +1568,7 @@ app.post('/api/admin/update-user-profile', async (req: Request, res: Response) =
 });
 
 // Recalculate all user armies based on closed positions
-app.post('/api/admin/recalculate-armies', async (req: Request, res: Response) => {
+app.post('/api/admin/recalculate-armies', adminAuth, async (req: Request, res: Response) => {
   try {
     // Get all users
     const users = await pool.query('SELECT id FROM users');
@@ -1562,8 +1589,8 @@ app.post('/api/admin/recalculate-armies', async (req: Request, res: Response) =>
   }
 });
 
-// Fix all user balances based on actual trade history  
-app.post('/api/admin/fix-balances', async (req: Request, res: Response) => {
+// Fix all user balances based on actual trade history
+app.post('/api/admin/fix-balances', adminAuth, async (req: Request, res: Response) => {
   try {
     // Recalculate balances for all users
     // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
