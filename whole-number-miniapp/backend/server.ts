@@ -6,6 +6,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
+import cron from 'node-cron';
 
 // Load environment variables
 dotenv.config();
@@ -1590,6 +1591,260 @@ app.get('/api/config', async (req: Request, res: Response) => {
 });
 
 // ============================================
+// FARCASTER NOTIFICATIONS
+// ============================================
+
+// Webhook endpoint for Farcaster events
+app.post('/api/farcaster/webhook', express.json(), async (req: Request, res: Response) => {
+  try {
+    const { event, data } = req.body;
+
+    console.log('📬 Farcaster webhook received:', event);
+
+    if (event === 'notifications_enabled') {
+      // User enabled notifications
+      const { fid, token, url } = data.notificationDetails;
+
+      // Store token in database
+      await pool.query(`
+        INSERT INTO notification_tokens (fid, token, url, enabled)
+        VALUES ($1, $2, $3, true)
+        ON CONFLICT (fid, token)
+        DO UPDATE SET url = $3, enabled = true, updated_at = CURRENT_TIMESTAMP
+      `, [fid, token, url]);
+
+      console.log(`✅ Notification enabled for FID ${fid}`);
+
+      // Send welcome notification
+      try {
+        await sendNotification(fid, {
+          notificationId: `welcome_${fid}`,
+          title: '⚔️ BATTLEFIELD Alerts Enabled!',
+          body: 'You\'ll now get daily reminders to check your positions',
+          targetUrl: 'https://battlefield-roan.vercel.app'
+        });
+      } catch (notifError) {
+        console.error('Failed to send welcome notification:', notifError);
+      }
+
+    } else if (event === 'notifications_disabled') {
+      // User disabled notifications
+      const { fid } = data;
+
+      await pool.query(`
+        UPDATE notification_tokens
+        SET enabled = false, updated_at = CURRENT_TIMESTAMP
+        WHERE fid = $1
+      `, [fid]);
+
+      console.log(`❌ Notifications disabled for FID ${fid}`);
+
+    } else if (event === 'miniapp_removed') {
+      // User removed the mini app
+      const { fid } = data;
+
+      await pool.query(`
+        DELETE FROM notification_tokens WHERE fid = $1
+      `, [fid]);
+
+      console.log(`🗑️ Mini app removed for FID ${fid}, tokens deleted`);
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error handling webhook:', error);
+    res.status(500).json({ success: false, message: 'Webhook processing failed' });
+  }
+});
+
+// Send notification to a specific FID
+async function sendNotification(fid: number, notification: {
+  notificationId: string;
+  title: string;
+  body: string;
+  targetUrl: string;
+}) {
+  try {
+    // Get active tokens for this FID
+    const tokensResult = await pool.query(`
+      SELECT token, url
+      FROM notification_tokens
+      WHERE fid = $1 AND enabled = true
+    `, [fid]);
+
+    if (tokensResult.rows.length === 0) {
+      console.log(`No active tokens for FID ${fid}`);
+      return { success: false, reason: 'no_tokens' };
+    }
+
+    const tokens = tokensResult.rows.map(row => row.token);
+    const notificationUrl = tokensResult.rows[0].url;
+
+    // Send to Farcaster notification API
+    const response = await fetch(notificationUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notificationId: notification.notificationId,
+        title: notification.title.slice(0, 32), // Max 32 chars
+        body: notification.body.slice(0, 128), // Max 128 chars
+        targetUrl: notification.targetUrl.slice(0, 1024), // Max 1024 chars
+        tokens
+      })
+    });
+
+    const result = await response.json();
+
+    // Log the notification
+    await pool.query(`
+      INSERT INTO notification_log (fid, notification_id, type, title, body, success)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (fid, notification_id, DATE(sent_at)) DO NOTHING
+    `, [
+      fid,
+      notification.notificationId,
+      'push',
+      notification.title,
+      notification.body,
+      response.ok
+    ]);
+
+    console.log(`📤 Notification sent to FID ${fid}:`, notification.title);
+
+    return { success: true, result };
+  } catch (error) {
+    console.error(`Error sending notification to FID ${fid}:`, error);
+    return { success: false, error };
+  }
+}
+
+// API endpoint to send daily position reminder
+app.post('/api/notifications/daily-reminder', async (req: Request, res: Response) => {
+  try {
+    // Get all users with open positions and notifications enabled
+    const usersResult = await pool.query(`
+      SELECT DISTINCT u.fid, u.username, COUNT(t.id) as open_positions
+      FROM users u
+      JOIN trades t ON t.user_id = u.id
+      WHERE t.status = 'open'
+        AND u.fid IS NOT NULL
+        AND u.notifications_enabled = true
+        AND u.daily_reminder_enabled = true
+      GROUP BY u.fid, u.username
+    `);
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const user of usersResult.rows) {
+      try {
+        const result = await sendNotification(user.fid, {
+          notificationId: `daily_reminder_${new Date().toISOString().split('T')[0]}`,
+          title: `⚔️ ${user.open_positions} Position${user.open_positions > 1 ? 's' : ''} Open!`,
+          body: `Check your ${user.open_positions} active trade${user.open_positions > 1 ? 's' : ''} on BATTLEFIELD`,
+          targetUrl: 'https://battlefield-roan.vercel.app'
+        });
+
+        if (result.success) {
+          sent++;
+        } else {
+          failed++;
+        }
+      } catch (error) {
+        console.error(`Failed to send reminder to FID ${user.fid}:`, error);
+        failed++;
+      }
+    }
+
+    res.json({
+      success: true,
+      stats: {
+        total: usersResult.rows.length,
+        sent,
+        failed
+      }
+    });
+  } catch (error) {
+    console.error('Error sending daily reminders:', error);
+    res.status(500).json({ success: false, message: 'Failed to send reminders' });
+  }
+});
+
+// API endpoint to send achievement notification
+app.post('/api/notifications/achievement', async (req: Request, res: Response) => {
+  try {
+    const { fid, achievementId, title, description } = req.body;
+
+    if (!fid || !achievementId || !title) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const result = await sendNotification(fid, {
+      notificationId: `achievement_${achievementId}_${fid}`,
+      title: `🏆 ${title}`,
+      body: description || 'Achievement unlocked!',
+      targetUrl: 'https://battlefield-roan.vercel.app'
+    });
+
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('Error sending achievement notification:', error);
+    res.status(500).json({ success: false, message: 'Failed to send achievement notification' });
+  }
+});
+
+// Get notification settings for a user
+app.get('/api/notifications/settings/:walletAddress', async (req: Request, res: Response) => {
+  try {
+    const { walletAddress } = req.params;
+
+    const result = await pool.query(`
+      SELECT
+        notifications_enabled,
+        daily_reminder_enabled,
+        achievement_notifications_enabled,
+        (SELECT COUNT(*) FROM notification_tokens WHERE fid = u.fid AND enabled = true) as active_tokens
+      FROM users u
+      WHERE wallet_address = $1
+    `, [walletAddress]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ success: true, settings: result.rows[0] });
+  } catch (error) {
+    console.error('Error fetching notification settings:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch settings' });
+  }
+});
+
+// Update notification settings for a user
+app.post('/api/notifications/settings', async (req: Request, res: Response) => {
+  try {
+    const { walletAddress, notifications_enabled, daily_reminder_enabled, achievement_notifications_enabled } = req.body;
+
+    if (!walletAddress) {
+      return res.status(400).json({ success: false, message: 'Wallet address required' });
+    }
+
+    await pool.query(`
+      UPDATE users
+      SET
+        notifications_enabled = COALESCE($2, notifications_enabled),
+        daily_reminder_enabled = COALESCE($3, daily_reminder_enabled),
+        achievement_notifications_enabled = COALESCE($4, achievement_notifications_enabled)
+      WHERE wallet_address = $1
+    `, [walletAddress, notifications_enabled, daily_reminder_enabled, achievement_notifications_enabled]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
+    res.status(500).json({ success: false, message: 'Failed to update settings' });
+  }
+});
+
+// ============================================
 // ERROR HANDLING
 // ============================================
 
@@ -1619,7 +1874,7 @@ app.listen(PORT, () => {
   console.log(`
     ⚔️  BATTLEFIELD API Server
     🐻 Bears vs Bulls 🐂
-    
+
     ✅ Server running on port ${PORT}
     🗄️  Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}
     🌍 Environment: ${process.env.NODE_ENV || 'development'}
@@ -1638,6 +1893,32 @@ app.listen(PORT, () => {
     - GET  /api/army/stats
     - GET  /api/config
   `);
+
+  // ============================================
+  // CRON JOBS - Daily Notification Scheduler
+  // ============================================
+
+  // Send daily reminders at 12:00 PM UTC (8 AM EST / 5 AM PST)
+  // This is a good time when traders check their positions
+  cron.schedule('0 12 * * *', async () => {
+    console.log('⏰ Running daily notification cron job...');
+
+    try {
+      const response = await fetch(`http://localhost:${PORT}/api/notifications/daily-reminder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result = await response.json() as { stats?: { total: number; sent: number; failed: number } };
+      console.log('✅ Daily reminders sent:', result.stats);
+    } catch (error) {
+      console.error('❌ Failed to send daily reminders:', error);
+    }
+  }, {
+    timezone: "UTC"
+  });
+
+  console.log('📅 Cron scheduler started: Daily reminders at 12:00 PM UTC');
 });
 
 // Graceful shutdown
