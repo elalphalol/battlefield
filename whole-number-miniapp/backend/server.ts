@@ -410,7 +410,12 @@ app.get('/api/users/:walletAddress', async (req: Request, res: Response) => {
 // Update user army
 app.patch('/api/users/:walletAddress/army', async (req: Request, res: Response) => {
   const { walletAddress } = req.params;
-  const { army } = req.body;
+  const { army, signerAddress } = req.body;
+
+  // Verify the signer owns the wallet being modified
+  if (!signerAddress || signerAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+    return res.status(403).json({ success: false, message: 'Unauthorized: Can only modify your own army' });
+  }
 
   if (!army || !['bears', 'bulls'].includes(army)) {
     return res.status(400).json({ success: false, message: 'Invalid army. Must be "bears" or "bulls"' });
@@ -1947,10 +1952,15 @@ app.get('/api/notifications/settings/:walletAddress', async (req: Request, res: 
 // Update notification settings for a user
 app.post('/api/notifications/settings', async (req: Request, res: Response) => {
   try {
-    const { walletAddress, notifications_enabled, daily_reminder_enabled, achievement_notifications_enabled } = req.body;
+    const { walletAddress, signerAddress, notifications_enabled, daily_reminder_enabled, achievement_notifications_enabled } = req.body;
 
     if (!walletAddress) {
       return res.status(400).json({ success: false, message: 'Wallet address required' });
+    }
+
+    // Verify the signer owns the wallet being modified
+    if (!signerAddress || signerAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized: Can only modify your own settings' });
     }
 
     await pool.query(`
@@ -1959,7 +1969,7 @@ app.post('/api/notifications/settings', async (req: Request, res: Response) => {
         notifications_enabled = COALESCE($2, notifications_enabled),
         daily_reminder_enabled = COALESCE($3, daily_reminder_enabled),
         achievement_notifications_enabled = COALESCE($4, achievement_notifications_enabled)
-      WHERE wallet_address = $1
+      WHERE LOWER(wallet_address) = LOWER($1)
     `, [walletAddress, notifications_enabled, daily_reminder_enabled, achievement_notifications_enabled]);
 
     res.json({ success: true });
