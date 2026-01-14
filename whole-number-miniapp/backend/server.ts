@@ -229,20 +229,6 @@ app.get('/health', async (req: Request, res: Response) => {
   }
 });
 
-// Sentry test endpoint
-app.get('/api/sentry-test', (req: Request, res: Response) => {
-  try {
-    throw new Error("Sentry test error from BATTLEFIELD Backend API");
-  } catch (error) {
-    Sentry.captureException(error);
-    res.json({
-      success: true,
-      message: "Test error sent to Sentry",
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
 // ============================================
 // USER ENDPOINTS
 // ============================================
