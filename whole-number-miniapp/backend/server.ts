@@ -1695,11 +1695,11 @@ async function sendNotification(fid: number, notification: {
 
     const result = await response.json();
 
-    // Log the notification
+    // Log the notification (deduplication happens via UNIQUE constraint on fid, notification_id, sent_date)
     await pool.query(`
       INSERT INTO notification_log (fid, notification_id, type, title, body, success)
       VALUES ($1, $2, $3, $4, $5, $6)
-      ON CONFLICT (fid, notification_id, DATE(sent_at)) DO NOTHING
+      ON CONFLICT (fid, notification_id, sent_date) DO NOTHING
     `, [
       fid,
       notification.notificationId,

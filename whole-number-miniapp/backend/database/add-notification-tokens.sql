@@ -29,10 +29,11 @@ CREATE TABLE IF NOT EXISTS notification_log (
   title TEXT NOT NULL,
   body TEXT NOT NULL,
   sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  sent_date DATE GENERATED ALWAYS AS (DATE(sent_at)) STORED,
   success BOOLEAN DEFAULT true,
 
   -- Deduplication: one notification per FID per notification_id per day
-  UNIQUE(fid, notification_id, DATE(sent_at))
+  UNIQUE(fid, notification_id, sent_date)
 );
 
 -- Create index for notification history lookups
