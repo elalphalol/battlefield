@@ -111,10 +111,12 @@ pool.connect(async (err, client, release) => {
 // CORS Configuration - Restrict to specific origins
 const allowedOrigins = [
   'http://localhost:3000',                    // Local development
-  'https://battlefield-roan.vercel.app',      // Vercel production
+  'https://battlefield-roan.vercel.app',      // Vercel production (legacy)
+  'https://btcbattlefield.com',               // Production VPS
+  'https://www.btcbattlefield.com',           // Production VPS (www)
   'https://warpcast.com',                     // Warpcast origin
   'https://client.warpcast.com',              // Warpcast client
-  process.env.FRONTEND_URL,                   // Custom domain (future VPS)
+  process.env.FRONTEND_URL,                   // Custom domain (env override)
 ].filter(Boolean);
 
 app.use(cors({
