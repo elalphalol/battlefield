@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { getApiUrl } from '../../config/api';
 import { Achievements } from '../../components/Achievements';
 import { VolumeTracker } from '../../components/VolumeTracker';
-import sdk from '@farcaster/frame-sdk';
+import sdk from '@farcaster/miniapp-sdk';
 
 interface UserProfile {
   user: {

@@ -6,7 +6,7 @@ import { base } from 'wagmi/chains';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
 import { ReactNode, useEffect } from 'react';
-import sdk from '@farcaster/frame-sdk';
+import sdk from '@farcaster/miniapp-sdk';
 
 const queryClient = new QueryClient();
 
