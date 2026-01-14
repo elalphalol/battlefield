@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// accountAssociation for battlefield-roan.vercel.app (original app)
-const VERCEL_MANIFEST = {
+// Migration manifest for battlefield-roan.vercel.app (old domain)
+// This tells Farcaster to redirect users to the new domain
+const VERCEL_MIGRATION_MANIFEST = {
   accountAssociation: {
     header: "eyJmaWQiOjE0NTIzNTEsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg0QzVCMjQzNTk4NzAyMzI4OTk3MjE3QUI2MkU2QTBCOGVEMzU5MTA3In0",
     payload: "eyJkb21haW4iOiJiYXR0bGVmaWVsZC1yb2FuLnZlcmNlbC5hcHAifQ",
@@ -20,7 +21,7 @@ const VERCEL_MANIFEST = {
   }
 };
 
-// accountAssociation for btcbattlefield.com (production)
+// Production manifest for btcbattlefield.com (new domain)
 const PRODUCTION_MANIFEST = {
   accountAssociation: {
     header: "eyJmaWQiOjE0NTIzNTEsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg0QzVCMjQzNTk4NzAyMzI4OTk3MjE3QUI2MkU2QTBCOGVEMzU5MTA3In0",
@@ -30,7 +31,6 @@ const PRODUCTION_MANIFEST = {
   frame: {
     version: "next",
     name: "Battlefield",
-    canonicalDomain: "btcbattlefield.com",
     iconUrl: "https://btcbattlefield.com/battlefield-logo.jpg",
     imageUrl: "https://btcbattlefield.com/opengraph-image.jpg",
     splashImageUrl: "https://btcbattlefield.com/opengraph-image.jpg",
@@ -43,8 +43,9 @@ const PRODUCTION_MANIFEST = {
 export async function GET(request: NextRequest) {
   const host = request.headers.get('host') || '';
 
-  // Serve different manifests based on domain
-  const manifest = host.includes('vercel.app') ? VERCEL_MANIFEST : PRODUCTION_MANIFEST;
+  // Serve migration manifest on Vercel (tells Farcaster to redirect to new domain)
+  // Serve production manifest on btcbattlefield.com
+  const manifest = host.includes('vercel.app') ? VERCEL_MIGRATION_MANIFEST : PRODUCTION_MANIFEST;
 
   return NextResponse.json(manifest);
 }
