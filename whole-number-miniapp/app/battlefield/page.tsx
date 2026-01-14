@@ -19,7 +19,9 @@ import { BattleAlerts } from '../components/BattleAlerts';
 import { VolumeTracker } from '../components/VolumeTracker';
 import { ArmyBattleStatus } from '../components/ArmyBattleStatus';
 import { ArmySelection } from '../components/ArmySelection';
+import { NotificationManager } from '../components/NotificationManager';
 import { useBTCPrice } from '../hooks/useBTCPrice';
+import { useAchievementDetector } from '../hooks/useAchievementDetector';
 import { WholeNumberStrategy } from '../lib/strategy';
 
 interface UserData {
@@ -49,6 +51,7 @@ export default function BattlefieldHome() {
   const [battleSection, setBattleSection] = useState<'market' | 'status' | 'predictions'>('market');
   const [strategy] = useState(() => new WholeNumberStrategy());
   const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
+  const [previousUserData, setPreviousUserData] = useState<UserData | null>(null);
   
   // Check URL params on mount to set initial tab
   useEffect(() => {
@@ -61,6 +64,30 @@ export default function BattlefieldHome() {
   
   // Use Farcaster wallet if available, otherwise use wagmi wallet
   const address = farcasterWallet || wagmiAddress;
+
+  // Achievement detection - convert userData to UserStats format
+  useAchievementDetector(
+    userData ? {
+      total_trades: userData.total_trades,
+      total_pnl: userData.total_pnl,
+      winning_trades: userData.winning_trades,
+      win_rate: userData.total_trades > 0 ? (userData.winning_trades / userData.total_trades) * 100 : 0,
+      current_streak: userData.current_streak,
+      best_streak: userData.best_streak,
+      times_liquidated: userData.times_liquidated,
+      rank: null, // Will need to fetch rank separately
+    } : null,
+    previousUserData ? {
+      total_trades: previousUserData.total_trades,
+      total_pnl: previousUserData.total_pnl,
+      winning_trades: previousUserData.winning_trades,
+      win_rate: previousUserData.total_trades > 0 ? (previousUserData.winning_trades / previousUserData.total_trades) * 100 : 0,
+      current_streak: previousUserData.current_streak,
+      best_streak: previousUserData.best_streak,
+      times_liquidated: previousUserData.times_liquidated,
+      rank: null,
+    } : null
+  );
 
   const handleExternalLink = async (url: string) => {
     // Always try SDK first - it will only work in Farcaster miniapp
@@ -131,6 +158,7 @@ export default function BattlefieldHome() {
   const fetchUserData = useCallback(async () => {
     if (!address) {
       setUserData(null);
+      setPreviousUserData(null);
       return;
     }
 
@@ -140,7 +168,11 @@ export default function BattlefieldHome() {
       const data = await response.json();
 
       if (data.success) {
-        setUserData(data.user);
+        // Save previous data before updating (for achievement detection)
+        setUserData(prevData => {
+          setPreviousUserData(prevData);
+          return data.user;
+        });
       } else {
         // No user found - try to get Farcaster data
         const { farcasterAuth } = await import('../lib/farcaster');
@@ -177,6 +209,8 @@ export default function BattlefieldHome() {
 
         const createData = await createResponse.json();
         if (createData.success) {
+          // For new users, no previous data
+          setPreviousUserData(null);
           setUserData(createData.user);
           console.log('✅ User created successfully:', createData.user);
         }
@@ -246,6 +280,9 @@ export default function BattlefieldHome() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
+      {/* Notification System */}
+      <NotificationManager />
+
       {/* Header */}
       <header className="border-b-2 border-yellow-500/50 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-4">
