@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { getApiUrl } from '../config/api';
+import toast from 'react-hot-toast';
 
 interface ArmySelectionProps {
   currentArmy?: 'bears' | 'bulls';
@@ -31,12 +32,12 @@ export function ArmySelection({ currentArmy, onArmyChange }: ArmySelectionProps)
       if (data.success) {
         onArmyChange(army);
       } else {
-        alert('Failed to change army');
+        toast.error('Failed to change army');
         setSelectedArmy(currentArmy || 'bulls');
       }
     } catch (error) {
       console.error('Error changing army:', error);
-      alert('Failed to change army');
+      toast.error('Failed to change army');
       setSelectedArmy(currentArmy || 'bulls');
     } finally {
       setIsChanging(false);

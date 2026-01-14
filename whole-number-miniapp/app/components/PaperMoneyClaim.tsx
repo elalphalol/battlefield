@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { getApiUrl } from '../config/api';
+import toast from 'react-hot-toast';
 
 interface PaperMoneyClaimProps {
   onClaim: (newBalance: number) => void;
@@ -79,11 +80,11 @@ export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperM
       if (data.success) {
         onClaim(data.newBalance);
       } else {
-        alert(data.message || 'Failed to claim paper money');
+        toast.error(data.message || 'Failed to claim paper money');
       }
     } catch (error) {
       console.error('Error claiming paper money:', error);
-      alert('Failed to claim paper money');
+      toast.error('Failed to claim paper money');
     } finally {
       setClaiming(false);
     }

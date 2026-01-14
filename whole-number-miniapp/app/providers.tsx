@@ -7,6 +7,7 @@ import { WagmiProvider, createConfig, http } from 'wagmi';
 import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
 import { ReactNode, useEffect } from 'react';
 import sdk from '@farcaster/miniapp-sdk';
+import { Toaster } from 'react-hot-toast';
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,34 @@ export function Providers({ children }: { children: ReactNode }) {
           apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
           chain={base}
         >
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: '#1e293b',
+                color: '#fff',
+                border: '2px solid #475569',
+                borderRadius: '0.5rem',
+                fontSize: '14px',
+                fontWeight: '600',
+              },
+              success: {
+                duration: 2500,
+                iconTheme: {
+                  primary: '#22c55e',
+                  secondary: '#fff',
+                },
+              },
+              error: {
+                duration: 4000,
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: '#fff',
+                },
+              },
+            }}
+          />
           {children}
         </OnchainKitProvider>
       </QueryClientProvider>

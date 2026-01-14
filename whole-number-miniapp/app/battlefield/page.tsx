@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { getApiUrl } from '../config/api';
 import sdk from '@farcaster/miniapp-sdk';
+import toast from 'react-hot-toast';
 import { WalletConnect } from '../components/WalletConnect';
 import { PaperMoneyClaim } from '../components/PaperMoneyClaim';
 import { TradingPanel } from '../components/TradingPanel';
@@ -318,7 +319,7 @@ export default function BattlefieldHome() {
                       const data = await response.json();
                       if (data.success) {
                         await fetchUserData(); // Refresh user data
-                        alert('✅ $1,000 added! Click 9 more times to reach $10k or start trading!');
+                        toast.success('$1,000 added! Click 9 more times to reach $10k or start trading!');
                       }
                     } catch (error) {
                       console.error('Error:', error);

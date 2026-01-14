@@ -6,6 +6,7 @@ import { getApiUrl } from '../../config/api';
 import { Achievements } from '../../components/Achievements';
 import { VolumeTracker } from '../../components/VolumeTracker';
 import sdk from '@farcaster/miniapp-sdk';
+import toast from 'react-hot-toast';
 
 interface UserProfile {
   user: {
@@ -507,9 +508,9 @@ export default function UserProfilePage() {
                         // Fallback: try copying to clipboard
                         try {
                           await navigator.clipboard.writeText(shareText);
-                          alert('✅ Cast text copied to clipboard!');
+                          toast.success('Cast text copied to clipboard!');
                         } catch (clipError) {
-                          alert('❌ Unable to create cast. Please try again.');
+                          toast.error('❌ Unable to create cast. Please try again.');
                         }
                       }
                     };

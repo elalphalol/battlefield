@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Position, ClosedPosition, Stats } from '../lib/strategy';
+import toast from 'react-hot-toast';
 
 export function usePaperTrading(currentPrice: number) {
   const [positions, setPositions] = useState<Position[]>([]);
@@ -39,7 +40,7 @@ export function usePaperTrading(currentPrice: number) {
 
   const openPosition = useCallback((type: 'long' | 'short', coordinate: number) => {
     if (currentPrice === 0) {
-      alert('⚠️ Waiting for price data. Please wait...');
+      toast.error('⚠️ Waiting for price data. Please wait...');
       return;
     }
 

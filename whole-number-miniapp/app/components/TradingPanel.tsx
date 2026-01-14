@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { getApiUrl } from '../config/api';
 import sdk from '@farcaster/miniapp-sdk';
+import toast from 'react-hot-toast';
 
 interface Trade {
   id: number;
@@ -99,18 +100,18 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const handleOpenTrade = async () => {
     // Check position limit
     if (openTrades.length >= 10) {
-      alert('❌ Maximum 10 open positions allowed. Please close some positions first.');
+      toast.error('❌ Maximum 10 open positions allowed. Please close some positions first.');
       return;
     }
 
     // Check minimum position size
     if (positionSize <= 0 || positionSize < 1) {
-      alert('❌ Please enter a position size. Minimum: $1');
+      toast.error('❌ Please enter a position size. Minimum: $1');
       return;
     }
 
     if (!address || positionSize > Number(paperBalance)) {
-      alert(`Insufficient balance. Available: $${Number(paperBalance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
+      toast.error(`Insufficient balance. Available: $${Number(paperBalance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
       return;
     }
 
@@ -147,11 +148,11 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         onTradeComplete();
       } else {
         console.error('❌ Trade failed:', data.message);
-        alert(`❌ ${data.message || 'Failed to open trade'}`);
+        toast.error(`❌ ${data.message || 'Failed to open trade'}`);
       }
     } catch (error) {
       console.error('💥 Error opening trade:', error);
-      alert(`❌ Failed to open trade: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`❌ Failed to open trade: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsOpening(false);
     }
@@ -184,11 +185,11 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         onTradeComplete();
       } else {
         console.error('❌ Close failed:', data.message);
-        alert(`❌ ${data.message || 'Failed to close trade'}`);
+        toast.error(`❌ ${data.message || 'Failed to close trade'}`);
       }
     } catch (error) {
       console.error('💥 Error closing trade:', error);
-      alert(`❌ Failed to close trade: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`❌ Failed to close trade: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setClosingTradeId(null);
     }
@@ -252,12 +253,12 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     const additionalCollateral = Number(collateralAmount);
     
     if (!additionalCollateral || additionalCollateral <= 0) {
-      alert('❌ Enter valid amount');
+      toast.error('❌ Enter valid amount');
       return;
     }
     
     if (additionalCollateral > Number(paperBalance)) {
-      alert(`❌ Insufficient balance: $${Number(paperBalance).toFixed(0)}`);
+      toast.error(`❌ Insufficient balance: $${Number(paperBalance).toFixed(0)}`);
       return;
     }
 
@@ -279,15 +280,15 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       const data = await response.json();
 
       if (data.success) {
-        alert(`✅ +$${additionalCollateral.toFixed(0)}\nNew Liq: $${data.newLiquidationPrice.toFixed(0)}`);
+        toast.success(`+$${additionalCollateral.toFixed(0)} added! New Liq: $${data.newLiquidationPrice.toFixed(0)}`);
         fetchOpenTrades();
         onTradeComplete();
       } else {
-        alert(`❌ ${data.message || 'Failed'}`);
+        toast.error(`❌ ${data.message || 'Failed'}`);
       }
     } catch (error) {
       console.error('Error adding collateral:', error);
-      alert(`❌ Failed to add margin`);
+      toast.error(`❌ Failed to add margin`);
     } finally {
       setAddingCollateralTradeId(null);
       setSelectedTradeId(null);
@@ -325,9 +326,9 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       // Fallback: try copying to clipboard
       try {
         await navigator.clipboard.writeText(shareText);
-        alert('✅ Cast text copied to clipboard!');
+        toast.success('Cast text copied to clipboard!');
       } catch (clipError) {
-        alert('❌ Unable to create cast. Please try again.');
+        toast.error('❌ Unable to create cast. Please try again.');
       }
     }
   };
