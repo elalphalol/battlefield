@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { getApiUrl } from '../../config/api';
 import { Achievements } from '../../components/Achievements';
 import { VolumeTracker } from '../../components/VolumeTracker';
+import { Missions } from '../../components/Missions';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
 
@@ -69,7 +70,7 @@ export default function UserProfilePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceLoaded, setPriceLoaded] = useState(false);
-  const [achievementTab, setAchievementTab] = useState<'achievements' | 'titles' | 'locked'>('achievements');
+  const [achievementTab, setAchievementTab] = useState<'missions' | 'achievements' | 'titles' | 'locked'>('missions');
 
   // Fetch BTC price
   useEffect(() => {
@@ -593,8 +594,18 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* Achievement Tab Navigation - 3 Tabs */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* Profile Tab Navigation - 4 Tabs */}
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            onClick={() => setAchievementTab('missions')}
+            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+              achievementTab === 'missions'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+            }`}
+          >
+            Missions
+          </button>
           <button
             onClick={() => setAchievementTab('achievements')}
             className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
@@ -603,7 +614,7 @@ export default function UserProfilePage() {
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
             }`}
           >
-            Achievements
+            Achieved
           </button>
           <button
             onClick={() => setAchievementTab('titles')}
@@ -627,20 +638,23 @@ export default function UserProfilePage() {
           </button>
         </div>
 
-        {/* Achievements Content */}
-        <div className="bg-slate-800 border-2 border-purple-500 rounded-lg">
-          <div className="p-4 border-b border-slate-700">
-            <h2 className="text-xl font-bold text-yellow-400">
-              {achievementTab === 'achievements' && '🏆 Achievements'}
-              {achievementTab === 'titles' && '👑 Player Titles'}
-              {achievementTab === 'locked' && '🔒 Locked Achievements'}
-            </h2>
-          </div>
-          <div className="p-4 max-h-[600px] overflow-y-auto">
-            {achievementTab === 'achievements' && (
-              <Achievements stats={profile.stats} showOnlyUnlocked={true} />
-            )}
-            {achievementTab === 'titles' && (
+        {/* Tab Content */}
+        {achievementTab === 'missions' ? (
+          <Missions walletAddress={profile.user.wallet_address} />
+        ) : (
+          <div className="bg-slate-800 border-2 border-purple-500 rounded-lg">
+            <div className="p-4 border-b border-slate-700">
+              <h2 className="text-xl font-bold text-yellow-400">
+                {achievementTab === 'achievements' && '🏆 Achievements'}
+                {achievementTab === 'titles' && '👑 Player Titles'}
+                {achievementTab === 'locked' && '🔒 Locked Achievements'}
+              </h2>
+            </div>
+            <div className="p-4 max-h-[600px] overflow-y-auto">
+              {achievementTab === 'achievements' && (
+                <Achievements stats={profile.stats} showOnlyUnlocked={true} />
+              )}
+              {achievementTab === 'titles' && (
               <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 text-center">
                 <h3 className="text-sm text-gray-400 mb-2">Current Title</h3>
                 <div className="flex items-center justify-center gap-3 mb-3">
@@ -665,10 +679,11 @@ export default function UserProfilePage() {
               </div>
             )}
             {achievementTab === 'locked' && (
-              <Achievements stats={profile.stats} showOnlyLocked={true} />
-            )}
+                <Achievements stats={profile.stats} showOnlyLocked={true} />
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Full Trading History with Pagination - Button to expand */}
         {profile.pagination.totalPages > 1 && (

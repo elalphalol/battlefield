@@ -8,38 +8,38 @@ import toast from 'react-hot-toast';
 interface PaperMoneyClaimProps {
   onClaim: (newBalance: number) => void;
   paperBalance: number;
-  walletAddress?: string; // Add optional wallet address prop
+  walletAddress?: string;
 }
 
 export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperMoneyClaimProps) {
   const { address: wagmiAddress } = useAccount();
-  // Use passed wallet address if available, otherwise fall back to wagmi
   const address = walletAddress || wagmiAddress;
   const [claiming, setClaiming] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [cooldownActive, setCooldownActive] = useState(true);
+  const [canClaimFromServer, setCanClaimFromServer] = useState(false);
   const [hasOpenPositions, setHasOpenPositions] = useState(false);
+  const [isEmergencyClaim, setIsEmergencyClaim] = useState(false);
 
-  // Can claim if balance is below $100 AND cooldown is over AND no open positions
-  const canClaim = Number(paperBalance) < 100 && !cooldownActive && !hasOpenPositions;
+  // Can claim if server says OK AND no open positions
+  const canClaim = canClaimFromServer && !hasOpenPositions;
 
   useEffect(() => {
     if (!address) return;
 
-    // Check claim status and open positions
     const checkStatus = async () => {
       try {
-        // Check cooldown
+        // Check claim status
         const response = await fetch(getApiUrl('api/claims/status'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ walletAddress: address })
         });
-        
+
         const data = await response.json();
         if (data.success) {
-          setCooldownActive(!data.canClaim);
+          setCanClaimFromServer(data.canClaim);
           setTimeLeft(data.timeLeft || 0);
+          setIsEmergencyClaim(data.emergencyClaim || false);
         }
 
         // Check open positions
@@ -54,20 +54,24 @@ export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperM
     };
 
     checkStatus();
-    const interval = setInterval(checkStatus, 1000);
-    
+    // Check every 10 seconds instead of every second (daily cooldown doesn't need frequent updates)
+    const interval = setInterval(checkStatus, 10000);
+
     return () => clearInterval(interval);
   }, [address]);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const formatTimeLeft = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
   };
 
   const handleClaim = async () => {
     if (!address || !canClaim || claiming) return;
-    
+
     setClaiming(true);
     try {
       const response = await fetch(getApiUrl('api/claims'), {
@@ -75,10 +79,13 @@ export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperM
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ walletAddress: address })
       });
-      
+
       const data = await response.json();
       if (data.success) {
         onClaim(data.newBalance);
+        toast.success('$1,000 claimed!');
+        // Refresh status
+        setCanClaimFromServer(false);
       } else {
         toast.error(data.message || 'Failed to claim paper money');
       }
@@ -101,8 +108,8 @@ export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperM
 
   return (
     <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-2 border-green-500/50 rounded-lg p-5 shadow-lg">
-      <h3 className="text-xl font-bold text-green-400 mb-4">💰 Claim</h3>
-      
+      <h3 className="text-xl font-bold text-green-400 mb-4">💰 Daily Claim</h3>
+
       <button
         onClick={handleClaim}
         disabled={!canClaim || claiming}
@@ -113,34 +120,34 @@ export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperM
             <span className="inline-block animate-spin mr-2">⏳</span>
             Claiming...
           </>
-        ) : canClaim ? (
-          <>
-            <span className="mr-2">💵</span>
-            Claim $1,000 Now!
-          </>
         ) : hasOpenPositions ? (
           <>
             <span className="mr-2">📊</span>
             Close positions first
           </>
-        ) : cooldownActive ? (
+        ) : canClaim ? (
+          <>
+            <span className="mr-2">💵</span>
+            {isEmergencyClaim ? 'Emergency Claim $1,000!' : 'Claim $1,000 Now!'}
+          </>
+        ) : timeLeft > 0 ? (
           <>
             <span className="mr-2">⏰</span>
-            Cooldown: {formatTime(timeLeft)}
+            Next claim in {formatTimeLeft(timeLeft)}
           </>
         ) : (
           <>
-            <span className="mr-2">💰</span>
-            Balance too high: ${Number(paperBalance).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+            <span className="mr-2">✅</span>
+            Already claimed today
           </>
         )}
       </button>
 
       <div className="mt-3 text-center text-xs leading-relaxed text-gray-400">
         {hasOpenPositions ? (
-          <>Close all positions to claim<br/>Can only claim when balance &lt; $100</>
+          <>Close all positions to claim</>
         ) : (
-          <>Claim $1,000 when balance &lt; $100<br/>(10min cooldown)</>
+          <>Daily $1,000 claim (resets at midnight UTC)<br/>Emergency claim available if balance &lt; $100</>
         )}
       </div>
     </div>

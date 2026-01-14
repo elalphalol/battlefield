@@ -442,7 +442,7 @@ app.patch('/api/users/:walletAddress/army', async (req: Request, res: Response) 
 // PAPER MONEY CLAIM ENDPOINTS
 // ============================================
 
-// Check claim status
+// Check claim status - Daily claim + emergency claim if balance < $100
 app.post('/api/claims/status', async (req: Request, res: Response) => {
   const { walletAddress } = req.body;
 
@@ -452,7 +452,7 @@ app.post('/api/claims/status', async (req: Request, res: Response) => {
 
   try {
     const user = await pool.query(
-      'SELECT last_claim_time FROM users WHERE wallet_address = $1',
+      'SELECT last_claim_time, paper_balance FROM users WHERE wallet_address = $1',
       [walletAddress]
     );
 
@@ -461,32 +461,39 @@ app.post('/api/claims/status', async (req: Request, res: Response) => {
     }
 
     const lastClaim = user.rows[0].last_claim_time;
+    const paperBalance = Number(user.rows[0].paper_balance);
     const now = new Date();
-    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
-    if (!lastClaim || lastClaim < tenMinutesAgo) {
-      res.json({ 
-        success: true, 
-        canClaim: true, 
-        timeLeft: 0,
-        lastClaim: lastClaim 
-      });
-    } else {
-      const timeLeft = Math.ceil((lastClaim.getTime() + 10 * 60 * 1000 - now.getTime()) / 1000);
-      res.json({ 
-        success: true, 
-        canClaim: false, 
-        timeLeft,
-        lastClaim: lastClaim 
-      });
-    }
+    // Get today's UTC midnight
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    // Get tomorrow's UTC midnight for countdown
+    const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000);
+
+    // Check if already claimed today
+    const claimedToday = lastClaim && lastClaim >= todayUTC;
+    // Emergency claim allowed if balance < $100
+    const emergencyClaim = paperBalance < 100;
+    // Can claim if: no claim today OR balance < $100 (emergency claim)
+    const canClaim = !claimedToday || emergencyClaim;
+
+    // Time left until next daily reset (midnight UTC)
+    const timeLeft = claimedToday && !emergencyClaim ? Math.ceil((tomorrowUTC.getTime() - now.getTime()) / 1000) : 0;
+
+    res.json({
+      success: true,
+      canClaim,
+      timeLeft,
+      lastClaim,
+      emergencyClaim: emergencyClaim && claimedToday,
+      nextReset: tomorrowUTC.toISOString()
+    });
   } catch (error) {
     console.error('Error checking claim status:', error);
     res.status(500).json({ success: false, message: 'Failed to check claim status' });
   }
 });
 
-// Claim paper money
+// Claim paper money - Daily claim + emergency claim if balance < $100
 app.post('/api/claims', claimLimiter, async (req: Request, res: Response) => {
   const { walletAddress } = req.body;
 
@@ -519,24 +526,25 @@ app.post('/api/claims', claimLimiter, async (req: Request, res: Response) => {
       });
     }
 
-    // Check if balance is too high
-    if (user.rows[0].paper_balance >= 100) {
-      return res.status(400).json({
-        success: false,
-        message: `Balance too high ($${user.rows[0].paper_balance}). Claims only available when balance < $100.`,
-        balance: user.rows[0].paper_balance
-      });
-    }
-
     const lastClaim = user.rows[0].last_claim_time;
+    const paperBalance = Number(user.rows[0].paper_balance);
     const now = new Date();
-    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
 
-    if (lastClaim && lastClaim > tenMinutesAgo) {
-      const timeLeft = Math.ceil((lastClaim.getTime() + 10 * 60 * 1000 - now.getTime()) / 1000);
+    // Get today's UTC midnight
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrowUTC = new Date(todayUTC.getTime() + 24 * 60 * 60 * 1000);
+
+    // Check if already claimed today
+    const claimedToday = lastClaim && lastClaim >= todayUTC;
+    // Emergency claim allowed if balance < $100
+    const emergencyClaim = paperBalance < 100;
+
+    // Block if already claimed today AND balance >= $100
+    if (claimedToday && !emergencyClaim) {
+      const timeLeft = Math.ceil((tomorrowUTC.getTime() - now.getTime()) / 1000);
       return res.status(429).json({
         success: false,
-        message: `Cooldown active. ${timeLeft}s remaining.`,
+        message: `Already claimed today. Next claim at midnight UTC.`,
         timeLeft
       });
     }
@@ -562,8 +570,11 @@ app.post('/api/claims', claimLimiter, async (req: Request, res: Response) => {
 
     await pool.query('COMMIT');
 
-    res.json({ 
-      success: true, 
+    // Update mission progress for claim streak
+    updateClaimStreakProgress(user.rows[0].id);
+
+    res.json({
+      success: true,
       amount: 1000,
       newBalance: updated.rows[0].paper_balance
     });
@@ -673,6 +684,9 @@ app.post('/api/trades/open', tradingLimiter, async (req: Request, res: Response)
     `);
 
     await pool.query('COMMIT');
+
+    // Update mission progress for trade missions
+    updateMissionProgress(user.rows[0].id, 'trade', 1);
 
     res.json({ success: true, trade: trade.rows[0] });
   } catch (error) {
@@ -832,8 +846,13 @@ app.post('/api/trades/close', tradingLimiter, async (req: Request, res: Response
 
     await pool.query('COMMIT');
 
-    res.json({ 
-      success: true, 
+    // Update mission progress for win missions (only if profitable)
+    if (finalPnl > 0) {
+      updateMissionProgress(t.user_id, 'win', 1);
+    }
+
+    res.json({
+      success: true,
       pnl,
       tradingFee,
       feePercentage,
@@ -1980,14 +1999,438 @@ app.post('/api/notifications/settings', async (req: Request, res: Response) => {
 });
 
 // ============================================
+// MISSIONS SYSTEM
+// ============================================
+
+// Helper: Get current daily period (resets at 12:00 UTC)
+function getDailyPeriod(): { start: Date; end: Date } {
+  const now = new Date();
+  const todayNoon = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12, 0, 0));
+
+  let start: Date;
+  let end: Date;
+
+  if (now.getTime() < todayNoon.getTime()) {
+    // Before noon today - period is yesterday noon to today noon
+    start = new Date(todayNoon.getTime() - 24 * 60 * 60 * 1000);
+    end = todayNoon;
+  } else {
+    // After noon today - period is today noon to tomorrow noon
+    start = todayNoon;
+    end = new Date(todayNoon.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  return { start, end };
+}
+
+// Helper: Get current weekly period (resets Monday 12:00 UTC)
+function getWeeklyPeriod(): { start: Date; end: Date } {
+  const now = new Date();
+  const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 1 = Monday, ...
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+  // Get this week's Monday at noon UTC
+  const thisMonday = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() - daysFromMonday,
+    12, 0, 0
+  ));
+
+  let start: Date;
+  let end: Date;
+
+  if (now.getTime() < thisMonday.getTime()) {
+    // Before Monday noon - period is last week
+    start = new Date(thisMonday.getTime() - 7 * 24 * 60 * 60 * 1000);
+    end = thisMonday;
+  } else {
+    // After Monday noon - period is this week
+    start = thisMonday;
+    end = new Date(thisMonday.getTime() + 7 * 24 * 60 * 60 * 1000);
+  }
+
+  return { start, end };
+}
+
+// Helper: Get one-time mission period (never resets - use a fixed epoch start)
+function getOnetimePeriod(): { start: Date; end: Date } {
+  // Use a fixed date far in the past as start, and far in the future as end
+  // This ensures one-time missions are only ever completed once
+  const start = new Date('2020-01-01T00:00:00Z');
+  const end = new Date('2099-12-31T23:59:59Z');
+  return { start, end };
+}
+
+// Helper: Get mission period based on type
+function getMissionPeriod(missionType: string): { start: Date; end: Date } {
+  switch (missionType) {
+    case 'daily':
+      return getDailyPeriod();
+    case 'weekly':
+      return getWeeklyPeriod();
+    case 'onetime':
+      return getOnetimePeriod();
+    default:
+      return getDailyPeriod();
+  }
+}
+
+// GET /api/missions - List all active missions
+app.get('/api/missions', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, mission_key, mission_type, title, description, objective_type,
+              objective_value, reward_amount, icon, display_order
+       FROM missions
+       WHERE is_active = true
+       ORDER BY mission_type, display_order`
+    );
+
+    res.json({ success: true, missions: result.rows });
+  } catch (error) {
+    console.error('Error fetching missions:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch missions' });
+  }
+});
+
+// GET /api/missions/:walletAddress - Get user's missions with progress
+app.get('/api/missions/:walletAddress', async (req: Request, res: Response) => {
+  const { walletAddress } = req.params;
+
+  try {
+    // Get user
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE LOWER(wallet_address) = LOWER($1)',
+      [walletAddress]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const userId = userResult.rows[0].id;
+    const dailyPeriod = getDailyPeriod();
+    const weeklyPeriod = getWeeklyPeriod();
+    const onetimePeriod = getOnetimePeriod();
+
+    // Get all active missions
+    const missionsResult = await pool.query(
+      `SELECT id, mission_key, mission_type, title, description, objective_type,
+              objective_value, reward_amount, icon, display_order
+       FROM missions
+       WHERE is_active = true
+       ORDER BY mission_type, display_order`
+    );
+
+    // Get user's progress for current periods (including one-time)
+    const progressResult = await pool.query(
+      `SELECT mission_id, progress, is_completed, is_claimed, completed_at, claimed_at, period_start
+       FROM user_missions
+       WHERE user_id = $1
+         AND ((period_start = $2) OR (period_start = $3) OR (period_start = $4))`,
+      [userId, dailyPeriod.start, weeklyPeriod.start, onetimePeriod.start]
+    );
+
+    const progressMap = new Map();
+    progressResult.rows.forEach(p => {
+      progressMap.set(`${p.mission_id}-${p.period_start.toISOString()}`, p);
+    });
+
+    // Combine missions with progress
+    const missions = missionsResult.rows.map(mission => {
+      const period = getMissionPeriod(mission.mission_type);
+      const key = `${mission.id}-${period.start.toISOString()}`;
+      const progress = progressMap.get(key);
+
+      return {
+        ...mission,
+        progress: progress?.progress || 0,
+        is_completed: progress?.is_completed || false,
+        is_claimed: progress?.is_claimed || false,
+        completed_at: progress?.completed_at,
+        claimed_at: progress?.claimed_at,
+        period_start: period.start,
+        period_end: period.end
+      };
+    });
+
+    res.json({
+      success: true,
+      missions,
+      daily_reset: dailyPeriod.end,
+      weekly_reset: weeklyPeriod.end
+    });
+  } catch (error) {
+    console.error('Error fetching user missions:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch missions' });
+  }
+});
+
+// POST /api/missions/:missionId/claim - Claim mission reward
+app.post('/api/missions/:missionId/claim', async (req: Request, res: Response) => {
+  const { missionId } = req.params;
+  const { walletAddress } = req.body;
+
+  if (!walletAddress) {
+    return res.status(400).json({ success: false, message: 'Wallet address required' });
+  }
+
+  try {
+    await pool.query('BEGIN');
+
+    // Get user
+    const userResult = await pool.query(
+      'SELECT id, paper_balance FROM users WHERE LOWER(wallet_address) = LOWER($1)',
+      [walletAddress]
+    );
+
+    if (userResult.rows.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const userId = userResult.rows[0].id;
+
+    // Get mission
+    const missionResult = await pool.query(
+      'SELECT * FROM missions WHERE id = $1 AND is_active = true',
+      [missionId]
+    );
+
+    if (missionResult.rows.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Mission not found' });
+    }
+
+    const mission = missionResult.rows[0];
+    const period = getMissionPeriod(mission.mission_type);
+
+    // Get user's mission progress
+    const progressResult = await pool.query(
+      `SELECT * FROM user_missions
+       WHERE user_id = $1 AND mission_id = $2 AND period_start = $3`,
+      [userId, missionId, period.start]
+    );
+
+    if (progressResult.rows.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: 'Mission not started' });
+    }
+
+    const progress = progressResult.rows[0];
+
+    if (!progress.is_completed) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: 'Mission not completed' });
+    }
+
+    if (progress.is_claimed) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: 'Already claimed' });
+    }
+
+    // Mark as claimed and add reward to user balance
+    const rewardAmount = Number(mission.reward_amount) / 100; // Convert cents to dollars
+
+    await pool.query(
+      `UPDATE user_missions SET is_claimed = true, claimed_at = NOW()
+       WHERE id = $1`,
+      [progress.id]
+    );
+
+    const balanceResult = await pool.query(
+      `UPDATE users SET paper_balance = paper_balance + $1
+       WHERE id = $2 RETURNING paper_balance`,
+      [rewardAmount, userId]
+    );
+
+    await pool.query('COMMIT');
+
+    console.log(`🎯 Mission claimed: ${mission.title} by user ${userId}, reward: $${rewardAmount}`);
+
+    res.json({
+      success: true,
+      reward: rewardAmount,
+      new_balance: Number(balanceResult.rows[0].paper_balance)
+    });
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    console.error('Error claiming mission:', error);
+    res.status(500).json({ success: false, message: 'Failed to claim mission' });
+  }
+});
+
+// POST /api/missions/complete - Mark manual mission as complete (follow)
+app.post('/api/missions/complete', async (req: Request, res: Response) => {
+  const { walletAddress, missionKey } = req.body;
+
+  if (!walletAddress || !missionKey) {
+    return res.status(400).json({ success: false, message: 'Wallet address and mission key required' });
+  }
+
+  try {
+    // Get user
+    const userResult = await pool.query(
+      'SELECT id FROM users WHERE LOWER(wallet_address) = LOWER($1)',
+      [walletAddress]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const userId = userResult.rows[0].id;
+
+    // Get mission
+    const missionResult = await pool.query(
+      'SELECT * FROM missions WHERE mission_key = $1 AND is_active = true',
+      [missionKey]
+    );
+
+    if (missionResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Mission not found' });
+    }
+
+    const mission = missionResult.rows[0];
+    const period = getMissionPeriod(mission.mission_type);
+
+    // Upsert user mission progress
+    await pool.query(
+      `INSERT INTO user_missions (user_id, mission_id, progress, is_completed, completed_at, period_start, period_end)
+       VALUES ($1, $2, $3, true, NOW(), $4, $5)
+       ON CONFLICT (user_id, mission_id, period_start)
+       DO UPDATE SET progress = $3, is_completed = true, completed_at = NOW()
+       WHERE user_missions.is_completed = false`,
+      [userId, mission.id, mission.objective_value, period.start, period.end]
+    );
+
+    console.log(`🎯 Mission completed: ${mission.title} by user ${userId}`);
+
+    res.json({ success: true, message: 'Mission completed' });
+  } catch (error) {
+    console.error('Error completing mission:', error);
+    res.status(500).json({ success: false, message: 'Failed to complete mission' });
+  }
+});
+
+// Helper: Update claim streak progress
+async function updateClaimStreakProgress(userId: number): Promise<void> {
+  try {
+    // Get the claim_streak mission
+    const missionResult = await pool.query(
+      `SELECT id, objective_value FROM missions WHERE objective_type = 'claim_streak' AND is_active = true`
+    );
+
+    if (missionResult.rows.length === 0) return;
+
+    const mission = missionResult.rows[0];
+    const period = getWeeklyPeriod();
+
+    // Get user's claims from the past few days
+    const claimsResult = await pool.query(
+      `SELECT DATE(created_at AT TIME ZONE 'UTC') as claim_date
+       FROM claims
+       WHERE user_id = $1 AND created_at >= $2
+       ORDER BY claim_date DESC`,
+      [userId, period.start]
+    );
+
+    // Calculate consecutive days (including today)
+    const claimDates = claimsResult.rows.map(r => r.claim_date.toISOString().split('T')[0]);
+    const uniqueDates = [...new Set(claimDates)];
+
+    // Count consecutive days from today backwards
+    let consecutiveDays = 0;
+    const today = new Date();
+    for (let i = 0; i < uniqueDates.length; i++) {
+      const expectedDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - i));
+      const expectedDateStr = expectedDate.toISOString().split('T')[0];
+
+      if (uniqueDates.includes(expectedDateStr)) {
+        consecutiveDays++;
+      } else {
+        break;
+      }
+    }
+
+    // Update mission progress with the streak count (not increment, but set to current streak)
+    await pool.query(
+      `INSERT INTO user_missions (user_id, mission_id, progress, period_start, period_end)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, mission_id, period_start)
+       DO UPDATE SET progress = $3
+       WHERE user_missions.is_completed = false
+       RETURNING progress`,
+      [userId, mission.id, consecutiveDays, period.start, period.end]
+    );
+
+    // Check if completed
+    if (consecutiveDays >= mission.objective_value) {
+      await pool.query(
+        `UPDATE user_missions SET is_completed = true, completed_at = NOW()
+         WHERE user_id = $1 AND mission_id = $2 AND period_start = $3 AND is_completed = false`,
+        [userId, mission.id, period.start]
+      );
+      console.log(`🎯 Claim streak mission completed: ${consecutiveDays} consecutive days for user ${userId}`);
+    }
+  } catch (error) {
+    console.error('Error updating claim streak progress:', error);
+  }
+}
+
+// Helper: Update mission progress (called from other endpoints)
+async function updateMissionProgress(userId: number, objectiveType: string, incrementBy: number = 1): Promise<void> {
+  try {
+    // Get missions matching this objective type
+    const missionsResult = await pool.query(
+      `SELECT id, mission_type, objective_value FROM missions
+       WHERE objective_type = $1 AND is_active = true`,
+      [objectiveType]
+    );
+
+    for (const mission of missionsResult.rows) {
+      const period = getMissionPeriod(mission.mission_type);
+
+      // Upsert progress
+      const result = await pool.query(
+        `INSERT INTO user_missions (user_id, mission_id, progress, period_start, period_end)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (user_id, mission_id, period_start)
+         DO UPDATE SET progress = user_missions.progress + $3
+         WHERE user_missions.is_completed = false
+         RETURNING progress`,
+        [userId, mission.id, incrementBy, period.start, period.end]
+      );
+
+      // Check if completed
+      if (result.rows.length > 0) {
+        const newProgress = result.rows[0].progress;
+        if (newProgress >= mission.objective_value) {
+          await pool.query(
+            `UPDATE user_missions SET is_completed = true, completed_at = NOW()
+             WHERE user_id = $1 AND mission_id = $2 AND period_start = $3 AND is_completed = false`,
+            [userId, mission.id, period.start]
+          );
+          console.log(`🎯 Mission auto-completed: mission ${mission.id} for user ${userId}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error updating mission progress:', error);
+    // Don't throw - mission progress is non-critical
+  }
+}
+
+// ============================================
 // ERROR HANDLING
 // ============================================
 
 // 404 handler
 app.use((req: Request, res: Response) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'Endpoint not found' 
+  res.status(404).json({
+    success: false,
+    message: 'Endpoint not found'
   });
 });
 

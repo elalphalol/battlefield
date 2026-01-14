@@ -130,21 +130,33 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
             const imageUrl = generateImageUrl();
             const army = userData?.army || 'bulls';
             const armyEmoji = army === 'bears' ? '🐻' : '🐂';
-            
+
             // Add liquidation status to share text
             const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
             const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
+
+            // Track the cast for mission progress
+            try {
+              await fetch(getApiUrl('api/missions/complete'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ walletAddress: address, missionKey: 'cast_result' })
+              });
+            } catch (err) {
+              console.error('Failed to track cast mission:', err);
+            }
 
             // Use Farcaster Frame SDK to open composer
             try {
               const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
               await sdk.actions.openUrl(castUrl);
+              toast.success('🎯 Mission done! Claim $500 in Missions tab');
             } catch (error) {
               console.error('Error casting to Farcaster:', error);
               // Fallback: try copying to clipboard
               try {
                 await navigator.clipboard.writeText(shareText);
-                toast.success('Cast text copied to clipboard!');
+                toast.success('Copied! 🎯 Claim $500 in Missions tab');
               } catch (clipError) {
                 toast.error('❌ Unable to create cast. Please try again.');
               }

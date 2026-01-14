@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { getApiUrl } from '../config/api';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
+import { TradeResultToast } from './TradeResultToast';
 
 interface Trade {
   id: number;
@@ -41,6 +42,11 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const [showCollateralModal, setShowCollateralModal] = useState(false);
   const [collateralAmount, setCollateralAmount] = useState('');
   const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
+
+  // Trade result toast state
+  const [showResultToast, setShowResultToast] = useState(false);
+  const [resultPnl, setResultPnl] = useState(0);
+  const [resultIsLiquidated, setResultIsLiquidated] = useState(false);
 
   // Calculate actual position size from percentage
   // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
@@ -179,8 +185,15 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       console.log('📊 Close response data:', data);
 
       if (data.success) {
-        // Silently close position - no alert
         console.log('✅ Trade closed successfully');
+
+        // Show trade result toast
+        const closedPnl = data.pnl || 0;
+        const wasLiquidated = data.status === 'liquidated';
+        setResultPnl(closedPnl);
+        setResultIsLiquidated(wasLiquidated);
+        setShowResultToast(true);
+
         fetchOpenTrades();
         onTradeComplete();
       } else {
@@ -300,7 +313,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     const armyEmoji = army === 'bears' ? '🐻' : '🐂';
     const websiteUrl = window.location.origin;
     const username = userData?.username || address?.slice(0, 8);
-    
+
     // Create params for share card image
     const params = new URLSearchParams({
       army,
@@ -312,21 +325,33 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       v: Date.now().toString()
     });
     const imageUrl = `${websiteUrl}/api/share-card?${params.toString()}`;
-    
+
     // Open position text
     const statusText = pnl >= 0 ? `up +$${Math.abs(pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : `down -$${Math.abs(pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     const shareText = `${armyEmoji} I have an OPEN position on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | Currently ${statusText} (${percentage >= 0 ? '+' : ''}${percentage.toFixed(1)}%)\n\n💭 Should I close it?\n\n⚔️ Bears vs Bulls`;
+
+    // Track the cast for mission progress
+    try {
+      await fetch(getApiUrl('api/missions/complete'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: address, missionKey: 'cast_result' })
+      });
+    } catch (err) {
+      console.error('Failed to track cast mission:', err);
+    }
 
     // Use Farcaster Frame SDK to open composer
     try {
       const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
       await sdk.actions.openUrl(castUrl);
+      toast.success('🎯 Mission done! Claim $500 in Missions tab');
     } catch (error) {
       console.error('Error casting to Farcaster:', error);
       // Fallback: try copying to clipboard
       try {
         await navigator.clipboard.writeText(shareText);
-        toast.success('Cast text copied to clipboard!');
+        toast.success('Copied! 🎯 Claim $500 in Missions tab');
       } catch (clipError) {
         toast.error('❌ Unable to create cast. Please try again.');
       }
@@ -344,6 +369,14 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
   return (
     <div className="space-y-4">
+      {/* Trade Result Toast */}
+      <TradeResultToast
+        isVisible={showResultToast}
+        pnl={resultPnl}
+        isLiquidated={resultIsLiquidated}
+        onDismiss={() => setShowResultToast(false)}
+      />
+
       {/* Open New Position */}
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
         <h3 className="text-xl font-bold text-yellow-400 mb-4">📈 Open Position</h3>
