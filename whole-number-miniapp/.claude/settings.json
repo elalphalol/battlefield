@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'pm2 restart\\|npm start\\|node server'; then /var/www/battlefield/whole-number-miniapp/backend/scripts/fix-sequences.sh 2>/dev/null || true; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'git commit|git push'; then cd /var/www/battlefield/whole-number-miniapp && npm run lint --silent 2>/dev/null || echo 'Warning: Lint check skipped or has warnings'; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'duplicate key.*trades_pkey\\|Failed to open trade'; then echo 'Sequence issue detected - run /fix-sequences'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'Build failed|error TS[0-9]+|Cannot find module'; then echo '\\n[Hook] Build error detected. Check TypeScript compilation.'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
