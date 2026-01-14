@@ -196,16 +196,37 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// Admin audit logging
+const auditLog = (action: string, details: Record<string, unknown>, ip: string, success: boolean) => {
+  const entry = {
+    timestamp: new Date().toISOString(),
+    type: 'ADMIN_AUDIT',
+    action,
+    ip,
+    success,
+    details
+  };
+  console.log(JSON.stringify(entry));
+};
+
 // Admin authentication middleware
 const adminAuth = (req: Request, res: Response, next: NextFunction) => {
   const adminKey = req.headers['x-admin-key'];
+  const ip = req.headers['x-real-ip'] as string || req.ip || 'unknown';
+
   if (!process.env.ADMIN_API_KEY) {
+    auditLog('AUTH_FAILURE', { reason: 'ADMIN_API_KEY not configured', path: req.path }, ip, false);
     console.error('ADMIN_API_KEY environment variable not set');
     return res.status(500).json({ error: 'Server configuration error' });
   }
   if (adminKey !== process.env.ADMIN_API_KEY) {
+    auditLog('AUTH_FAILURE', { reason: 'Invalid API key', path: req.path }, ip, false);
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  // Attach IP to request for use in endpoint logging
+  (req as any).adminIp = ip;
+  auditLog('AUTH_SUCCESS', { path: req.path }, ip, true);
   next();
 };
 
@@ -1545,10 +1566,11 @@ app.post('/api/admin/update-user-profile', adminAuth, async (req: Request, res: 
       });
     }
 
-    console.log(`✅ Admin updated user: ${username} (FID: ${fid}) for wallet ${walletAddress}`);
+    auditLog('UPDATE_USER_PROFILE', { walletAddress, fid, username, pfpUrl }, (req as any).adminIp, true);
     res.json({ success: true, user: updated.rows[0] });
   } catch (error) {
     console.error('Error updating user profile:', error);
+    auditLog('UPDATE_USER_PROFILE', { walletAddress, fid, username, error: String(error) }, (req as any).adminIp, false);
     res.status(500).json({ success: false, message: 'Failed to update user profile' });
   }
 });
@@ -1565,12 +1587,14 @@ app.post('/api/admin/recalculate-armies', adminAuth, async (req: Request, res: R
       updated++;
     }
 
-    res.json({ 
-      success: true, 
-      message: `Successfully recalculated armies for ${updated} users` 
+    auditLog('RECALCULATE_ARMIES', { usersUpdated: updated }, (req as any).adminIp, true);
+    res.json({
+      success: true,
+      message: `Successfully recalculated armies for ${updated} users`
     });
   } catch (error) {
     console.error('Error recalculating armies:', error);
+    auditLog('RECALCULATE_ARMIES', { error: String(error) }, (req as any).adminIp, false);
     res.status(500).json({ success: false, message: 'Failed to recalculate armies' });
   }
 });
@@ -1625,13 +1649,15 @@ app.post('/api/admin/fix-balances', adminAuth, async (req: Request, res: Respons
       ORDER BY u.total_pnl DESC
     `);
 
-    res.json({ 
-      success: true, 
+    auditLog('FIX_BALANCES', { usersUpdated: results.rows.length }, (req as any).adminIp, true);
+    res.json({
+      success: true,
       message: `Successfully recalculated balances for ${results.rows.length} users`,
       users: results.rows
     });
   } catch (error) {
     console.error('Error fixing balances:', error);
+    auditLog('FIX_BALANCES', { error: String(error) }, (req as any).adminIp, false);
     res.status(500).json({ success: false, message: 'Failed to fix balances' });
   }
 });
