@@ -59,6 +59,10 @@ export default function BattlefieldHome() {
     const tab = params.get('tab');
     if (tab === 'leaderboard') {
       setActiveTab('leaderboard');
+    } else if (tab === 'battle') {
+      setActiveTab('battle');
+    } else if (tab === 'learn') {
+      setActiveTab('learn');
     }
   }, []);
   

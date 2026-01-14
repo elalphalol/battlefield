@@ -778,7 +778,7 @@ export default function UserProfilePage() {
             </button>
             
             <button
-              onClick={() => router.push('/battle')}
+              onClick={() => router.push('/battlefield?tab=battle')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">⚔️</span>
@@ -807,7 +807,7 @@ export default function UserProfilePage() {
             </button>
             
             <button
-              onClick={() => router.push('/learn')}
+              onClick={() => router.push('/battlefield?tab=learn')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
               <span className="text-2xl">📚</span>
