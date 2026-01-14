@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { base } from 'wagmi/chains';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors';
+import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 import { ReactNode, useEffect } from 'react';
 import sdk from '@farcaster/miniapp-sdk';
 import { Toaster } from 'react-hot-toast';
@@ -14,6 +15,7 @@ const queryClient = new QueryClient();
 const wagmiConfig = createConfig({
   chains: [base],
   connectors: [
+    farcasterMiniApp(),
     injected(),
     walletConnect({
       projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID',
