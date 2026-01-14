@@ -107,8 +107,32 @@ pool.connect(async (err, client, release) => {
   release();
 });
 
-// Middleware
-app.use(cors());
+// CORS Configuration - Restrict to specific origins
+const allowedOrigins = [
+  'http://localhost:3000',                    // Local development
+  'https://battlefield-roan.vercel.app',      // Vercel production
+  'https://warpcast.com',                     // Warpcast origin
+  'https://client.warpcast.com',              // Warpcast client
+  process.env.FRONTEND_URL,                   // Custom domain (future VPS)
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, same-origin)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Request logging middleware
