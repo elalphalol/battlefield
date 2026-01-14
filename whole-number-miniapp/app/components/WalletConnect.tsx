@@ -1,52 +1,101 @@
 'use client';
 
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { farcasterAuth, type FarcasterUser } from '../lib/farcaster';
 
 export function WalletConnect() {
   const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { connect, connectors, error: connectError } = useConnect();
   const { disconnect } = useDisconnect();
   const [showModal, setShowModal] = useState(false);
   const [isInFarcaster, setIsInFarcaster] = useState(false);
   const [farcasterUser, setFarcasterUser] = useState<FarcasterUser | null>(null);
   const [farcasterConnecting, setFarcasterConnecting] = useState(false);
+  const autoConnectAttempted = useRef(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Log connection errors
+  useEffect(() => {
+    if (connectError) {
+      console.error('Wallet connection error:', connectError);
+    }
+  }, [connectError]);
+
+  // Track if component is mounted (for portal)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Initialize Farcaster SDK on mount
   useEffect(() => {
     const initFarcaster = async () => {
       const initialized = await farcasterAuth.initialize();
-      setIsInFarcaster(initialized);
-      
+
       if (initialized) {
         const user = await farcasterAuth.getFarcasterUser();
-        if (user) {
+        if (user && user.fid) {
+          setIsInFarcaster(true);
           setFarcasterUser(user);
           console.log('Farcaster user detected:', user);
+        } else {
+          setIsInFarcaster(false);
+          console.log('Farcaster SDK initialized but no user - regular browser');
+        }
+      } else {
+        setIsInFarcaster(false);
+      }
+    };
+
+    initFarcaster();
+  }, []);
+
+  // Auto-connect using Farcaster connector when in Farcaster frame
+  useEffect(() => {
+    const autoConnectFarcaster = async () => {
+      if (autoConnectAttempted.current || !isInFarcaster || isConnected) {
+        return;
+      }
+
+      autoConnectAttempted.current = true;
+
+      const farcasterConnector = connectors.find(c =>
+        c.id === 'farcasterMiniApp' || c.name.toLowerCase().includes('farcaster')
+      );
+
+      if (farcasterConnector) {
+        console.log('Auto-connecting with Farcaster connector...');
+        try {
+          connect({ connector: farcasterConnector });
+        } catch (error) {
+          console.log('Auto-connect failed, user can connect manually:', error);
         }
       }
     };
-    
-    initFarcaster();
-  }, []);
+
+    const timer = setTimeout(autoConnectFarcaster, 500);
+    return () => clearTimeout(timer);
+  }, [isInFarcaster, isConnected, connectors, connect]);
 
   // When wallet connects in Farcaster frame, update profile with Farcaster data
   useEffect(() => {
     const updateFarcasterData = async () => {
-      if (isConnected && address && isInFarcaster && !farcasterUser) {
-        console.log('Wallet connected in Farcaster frame, fetching Farcaster data...');
-        const user = await farcasterAuth.getFarcasterUser();
-        if (user) {
-          setFarcasterUser(user);
-          // Update backend with Farcaster data
+      if (isConnected && address && isInFarcaster) {
+        if (!farcasterUser) {
+          const user = await farcasterAuth.getFarcasterUser();
+          if (user) {
+            setFarcasterUser(user);
+            await farcasterAuth.updateExistingUser(address);
+          }
+        } else {
           await farcasterAuth.updateExistingUser(address);
         }
       }
     };
-    
+
     updateFarcasterData();
-  }, [isConnected, address, isInFarcaster]);
+  }, [isConnected, address, isInFarcaster, farcasterUser]);
 
   // Handle Farcaster sign-in
   const handleFarcasterSignIn = async () => {
@@ -55,38 +104,40 @@ export function WalletConnect() {
       const result = await farcasterAuth.signInWithFarcaster();
       if (result) {
         const { farcasterUser, walletAddress } = result;
-        
-        // Register user on backend
         await farcasterAuth.registerUser(farcasterUser, walletAddress);
-        
         setFarcasterUser(farcasterUser);
         setShowModal(false);
-        
-        // Show success message
-        console.log('✅ Farcaster authentication successful!');
+        console.log('Farcaster authentication successful!');
       }
     } catch (error) {
       console.error('Farcaster sign-in error:', error);
-      // Only log error, don't show alert - user can try wallet connection instead
     } finally {
       setFarcasterConnecting(false);
     }
   };
 
-  // Connected state (either wallet or Farcaster)
+  // Connected state
   if (isConnected && address) {
     return (
       <div className="relative">
         <button
           onClick={() => setShowModal(!showModal)}
-          className="bg-slate-800 border-2 border-blue-500 rounded-lg px-4 py-2 text-white hover:bg-slate-700 flex items-center gap-2"
+          className={`rounded-lg px-4 py-2 text-white flex items-center gap-2 ${
+            farcasterUser
+              ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500'
+              : 'bg-slate-800 border-2 border-blue-500 hover:bg-slate-700'
+          }`}
         >
-          {farcasterUser && (
-            <span className="text-purple-400">🎭</span>
+          {farcasterUser ? (
+            <>
+              <span>🎭</span>
+              <span className="font-semibold">{farcasterUser.username || farcasterUser.displayName || `FID ${farcasterUser.fid}`}</span>
+            </>
+          ) : (
+            <span>{address.slice(0, 6)}...{address.slice(-4)}</span>
           )}
-          {address.slice(0, 6)}...{address.slice(-4)}
         </button>
-        
+
         {showModal && (
           <div className="absolute right-0 mt-2 w-64 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-50">
             <div className="p-4">
@@ -130,7 +181,7 @@ export function WalletConnect() {
         >
           🎭 {farcasterUser.username || `FID ${farcasterUser.fid}`}
         </button>
-        
+
         {showModal && (
           <div className="absolute right-0 mt-2 w-80 bg-slate-800 border-2 border-slate-700 rounded-lg shadow-xl z-50">
             <div className="p-4">
@@ -147,14 +198,6 @@ export function WalletConnect() {
                     <div className="text-gray-400 text-xs">FID: {farcasterUser.fid}</div>
                   </div>
                 </div>
-                {farcasterUser.verifications && farcasterUser.verifications.length > 0 && (
-                  <div className="text-xs text-gray-400 mt-2">
-                    <div className="text-green-400 mb-1">✅ Verified Address:</div>
-                    <div className="font-mono text-white">
-                      {farcasterUser.verifications[0].slice(0, 6)}...{farcasterUser.verifications[0].slice(-4)}
-                    </div>
-                  </div>
-                )}
               </div>
               <button
                 onClick={() => setShowModal(false)}
@@ -178,43 +221,35 @@ export function WalletConnect() {
       >
         🔗 Connect Wallet
       </button>
-      
-      {showModal && (
-        <>
-          {/* Backdrop for mobile and desktop */}
-          <div 
-            className="fixed inset-0 bg-black/60 z-[999] md:hidden"
+
+      {showModal && isMounted && createPortal(
+        <div className="fixed inset-0 z-[99999]">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80"
             onClick={() => setShowModal(false)}
           />
-          
-          {/* Modal - Bottom sheet on mobile, dropdown on desktop */}
-          <div className="fixed md:absolute 
-                          inset-x-0 md:inset-x-auto
-                          bottom-0 md:bottom-auto
-                          md:right-0 
-                          md:top-full md:mt-2 
-                          w-full md:w-80 
-                          bg-slate-800 border-2 border-slate-700 
-                          rounded-t-3xl md:rounded-lg 
-                          shadow-2xl z-[1000]
-                          max-h-[65vh] md:max-h-[85vh] 
-                          overflow-y-auto
-                          animate-slide-up md:animate-none">
-            <div className="p-4 md:p-4 pb-safe">
-              {/* Mobile drag handle */}
-              <div className="w-12 h-1.5 bg-slate-600 rounded-full mx-auto mb-3 md:hidden flex-shrink-0" />
-              
-              <div className="flex items-center justify-between mb-4 flex-shrink-0">
+
+          {/* Modal - Bottom sheet */}
+          <div
+            className="absolute left-0 right-0 bottom-0 bg-slate-800 border-t-2 border-slate-600 rounded-t-2xl shadow-2xl max-h-[75vh] overflow-y-auto"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
+          >
+            <div className="p-5 pb-8">
+              {/* Drag handle */}
+              <div className="w-12 h-1.5 bg-slate-500 rounded-full mx-auto mb-4" />
+
+              <div className="flex items-center justify-between mb-4">
                 <div className="text-white font-bold text-lg">Connect Wallet</div>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-white text-3xl leading-none w-8 h-8 flex items-center justify-center"
+                  className="text-gray-400 hover:text-white text-3xl leading-none w-10 h-10 flex items-center justify-center bg-slate-700 rounded-full"
                   aria-label="Close"
                 >
                   ×
                 </button>
               </div>
-              
+
               <div className="space-y-3">
                 {/* Farcaster Sign In - ONLY show when in Farcaster Frame (Warpcast) */}
                 {isInFarcaster && !farcasterUser && (
@@ -241,55 +276,150 @@ export function WalletConnect() {
                 <div className="text-gray-400 text-xs mb-2 font-semibold">
                   {isInFarcaster ? 'Connect with wallet:' : 'Select wallet to connect:'}
                 </div>
-                
-                {connectors.map((connector) => (
-                  <button
-                    key={connector.id}
-                    onClick={() => {
-                      try {
-                        connect({ connector });
-                        // Don't close immediately for mobile - let user complete action
-                        setTimeout(() => setShowModal(false), 500);
-                      } catch (error) {
-                        console.error('Connection error:', error);
-                      }
-                    }}
-                    className="w-full bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white py-4 rounded-lg font-bold text-left px-4 flex items-center justify-between transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {connector.id === 'injected' ? '🦊' : 
-                         connector.id === 'walletConnect' ? '📱' : 
-                         '💼'}
-                      </span>
-                      <div>
-                        <div className="font-bold">
-                          {connector.id === 'injected' ? 'Browser Wallet' : 
-                           connector.id === 'walletConnect' ? 'Mobile Wallets' : 
-                           connector.name}
+
+                {/* Wallet options - different for mobile vs desktop */}
+                {(() => {
+                  const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+                  // Find specific connectors
+                  const metaMaskConnector = connectors.find(c => c.id === 'metaMaskSDK' || c.id === 'metaMask');
+                  const coinbaseConnector = connectors.find(c => c.id === 'coinbaseWalletSDK' || c.id === 'coinbaseWallet');
+                  const injectedConnector = connectors.find(c => c.id === 'injected');
+
+                  if (isMobile && !isInFarcaster) {
+                    // Mobile browser - show SDK-powered buttons
+                    return (
+                      <>
+                        {/* Info about how it works */}
+                        <div className="mb-3 p-3 bg-slate-700/50 rounded-lg text-xs text-gray-300">
+                          <div className="font-semibold text-white mb-1">How it works:</div>
+                          <div>1. Tap your wallet below</div>
+                          <div>2. Approve in your wallet app</div>
+                          <div>3. Return here - you&apos;ll be connected!</div>
                         </div>
-                        <div className="text-xs text-gray-400">
-                          {connector.id === 'injected' ? 'Rabby, MetaMask, etc.' : 
-                           connector.id === 'walletConnect' ? 'Trust, Rainbow, Coinbase' : 
-                           ''}
+
+                        {/* MetaMask - uses SDK with deep linking */}
+                        {metaMaskConnector && (
+                          <button
+                            onClick={() => {
+                              console.log('Connecting with MetaMask SDK...');
+                              setShowModal(false);
+                              setTimeout(() => {
+                                connect({ connector: metaMaskConnector });
+                              }, 100);
+                            }}
+                            className="w-full bg-orange-600 hover:bg-orange-500 active:bg-orange-400 text-white py-4 rounded-lg font-bold text-left px-4 flex items-center justify-between transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">🦊</span>
+                              <div>
+                                <div className="font-bold">MetaMask</div>
+                                <div className="text-xs text-orange-200">Connect via MetaMask app</div>
+                              </div>
+                            </div>
+                            <span className="text-orange-200">→</span>
+                          </button>
+                        )}
+
+                        {/* Coinbase Wallet - uses SDK with mobile linking */}
+                        {coinbaseConnector && (
+                          <button
+                            onClick={() => {
+                              console.log('Connecting with Coinbase Wallet SDK...');
+                              setShowModal(false);
+                              setTimeout(() => {
+                                connect({ connector: coinbaseConnector });
+                              }, 100);
+                            }}
+                            className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-400 text-white py-4 rounded-lg font-bold text-left px-4 flex items-center justify-between transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">🔵</span>
+                              <div>
+                                <div className="font-bold">Coinbase Wallet</div>
+                                <div className="text-xs text-blue-200">Connect via Coinbase app</div>
+                              </div>
+                            </div>
+                            <span className="text-blue-200">→</span>
+                          </button>
+                        )}
+
+                        <div className="text-center text-gray-500 text-xs mt-3">
+                          Connection stays in this browser
                         </div>
-                      </div>
-                    </div>
-                    <span className="text-gray-400">→</span>
-                  </button>
-                ))}
+                      </>
+                    );
+                  }
+
+                  // Desktop or Farcaster - show appropriate connectors
+                  const desktopConnectors = isInFarcaster
+                    ? connectors.filter(c => c.id === 'farcasterMiniApp')
+                    : connectors.filter(c =>
+                        c.id === 'injected' ||
+                        c.id === 'metaMaskSDK' ||
+                        c.id === 'metaMask' ||
+                        c.id === 'coinbaseWalletSDK' ||
+                        c.id === 'coinbaseWallet'
+                      );
+
+                  // Helper to get connector display info
+                  const getConnectorInfo = (id: string) => {
+                    switch (id) {
+                      case 'injected':
+                        return { icon: '🌐', name: 'Browser Wallet', desc: 'Use detected wallet' };
+                      case 'metaMaskSDK':
+                      case 'metaMask':
+                        return { icon: '🦊', name: 'MetaMask', desc: 'Connect via extension' };
+                      case 'coinbaseWalletSDK':
+                      case 'coinbaseWallet':
+                        return { icon: '🔵', name: 'Coinbase Wallet', desc: 'Connect via extension' };
+                      case 'farcasterMiniApp':
+                        return { icon: '🎭', name: 'Farcaster Wallet', desc: 'Connected via Warpcast' };
+                      default:
+                        return { icon: '💼', name: id, desc: '' };
+                    }
+                  };
+
+                  return desktopConnectors
+                    .map((connector) => {
+                      const info = getConnectorInfo(connector.id);
+                      return (
+                        <button
+                          key={connector.id}
+                          onClick={() => {
+                            console.log('Connecting with:', connector.id, connector.name);
+                            setShowModal(false);
+                            setTimeout(() => {
+                              connect({ connector });
+                            }, 100);
+                          }}
+                          className="w-full bg-slate-700 hover:bg-slate-600 active:bg-slate-500 text-white py-4 rounded-lg font-bold text-left px-4 flex items-center justify-between transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{info.icon}</span>
+                            <div>
+                              <div className="font-bold">{info.name}</div>
+                              {info.desc && <div className="text-xs text-gray-400">{info.desc}</div>}
+                            </div>
+                          </div>
+                          <span className="text-gray-400">→</span>
+                        </button>
+                      );
+                    });
+                })()}
               </div>
 
               {/* Help text */}
               <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded text-xs text-gray-300">
                 <div className="font-semibold text-blue-400 mb-1">💡 Tip</div>
-                {isInFarcaster 
+                {isInFarcaster
                   ? 'Use Farcaster sign-in to automatically link your profile and wallet!'
                   : 'Connect your wallet to start paper trading on the Battlefield!'}
               </div>
             </div>
           </div>
-        </>
+        </div>,
+        document.body
       )}
     </div>
   );
