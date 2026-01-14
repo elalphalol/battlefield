@@ -499,19 +499,28 @@ export default function UserProfilePage() {
                       const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
                       const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
 
-                      // Use Farcaster Frame SDK to open composer
+                      // Check if we're in Farcaster context
+                      let isInFarcaster = false;
                       try {
-                        const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
-                        await sdk.actions.openUrl(castUrl);
-                      } catch (error) {
-                        console.error('Error casting to Farcaster:', error);
-                        // Fallback: try copying to clipboard
+                        const context = await sdk.context;
+                        isInFarcaster = !!(context && context.user && context.user.fid);
+                      } catch {
+                        isInFarcaster = false;
+                      }
+
+                      if (isInFarcaster) {
+                        // Use Farcaster Frame SDK to open composer
                         try {
-                          await navigator.clipboard.writeText(shareText);
-                          toast.success('Cast text copied to clipboard!');
-                        } catch (clipError) {
-                          toast.error('❌ Unable to create cast. Please try again.');
+                          const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
+                          await sdk.actions.openUrl(castUrl);
+                        } catch (error) {
+                          console.error('Error casting to Farcaster:', error);
+                          toast.error('Unable to open cast composer');
                         }
+                      } else {
+                        // Not in Farcaster - redirect to referral signup
+                        toast('Join Farcaster to cast your trades!', { icon: '🟪' });
+                        window.open('https://farcaster.xyz/~/code/C46NY7', '_blank');
                       }
                     };
 
