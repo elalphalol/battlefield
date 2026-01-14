@@ -17,6 +17,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import cron from 'node-cron';
+import rateLimit from 'express-rate-limit';
 
 // Load environment variables
 dotenv.config();
@@ -195,6 +196,37 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
+
+// Rate limiters
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute
+  message: { error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.headers['x-real-ip'] as string || req.ip || 'unknown'
+});
+
+const tradingLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // 30 requests per minute for trading
+  message: { error: 'Too many trading requests, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.headers['x-real-ip'] as string || req.ip || 'unknown'
+});
+
+const claimLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // 10 requests per minute for claims
+  message: { error: 'Too many claim requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.headers['x-real-ip'] as string || req.ip || 'unknown'
+});
+
+// Apply general rate limit to all API routes
+app.use('/api/', generalLimiter);
 
 // Admin audit logging
 const auditLog = (action: string, details: Record<string, unknown>, ip: string, success: boolean) => {
@@ -450,7 +482,7 @@ app.post('/api/claims/status', async (req: Request, res: Response) => {
 });
 
 // Claim paper money
-app.post('/api/claims', async (req: Request, res: Response) => {
+app.post('/api/claims', claimLimiter, async (req: Request, res: Response) => {
   const { walletAddress } = req.body;
 
   if (!walletAddress) {
@@ -542,7 +574,7 @@ app.post('/api/claims', async (req: Request, res: Response) => {
 // ============================================
 
 // Open trade
-app.post('/api/trades/open', async (req: Request, res: Response) => {
+app.post('/api/trades/open', tradingLimiter, async (req: Request, res: Response) => {
   const { walletAddress, type, leverage, size, entryPrice } = req.body;
 
   if (!walletAddress || !type || !leverage || !size || !entryPrice) {
