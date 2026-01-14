@@ -25,7 +25,7 @@ export function ArmySelection({ currentArmy, onArmyChange }: ArmySelectionProps)
       const response = await fetch(getApiUrl(`api/users/${address}/army`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ army })
+        body: JSON.stringify({ army, signerAddress: address })
       });
       
       const data = await response.json();
