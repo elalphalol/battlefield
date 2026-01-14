@@ -717,7 +717,7 @@ async function updateUserArmy(userId: number) {
 }
 
 // Close trade
-app.post('/api/trades/close', async (req: Request, res: Response) => {
+app.post('/api/trades/close', tradingLimiter, async (req: Request, res: Response) => {
   const { tradeId, exitPrice } = req.body;
 
   if (!tradeId || !exitPrice) {
