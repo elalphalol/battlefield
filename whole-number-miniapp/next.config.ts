@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -54,4 +55,16 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry organization and project
+  org: "hjdd",
+  project: "battlefield-frontend",
+
+  // Suppress logs unless in CI
+  silent: !process.env.CI,
+
+  // Source maps configuration
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
+});

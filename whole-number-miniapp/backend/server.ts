@@ -2,6 +2,16 @@
 // Bears 🐻 vs Bulls 🐂 Paper Trading Game
 // Fixed: Auto-create users when opening positions
 
+// Import and initialize Sentry FIRST, before any other imports
+import * as Sentry from '@sentry/node';
+
+Sentry.init({
+  dsn: "https://829222b2bf1c24e1135948d3d605ef2a@o4510706963251200.ingest.us.sentry.io/4510706982060032",
+  tracesSampleRate: 1.0,
+  environment: process.env.NODE_ENV || "development",
+  serverName: process.env.RAILWAY_SERVICE_NAME || "battlefield-backend",
+});
+
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -104,7 +114,49 @@ pool.connect(async (err, client, release) => {
   } catch (volumeError) {
     console.error('⚠️  Volume tracking setup failed (non-critical):', volumeError);
   }
-  
+
+  // Auto-fix sequence mismatches to prevent "duplicate key" errors
+  try {
+    console.log('🔧 Checking database sequences...');
+
+    const tables = ['trades', 'users', 'referrals'];
+    let fixedCount = 0;
+
+    for (const table of tables) {
+      const seqName = `${table}_id_seq`;
+
+      // Check if sequence exists
+      const seqExists = await client.query(
+        `SELECT EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_name = $1)`,
+        [seqName]
+      );
+
+      if (seqExists.rows[0].exists) {
+        // Get max ID and current sequence value
+        const maxResult = await client.query(`SELECT COALESCE(MAX(id), 0) as max_id FROM ${table}`);
+        const seqResult = await client.query(`SELECT last_value FROM ${seqName}`);
+
+        const maxId = parseInt(maxResult.rows[0].max_id);
+        const seqVal = parseInt(seqResult.rows[0].last_value);
+
+        if (maxId >= seqVal) {
+          const newVal = maxId + 1;
+          await client.query(`SELECT setval($1, $2, false)`, [seqName, newVal]);
+          console.log(`   ✅ ${table}: sequence reset from ${seqVal} to ${newVal}`);
+          fixedCount++;
+        }
+      }
+    }
+
+    if (fixedCount > 0) {
+      console.log(`✅ Fixed ${fixedCount} sequence(s)`);
+    } else {
+      console.log('✅ All sequences OK');
+    }
+  } catch (seqError) {
+    console.error('⚠️  Sequence check failed (non-critical):', seqError);
+  }
+
   release();
 });
 
@@ -150,14 +202,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.get('/health', async (req: Request, res: Response) => {
   try {
     const result = await pool.query('SELECT NOW()');
-    res.json({ 
-      status: 'healthy', 
+    res.json({
+      status: 'healthy',
       database: 'connected',
-      timestamp: result.rows[0].now 
+      timestamp: result.rows[0].now
     });
   } catch (error) {
-    res.status(500).json({ 
-      status: 'unhealthy', 
+    res.status(500).json({
+      status: 'unhealthy',
       database: 'disconnected',
       error: 'Database connection failed'
     });
@@ -1858,11 +1910,14 @@ app.use((req: Request, res: Response) => {
   });
 });
 
+// Sentry error handler - must be before other error handlers
+Sentry.setupExpressErrorHandler(app);
+
 // Global error handler
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ 
-    success: false, 
+  res.status(500).json({
+    success: false,
     message: 'Internal server error',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
