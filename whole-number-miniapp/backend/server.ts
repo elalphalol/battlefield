@@ -3172,12 +3172,15 @@ app.get('/api/admin/activity', async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
 
-    // Get recent trades (opened, closed, liquidated)
+    // Get recent trades (opened, closed, liquidated, stopped by stop loss)
     const recentTrades = await pool.query(`
       SELECT
         t.id,
         'trade' as type,
-        t.status as action,
+        CASE
+          WHEN t.status = 'closed' AND t.stop_loss IS NOT NULL AND ABS(t.exit_price - t.stop_loss) < 1 THEN 'stopped'
+          ELSE t.status
+        END as action,
         t.position_type,
         t.leverage,
         ROUND(t.position_size::numeric, 0) as amount,

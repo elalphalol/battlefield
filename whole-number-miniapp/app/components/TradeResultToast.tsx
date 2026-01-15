@@ -6,6 +6,7 @@ interface TradeResultToastProps {
   isVisible: boolean;
   pnl: number;
   isLiquidated?: boolean;
+  isStopLoss?: boolean;
   onDismiss: () => void;
 }
 
@@ -31,15 +32,21 @@ const LIQUIDATION_MESSAGES = [
   'Margin call!',
 ];
 
+const STOP_LOSS_MESSAGES = [
+  'Stop Loss Hit!',
+  'Position Closed!',
+  'SL Triggered!',
+];
+
 function getRandomMessage(messages: string[]): string {
   return messages[Math.floor(Math.random() * messages.length)];
 }
 
-export function TradeResultToast({ isVisible, pnl, isLiquidated, onDismiss }: TradeResultToastProps) {
+export function TradeResultToast({ isVisible, pnl, isLiquidated, isStopLoss, onDismiss }: TradeResultToastProps) {
   const [show, setShow] = useState(false);
   const [message, setMessage] = useState('');
 
-  const isWin = pnl >= 0 && !isLiquidated;
+  const isWin = pnl >= 0 && !isLiquidated && !isStopLoss;
   const formattedPnl = Math.round(Math.abs(pnl)).toLocaleString('en-US');
 
   useEffect(() => {
@@ -47,6 +54,8 @@ export function TradeResultToast({ isVisible, pnl, isLiquidated, onDismiss }: Tr
       // Pick a random message
       if (isLiquidated) {
         setMessage(getRandomMessage(LIQUIDATION_MESSAGES));
+      } else if (isStopLoss) {
+        setMessage(getRandomMessage(STOP_LOSS_MESSAGES));
       } else if (isWin) {
         setMessage(getRandomMessage(WIN_MESSAGES));
       } else {
@@ -66,29 +75,35 @@ export function TradeResultToast({ isVisible, pnl, isLiquidated, onDismiss }: Tr
     } else {
       setShow(false);
     }
-  }, [isVisible, isWin, isLiquidated, onDismiss]);
+  }, [isVisible, isWin, isLiquidated, isStopLoss, onDismiss]);
 
   if (!isVisible) return null;
 
   const bgColor = isLiquidated
     ? 'from-red-900/95 to-orange-900/95'
+    : isStopLoss
+    ? 'from-yellow-900/95 to-amber-900/95'
     : isWin
     ? 'from-green-900/95 to-emerald-900/95'
     : 'from-red-900/95 to-rose-900/95';
 
   const borderColor = isLiquidated
     ? 'border-orange-500'
+    : isStopLoss
+    ? 'border-yellow-500'
     : isWin
     ? 'border-green-500'
     : 'border-red-500';
 
   const glowColor = isLiquidated
     ? 'rgba(249, 115, 22, 0.4)'
+    : isStopLoss
+    ? 'rgba(234, 179, 8, 0.4)'
     : isWin
     ? 'rgba(34, 197, 94, 0.4)'
     : 'rgba(239, 68, 68, 0.4)';
 
-  const icon = isLiquidated ? '💥' : isWin ? '💰' : '📉';
+  const icon = isLiquidated ? '💥' : isStopLoss ? '🛡️' : isWin ? '💰' : '📉';
 
   return (
     <div
@@ -117,6 +132,8 @@ export function TradeResultToast({ isVisible, pnl, isLiquidated, onDismiss }: Tr
           className={`text-2xl font-bold ${
             isLiquidated
               ? 'text-orange-400'
+              : isStopLoss
+              ? 'text-yellow-400'
               : isWin
               ? 'text-green-400'
               : 'text-red-400'
@@ -129,6 +146,13 @@ export function TradeResultToast({ isVisible, pnl, isLiquidated, onDismiss }: Tr
         {isLiquidated && (
           <div className="text-xs text-orange-300 mt-1">
             The market shows no mercy
+          </div>
+        )}
+
+        {/* Subtitle for stop loss */}
+        {isStopLoss && (
+          <div className="text-xs text-yellow-300 mt-1">
+            Your stop loss protected you
           </div>
         )}
       </div>

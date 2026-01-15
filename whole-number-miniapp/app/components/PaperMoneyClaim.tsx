@@ -17,11 +17,10 @@ export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperM
   const [claiming, setClaiming] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [canClaimFromServer, setCanClaimFromServer] = useState(false);
-  const [hasOpenPositions, setHasOpenPositions] = useState(false);
   const [isEmergencyClaim, setIsEmergencyClaim] = useState(false);
 
-  // Can claim if server says OK AND no open positions
-  const canClaim = canClaimFromServer && !hasOpenPositions;
+  // Can claim if server says OK (removed open positions restriction)
+  const canClaim = canClaimFromServer;
 
   useEffect(() => {
     if (!address) return;
@@ -40,13 +39,6 @@ export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperM
           setCanClaimFromServer(data.canClaim);
           setTimeLeft(data.timeLeft || 0);
           setIsEmergencyClaim(data.emergencyClaim || false);
-        }
-
-        // Check open positions
-        const positionsResponse = await fetch(getApiUrl(`api/trades/${address}/open`));
-        const positionsData = await positionsResponse.json();
-        if (positionsData.success) {
-          setHasOpenPositions(positionsData.trades.length > 0);
         }
       } catch (error) {
         console.error('Error checking claim status:', error);
@@ -120,11 +112,6 @@ export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperM
             <span className="inline-block animate-spin mr-2">⏳</span>
             Claiming...
           </>
-        ) : hasOpenPositions ? (
-          <>
-            <span className="mr-2">📊</span>
-            Close positions first
-          </>
         ) : canClaim ? (
           <>
             <span className="mr-2">💵</span>
@@ -144,11 +131,7 @@ export function PaperMoneyClaim({ onClaim, paperBalance, walletAddress }: PaperM
       </button>
 
       <div className="mt-3 text-center text-xs leading-relaxed text-gray-400">
-        {hasOpenPositions ? (
-          <>Close all positions to claim</>
-        ) : (
-          <>Daily $1,000 claim (resets at midnight UTC)<br/>Emergency claim available if balance &lt; $100</>
-        )}
+        Daily $1,000 claim (resets at midnight UTC)<br/>Emergency claim available if balance &lt; $100
       </div>
     </div>
   );

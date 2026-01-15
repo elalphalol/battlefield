@@ -15,6 +15,7 @@ interface ClosedTrade {
   position_size: number;
   pnl: number;
   status: 'closed' | 'liquidated';
+  stop_loss: number | null;
   opened_at: string;
   closed_at: string;
 }
@@ -107,6 +108,9 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
           const pnlPercentage = (pnl / Number(trade.position_size)) * 100;
           const isProfit = pnl >= 0;
           const isLiquidated = trade.status === 'liquidated';
+          // Check if trade was closed by stop loss (stop_loss set and exit price is at/near stop loss)
+          const wasStopLoss = trade.stop_loss !== null && trade.status === 'closed' &&
+            Math.abs(Number(trade.exit_price) - Number(trade.stop_loss)) < 1;
 
           const generateImageUrl = () => {
             const army = userData?.army || 'bulls';
@@ -169,6 +173,8 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
               className={`border-2 rounded-lg p-3 relative overflow-hidden ${
                 isLiquidated
                   ? 'border-red-900 bg-red-950/30'
+                  : wasStopLoss
+                  ? 'border-yellow-700 bg-yellow-950/20'
                   : isProfit
                   ? 'border-green-900 bg-green-950/30'
                   : 'border-red-700 bg-red-950/20'
@@ -180,6 +186,15 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
                   <div className="text-red-500 font-black text-3xl opacity-20 rotate-[-15deg] border-4 border-red-500 px-4 py-2 rounded">
                     LIQUIDATED
                   </div>
+                </div>
+              )}
+
+              {/* Stop Loss Indicator */}
+              {wasStopLoss && (
+                <div className="absolute top-1 right-1 z-10">
+                  <span className="text-xs bg-yellow-600/80 text-yellow-100 px-2 py-0.5 rounded font-bold">
+                    🛡️ SL
+                  </span>
                 </div>
               )}
 

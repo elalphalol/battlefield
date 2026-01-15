@@ -595,6 +595,11 @@ export default function AdminPage() {
                               icon = activity.position_type === 'long' ? '📈' : '📉';
                               text = `opened ${activity.position_type?.toUpperCase()} ${activity.leverage}x ($${activity.amount?.toLocaleString()})`;
                               colorClass = 'text-blue-400';
+                            } else if (activity.action === 'stopped') {
+                              icon = '🛡️';
+                              const pnlSign = (activity.pnl ?? 0) >= 0 ? '+' : '';
+                              text = `STOP LOSS ${pnlSign}$${Math.abs(activity.pnl ?? 0).toLocaleString()}`;
+                              colorClass = 'text-yellow-400';
                             } else if (activity.action === 'closed') {
                               icon = (activity.pnl ?? 0) >= 0 ? '💰' : '📉';
                               const pnlSign = (activity.pnl ?? 0) >= 0 ? '+' : '';

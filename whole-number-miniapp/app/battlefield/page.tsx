@@ -54,6 +54,13 @@ export default function BattlefieldHome() {
   const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
   const [previousUserData, setPreviousUserData] = useState<UserData | null>(null);
 
+  // Stopped/liquidated trade notification state
+  const [stoppedTradeInfo, setStoppedTradeInfo] = useState<{
+    pnl: number;
+    isLiquidated: boolean;
+    isStopLoss: boolean;
+  } | null>(null);
+
   // Check URL params on mount to set initial tab
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -245,11 +252,36 @@ export default function BattlefieldHome() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ currentPrice: btcPrice })
           });
-          
+
           const data = await response.json();
+
+          // Show notification for liquidated trades
           if (data.success && data.liquidatedCount > 0) {
             console.log(`💥 Auto-liquidated ${data.liquidatedCount} position(s)`);
+            // Show notification for the first liquidated trade
+            const trade = data.liquidatedTrades[0];
+            setStoppedTradeInfo({
+              pnl: -trade.loss, // Loss is positive, so negate for display
+              isLiquidated: true,
+              isStopLoss: false
+            });
             // Refresh user data if any liquidations occurred
+            if (address) {
+              fetchUserData();
+            }
+          }
+
+          // Show notification for stopped trades (stop loss triggered)
+          if (data.success && data.stoppedCount > 0) {
+            console.log(`🛑 Stop loss triggered for ${data.stoppedCount} position(s)`);
+            // Show notification for the first stopped trade
+            const trade = data.stoppedTrades[0];
+            setStoppedTradeInfo({
+              pnl: trade.pnl,
+              isLiquidated: false,
+              isStopLoss: true
+            });
+            // Refresh user data
             if (address) {
               fetchUserData();
             }
@@ -258,7 +290,7 @@ export default function BattlefieldHome() {
           console.error('Error checking liquidations:', error);
         }
       };
-      
+
       checkLiquidations();
     }
   }, [btcPrice, address, fetchUserData]);
@@ -387,6 +419,8 @@ export default function BattlefieldHome() {
                 paperBalance={userData?.paper_balance || 0}
                 onTradeComplete={handleTradeComplete}
                 walletAddress={address}
+                stoppedTradeInfo={stoppedTradeInfo}
+                onStoppedTradeShown={() => setStoppedTradeInfo(null)}
               />
             </div>
 

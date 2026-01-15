@@ -9,6 +9,7 @@ import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 import { ReactNode, useEffect } from 'react';
 import sdk from '@farcaster/miniapp-sdk';
 import { Toaster } from 'react-hot-toast';
+import { TwemojiProvider } from './components/TwemojiProvider';
 
 const queryClient = new QueryClient();
 
@@ -97,7 +98,9 @@ export function Providers({ children }: { children: ReactNode }) {
               },
             }}
           />
-          {children}
+          <TwemojiProvider>
+            {children}
+          </TwemojiProvider>
         </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

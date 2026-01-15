@@ -3,6 +3,15 @@
 import { useState } from 'react';
 import sdk from '@farcaster/miniapp-sdk';
 
+// Farcaster icon component - using local SVG for consistent rendering
+const FarcasterIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
+  <img
+    src="/farcaster-icon.svg"
+    alt="Farcaster"
+    className={`${className} rounded-sm`}
+  />
+);
+
 interface AchievementsProps {
   stats: {
     total_trades: number;
@@ -207,7 +216,7 @@ export function Achievements({ stats, showOnlyUnlocked, showOnlyLocked, username
                         className="text-purple-400 hover:text-purple-300 text-xs font-medium flex items-center gap-1 ml-2"
                         title="Share to Farcaster"
                       >
-                        Cast
+                        <FarcasterIcon className="w-3 h-3" /> Cast
                       </button>
                     </div>
                   </div>

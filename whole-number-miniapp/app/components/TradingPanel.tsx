@@ -18,14 +18,22 @@ interface Trade {
   opened_at: string;
 }
 
+interface StoppedTradeInfo {
+  pnl: number;
+  isLiquidated: boolean;
+  isStopLoss: boolean;
+}
+
 interface TradingPanelProps {
   btcPrice: number;
   paperBalance: number;
   onTradeComplete: () => void;
   walletAddress?: string; // Add optional wallet address prop
+  stoppedTradeInfo?: StoppedTradeInfo | null; // Info from auto-liquidation/stop loss
+  onStoppedTradeShown?: () => void; // Callback when notification is shown
 }
 
-export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAddress }: TradingPanelProps) {
+export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAddress, stoppedTradeInfo, onStoppedTradeShown }: TradingPanelProps) {
   const { address: wagmiAddress } = useAccount();
   // Use passed wallet address if available, otherwise fall back to wagmi
   const address = walletAddress || wagmiAddress;
@@ -56,6 +64,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const [showResultToast, setShowResultToast] = useState(false);
   const [resultPnl, setResultPnl] = useState(0);
   const [resultIsLiquidated, setResultIsLiquidated] = useState(false);
+  const [resultIsStopLoss, setResultIsStopLoss] = useState(false);
 
   // Calculate actual position size from percentage
   // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
@@ -84,6 +93,20 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       return () => clearInterval(interval);
     }
   }, [address]);
+
+  // Handle stopped/liquidated trade notifications from parent
+  useEffect(() => {
+    if (stoppedTradeInfo) {
+      setResultPnl(stoppedTradeInfo.pnl);
+      setResultIsLiquidated(stoppedTradeInfo.isLiquidated);
+      setResultIsStopLoss(stoppedTradeInfo.isStopLoss);
+      setShowResultToast(true);
+      // Notify parent that we've shown the notification
+      if (onStoppedTradeShown) {
+        onStoppedTradeShown();
+      }
+    }
+  }, [stoppedTradeInfo, onStoppedTradeShown]);
 
   const fetchUserData = async () => {
     if (!address) return;
@@ -439,6 +462,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         isVisible={showResultToast}
         pnl={resultPnl}
         isLiquidated={resultIsLiquidated}
+        isStopLoss={resultIsStopLoss}
         onDismiss={() => setShowResultToast(false)}
       />
 
