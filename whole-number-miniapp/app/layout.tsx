@@ -13,9 +13,9 @@ const miniappEmbed = JSON.stringify({
   version: "1",
   imageUrl: `${appUrl}/miniapp-embed.jpg`,
   button: {
-    title: "Play Battlefield ⚔️",
+    title: "Play Battlefield",
     action: {
-      type: "launch_miniapp",
+      type: "launch_frame",
       url: appUrl,
       name: "Battlefield",
       splashImageUrl: `${appUrl}/battlefield-icon-200.png`,
