@@ -104,12 +104,12 @@ export default function LandingPage() {
             </button>
           </p>
           <p className="text-sm text-purple-400 font-semibold mt-2">
-            Launching on Clanker.world
+            Launching on clanker.world
           </p>
         </div>
 
         {/* Footer Legal */}
-        <div className="text-xs text-gray-600 max-w-2xl mx-auto">
+        <div className="text-xs text-gray-600 max-w-2xl mx-auto pb-8">
           <p>⚠️ Paper trading only. No real funds at risk. High leverage trading is educational.</p>
           <p className="mt-2">This is a game. Trade responsibly. DYOR.</p>
         </div>

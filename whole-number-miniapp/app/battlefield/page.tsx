@@ -319,11 +319,13 @@ export default function BattlefieldHome() {
       <div className="container mx-auto px-4 py-6 max-w-7xl pb-24">
         {/* BTC Price with Volume - Only show on Trade tab */}
         {activeTab === 'trade' && (
-          <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
-            <div className="text-center">
-              <div className="text-sm text-gray-400 mb-2">BITCOIN PRICE</div>
-              <div className="text-5xl md:text-6xl font-bold text-yellow-400 mb-4">
-                {isLoading ? 'Loading...' : `$${Math.floor(btcPrice).toLocaleString()}`}
+          <div className="bg-slate-800 rounded-lg px-4 py-3 mb-4 border border-slate-700">
+            <div className="flex items-center justify-between">
+              <div className="flex items-baseline gap-2">
+                <div className="text-3xl md:text-4xl font-bold text-yellow-400">
+                  {isLoading ? '...' : `$${Math.floor(btcPrice).toLocaleString()}`}
+                </div>
+                <span className="text-sm text-gray-400 font-medium">BTC</span>
               </div>
               {/* Minimal Volume Display */}
               <VolumeTracker walletAddress={address} showUserVolume={false} showExplanation={false} minimal={true} />
@@ -1040,7 +1042,7 @@ export default function BattlefieldHome() {
       </nav>
 
       {/* Footer */}
-      <footer className="border-t border-slate-700 mt-12 py-8 text-center text-gray-400 space-y-3">
+      <footer className="border-t border-slate-700 mt-12 py-8 mb-24 text-center text-gray-400 space-y-3">
         <p className="text-sm font-bold">⚔️ <strong>BATTLEFIELD</strong> ⚔️</p>
         
         <div className="space-y-2">
@@ -1070,7 +1072,7 @@ export default function BattlefieldHome() {
             </button>
           </p>
           <p className="text-sm text-purple-400 font-semibold">
-            Launching on Clanker.world
+            Launching on clanker.world
           </p>
         </div>
         

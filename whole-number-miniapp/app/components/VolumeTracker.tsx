@@ -68,16 +68,15 @@ export function VolumeTracker({ walletAddress, showUserVolume = false, showExpla
     return `$${volume.toLocaleString()}`;
   };
 
-  // Minimal mode: Simple inline display
+  // Minimal mode: Compact inline display
   if (minimal) {
     return (
-      <div className="text-center">
-        <p className="text-sm text-gray-400 mb-1">Global Trading Volume</p>
-        <p className="text-xl font-bold text-blue-400">
-          {formatVolume(volumeStats.globalVolume)}
+      <div className="text-right">
+        <p className="text-lg font-bold text-blue-400">
+          {formatVolume(volumeStats.globalVolume)} <span className="text-sm font-normal text-gray-400">Volume</span>
         </p>
-        <p className="text-xs text-gray-500 mt-0.5">
-          {volumeStats.totalTraders} traders
+        <p className="text-xs text-gray-500">
+          {volumeStats.totalTraders.toLocaleString()} traders
         </p>
       </div>
     );

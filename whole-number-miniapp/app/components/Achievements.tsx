@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import sdk from '@farcaster/miniapp-sdk';
 
 interface AchievementsProps {
   stats: {
@@ -15,6 +16,8 @@ interface AchievementsProps {
   };
   showOnlyUnlocked?: boolean;
   showOnlyLocked?: boolean;
+  username?: string;
+  isOwnProfile?: boolean;
 }
 
 interface Achievement {
@@ -30,7 +33,7 @@ interface Achievement {
   target?: number;
 }
 
-export function Achievements({ stats, showOnlyUnlocked, showOnlyLocked }: AchievementsProps) {
+export function Achievements({ stats, showOnlyUnlocked, showOnlyLocked, username, isOwnProfile = true }: AchievementsProps) {
   const [showUnlocked, setShowUnlocked] = useState(true);
   const [showLocked, setShowLocked] = useState(false);
 
@@ -153,6 +156,26 @@ export function Achievements({ stats, showOnlyUnlocked, showOnlyLocked }: Achiev
     Mythic: 'border-yellow-500',
   };
 
+  const handleShareAchievement = async (achievement: Achievement) => {
+    // If viewing someone else's profile, tag them in the cast
+    const shareText = isOwnProfile
+      ? `Just unlocked ${achievement.title} on @btcbattle! ${achievement.icon}\n\n${achievement.description}\n\n+${achievement.points} points earned!`
+      : `@${username} unlocked ${achievement.title} on @btcbattle! ${achievement.icon}\n\n${achievement.description}\n\n+${achievement.points} points earned!`;
+    const miniappUrl = 'https://farcaster.xyz/miniapps/5kLec5hSq3bP/battlefield';
+
+    try {
+      const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(miniappUrl)}`;
+      await sdk.actions.openUrl(castUrl);
+    } catch (error) {
+      console.error('Error sharing achievement:', error);
+      try {
+        await navigator.clipboard.writeText(shareText);
+      } catch (clipError) {
+        console.error('Failed to copy to clipboard:', clipError);
+      }
+    }
+  };
+
   // If showOnlyUnlocked, render ONLY unlocked achievements cards (no dropdown, no title)
   if (showOnlyUnlocked) {
     return (
@@ -171,12 +194,21 @@ export function Achievements({ stats, showOnlyUnlocked, showOnlyLocked }: Achiev
                   <div className="flex-1">
                     <h4 className="font-bold text-white text-sm mb-1">{achievement.title}</h4>
                     <p className="text-xs text-gray-400 mb-2">{achievement.description}</p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-xs text-gray-500">{categoryNames[achievement.category]}</p>
-                      <span className="text-xs text-gray-600">•</span>
-                      <p className={`text-xs font-bold ${rarityColors[achievement.rarity]}`}>{achievement.rarity}</p>
-                      <span className="text-xs text-gray-600">•</span>
-                      <p className="text-xs text-yellow-400 font-bold">+{achievement.points} pts</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs text-gray-500">{categoryNames[achievement.category]}</p>
+                        <span className="text-xs text-gray-600">•</span>
+                        <p className={`text-xs font-bold ${rarityColors[achievement.rarity]}`}>{achievement.rarity}</p>
+                        <span className="text-xs text-gray-600">•</span>
+                        <p className="text-xs text-yellow-400 font-bold">+{achievement.points} pts</p>
+                      </div>
+                      <button
+                        onClick={() => handleShareAchievement(achievement)}
+                        className="text-purple-400 hover:text-purple-300 text-xs font-medium flex items-center gap-1 ml-2"
+                        title="Share to Farcaster"
+                      >
+                        Cast
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -285,12 +317,21 @@ export function Achievements({ stats, showOnlyUnlocked, showOnlyLocked }: Achiev
                     <div className="flex-1">
                       <h4 className="font-bold text-white text-sm mb-1">{achievement.title}</h4>
                       <p className="text-xs text-gray-400 mb-2">{achievement.description}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-gray-500">{categoryNames[achievement.category]}</p>
-                        <span className="text-xs text-gray-600">•</span>
-                        <p className={`text-xs font-bold ${rarityColors[achievement.rarity]}`}>{achievement.rarity}</p>
-                        <span className="text-xs text-gray-600">•</span>
-                        <p className="text-xs text-yellow-400 font-bold">+{achievement.points} pts</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-gray-500">{categoryNames[achievement.category]}</p>
+                          <span className="text-xs text-gray-600">•</span>
+                          <p className={`text-xs font-bold ${rarityColors[achievement.rarity]}`}>{achievement.rarity}</p>
+                          <span className="text-xs text-gray-600">•</span>
+                          <p className="text-xs text-yellow-400 font-bold">+{achievement.points} pts</p>
+                        </div>
+                        <button
+                          onClick={() => handleShareAchievement(achievement)}
+                          className="text-purple-400 hover:text-purple-300 text-xs font-medium flex items-center gap-1 ml-2"
+                          title="Share to Farcaster"
+                        >
+                          Cast
+                        </button>
                       </div>
                     </div>
                   </div>

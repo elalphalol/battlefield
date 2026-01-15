@@ -14,6 +14,7 @@ interface Trade {
   entry_price: number;
   position_size: number;
   liquidation_price: number;
+  stop_loss: number | null;
   opened_at: string;
 }
 
@@ -42,6 +43,14 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const [showCollateralModal, setShowCollateralModal] = useState(false);
   const [collateralAmount, setCollateralAmount] = useState('');
   const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
+
+  // Stop loss states
+  const [stopLossEnabled, setStopLossEnabled] = useState(false);
+  const [stopLossPrice, setStopLossPrice] = useState('');
+  const [showStopLossModal, setShowStopLossModal] = useState(false);
+  const [editingStopLossTrade, setEditingStopLossTrade] = useState<Trade | null>(null);
+  const [editStopLossPrice, setEditStopLossPrice] = useState('');
+  const [updatingStopLossTradeId, setUpdatingStopLossTradeId] = useState<number | null>(null);
 
   // Trade result toast state
   const [showResultToast, setShowResultToast] = useState(false);
@@ -103,7 +112,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     }
   };
 
-  const handleOpenTrade = async () => {
+  const handleOpenTrade = async (type: 'long' | 'short') => {
     // Check position limit
     if (openTrades.length >= 10) {
       toast.error('❌ Maximum 10 open positions allowed. Please close some positions first.');
@@ -121,14 +130,18 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       return;
     }
 
+    setTradeType(type);
     setIsOpening(true);
     try {
+      const stopLoss = stopLossEnabled && stopLossPrice ? Number(stopLossPrice) : null;
+
       console.log('🚀 Opening trade with:', {
         walletAddress: address,
-        type: tradeType,
+        type: type,
         leverage,
         size: positionSize,
-        entryPrice: btcPrice
+        entryPrice: btcPrice,
+        stopLoss
       });
 
       const response = await fetch(getApiUrl('api/trades/open'), {
@@ -136,10 +149,11 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress: address,
-          type: tradeType,
+          type: type,
           leverage,
           size: positionSize,
-          entryPrice: btcPrice
+          entryPrice: btcPrice,
+          stopLoss
         })
       });
 
@@ -150,9 +164,15 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       if (data.success) {
         console.log('✅ Trade opened successfully');
         // Show confirmation toast with trade details
-        const emoji = tradeType === 'long' ? '🐂' : '🐻';
-        const direction = tradeType === 'long' ? 'LONG' : 'SHORT';
+        const emoji = type === 'long' ? '🐂' : '🐻';
+        const direction = type === 'long' ? 'LONG' : 'SHORT';
         toast.success(`${emoji} ${direction} ${leverage}x opened! $${positionSize.toLocaleString()}`);
+        // Reset stop loss fields and position size
+        setStopLossEnabled(false);
+        setStopLossPrice('');
+        setPositionSizePercent(0);
+        setInputValue('0');
+        setIsManualInput(false);
         fetchOpenTrades();
         onTradeComplete();
       } else {
@@ -311,6 +331,48 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     }
   };
 
+  const openStopLossModal = (trade: Trade) => {
+    setEditingStopLossTrade(trade);
+    setEditStopLossPrice(trade.stop_loss ? trade.stop_loss.toString() : '');
+    setShowStopLossModal(true);
+  };
+
+  const handleUpdateStopLoss = async () => {
+    if (!address || !editingStopLossTrade) return;
+
+    const newStopLoss = editStopLossPrice ? Number(editStopLossPrice) : null;
+
+    setUpdatingStopLossTradeId(editingStopLossTrade.id);
+    setShowStopLossModal(false);
+
+    try {
+      const response = await fetch(getApiUrl('api/trades/update-stop-loss'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tradeId: editingStopLossTrade.id,
+          stopLoss: newStopLoss,
+          walletAddress: address
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(newStopLoss ? `🛑 Stop loss set at $${newStopLoss.toLocaleString()}` : '✓ Stop loss removed');
+        fetchOpenTrades();
+      } else {
+        toast.error(`❌ ${data.message || 'Failed to update stop loss'}`);
+      }
+    } catch (error) {
+      console.error('Error updating stop loss:', error);
+      toast.error('❌ Failed to update stop loss');
+    } finally {
+      setUpdatingStopLossTradeId(null);
+      setEditingStopLossTrade(null);
+    }
+  };
+
   const handleCastOpenPosition = async (trade: Trade, pnl: number, percentage: number) => {
     const army = userData?.army || 'bulls';
     const armyEmoji = army === 'bears' ? '🐻' : '🐂';
@@ -382,29 +444,21 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
       {/* Open New Position */}
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
-        <h3 className="text-xl font-bold text-yellow-400 mb-4">📈 Open Position</h3>
-
-        {/* Trade Type Selection - CLEAN TABS */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        {/* LONG/SHORT Buttons - Main triggers at top */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
           <button
-            onClick={() => setTradeType('long')}
-            className={`py-5 px-6 rounded-xl border-4 font-bold text-xl transition-all transform hover:scale-105 ${
-              tradeType === 'long'
-                ? 'border-green-500 bg-green-600 text-white shadow-lg shadow-green-500/50'
-                : 'border-slate-600 bg-slate-700/30 text-gray-400 hover:border-green-400'
-            }`}
+            onClick={() => handleOpenTrade('long')}
+            disabled={isOpening || positionSize < 1 || positionSize > Number(paperBalance)}
+            className="w-full py-6 rounded-xl font-bold text-xl transition-all transform hover:scale-105 shadow-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-green-500/50 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            LONG
+            {isOpening && tradeType === 'long' ? '...' : `LONG ${leverage}x`}
           </button>
           <button
-            onClick={() => setTradeType('short')}
-            className={`py-5 px-6 rounded-xl border-4 font-bold text-xl transition-all transform hover:scale-105 ${
-              tradeType === 'short'
-                ? 'border-red-500 bg-red-600 text-white shadow-lg shadow-red-500/50'
-                : 'border-slate-600 bg-slate-700/30 text-gray-400 hover:border-red-400'
-            }`}
+            onClick={() => handleOpenTrade('short')}
+            disabled={isOpening || positionSize < 1 || positionSize > Number(paperBalance)}
+            className="w-full py-6 rounded-xl font-bold text-xl transition-all transform hover:scale-105 shadow-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 shadow-red-500/50 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            SHORT
+            {isOpening && tradeType === 'short' ? '...' : `SHORT ${leverage}x`}
           </button>
         </div>
 
@@ -440,7 +494,8 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
               step="1"
               value={leverage}
               onChange={(e) => setLeverage(Number(e.target.value))}
-              className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+              className="w-full h-4 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+              style={{ WebkitAppearance: 'none' }}
             />
             <div className="flex justify-between text-xs text-gray-400 mt-1">
               <span>1x</span>
@@ -515,13 +570,87 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
               setPositionSizePercent(Number(e.target.value));
               setIsManualInput(false); // Clear manual input flag when using slider
             }}
-            className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+            className="w-full h-4 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+            style={{ WebkitAppearance: 'none' }}
           />
           <div className="flex justify-between text-xs text-gray-400 mt-1">
             <span>0%</span>
             <span className="text-gray-500">{Math.round(positionSizePercent)}%</span>
             <span>100%</span>
           </div>
+        </div>
+
+        {/* Stop Loss (Optional) */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <button
+              onClick={() => setStopLossEnabled(!stopLossEnabled)}
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                stopLossEnabled ? 'bg-orange-500 border-orange-500' : 'border-slate-500 hover:border-slate-400'
+              }`}
+            >
+              {stopLossEnabled && <span className="text-white text-xs">✓</span>}
+            </button>
+            <label className="text-sm font-semibold text-gray-300 cursor-pointer" onClick={() => setStopLossEnabled(!stopLossEnabled)}>
+              Stop Loss <span className="text-gray-500">(optional)</span>
+            </label>
+          </div>
+
+          {stopLossEnabled && (
+            <div className="space-y-2">
+              {/* Quick Stop Loss Buttons - Based on PnL % loss */}
+              <div className="grid grid-cols-4 gap-2">
+                {[5, 10, 15, 20].map((pnlLossPercent) => {
+                  // Calculate price that would cause this PnL loss
+                  // PnL% = priceChange% * leverage
+                  // priceChange% = pnlLossPercent / leverage
+                  const priceChangePercent = pnlLossPercent / leverage;
+                  const slPrice = tradeType === 'long'
+                    ? Math.round(btcPrice * (1 - priceChangePercent / 100))
+                    : Math.round(btcPrice * (1 + priceChangePercent / 100));
+
+                  // Disable if this stop loss would trigger instantly due to fee
+                  // Fee = leverage * 0.05% of collateral (e.g., 200x = 10% fee)
+                  const currentFeePercent = leverage * 0.05;
+                  const isDisabled = pnlLossPercent <= currentFeePercent;
+
+                  return (
+                    <button
+                      key={pnlLossPercent}
+                      onClick={() => !isDisabled && setStopLossPrice(slPrice.toString())}
+                      disabled={isDisabled}
+                      className={`py-1.5 rounded border text-xs font-semibold transition-all ${
+                        isDisabled
+                          ? 'border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed'
+                          : stopLossPrice === slPrice.toString()
+                          ? 'border-orange-500 bg-orange-900/30 text-orange-400'
+                          : 'border-slate-600 bg-slate-700/30 text-gray-400 hover:border-slate-500'
+                      }`}
+                      title={isDisabled ? `Fee is ${currentFeePercent.toFixed(0)}% - stop loss would trigger instantly` : ''}
+                    >
+                      -{pnlLossPercent}%
+                    </button>
+                  );
+                })}
+              </div>
+              {feePercentage >= 5 && (
+                <p className="text-xs text-yellow-500">
+                  ⚠️ Fee: {feePercentage.toFixed(0)}% - greyed options would trigger instantly
+                </p>
+              )}
+              <input
+                type="number"
+                inputMode="decimal"
+                value={stopLossPrice}
+                onChange={(e) => setStopLossPrice(e.target.value)}
+                placeholder={tradeType === 'long' ? `Below $${Math.round(btcPrice).toLocaleString()}` : `Above $${Math.round(btcPrice).toLocaleString()}`}
+                className="w-full bg-slate-700 text-white px-4 py-2 rounded border border-orange-500/50 focus:border-orange-500 focus:outline-none"
+              />
+              <p className="text-xs text-gray-500">
+                Stop loss at PnL % loss (fee: {feePercentage.toFixed(1)}%)
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Trade Summary */}
@@ -548,20 +677,6 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
           </div>
         </div>
 
-        {/* Open Button - ENLARGED */}
-        <button
-          onClick={handleOpenTrade}
-          disabled={isOpening || positionSize < 1 || positionSize > Number(paperBalance)}
-          className={`w-full py-6 rounded-xl font-bold text-2xl transition-all transform hover:scale-105 shadow-xl ${
-            tradeType === 'long'
-              ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-green-500/50'
-              : 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 shadow-red-500/50'
-          } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          {isOpening ? '⏳ Opening...' : 
-           positionSize < 1 ? 'Enter Position Size' :
-           `🚀 OPEN ${tradeType.toUpperCase()} ${leverage}x`}
-        </button>
       </div>
 
       {/* Open Positions */}
@@ -607,7 +722,14 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                     <div>Now: ${Math.round(btcPrice).toLocaleString('en-US')}</div>
                     <div>Size: ${Math.round(Number(trade.position_size)).toLocaleString('en-US')}</div>
                     <div>Total: ${Math.round(Number(trade.position_size) * Number(trade.leverage)).toLocaleString('en-US')}</div>
-                    <div className="col-span-2">Liq: ${Math.round(Number(trade.liquidation_price)).toLocaleString('en-US')}</div>
+                    <div>Liq: ${Math.round(Number(trade.liquidation_price)).toLocaleString('en-US')}</div>
+                    <div
+                      onClick={() => openStopLossModal(trade)}
+                      className={`cursor-pointer hover:text-orange-400 transition-colors ${trade.stop_loss ? 'text-green-400' : ''}`}
+                      title="Click to set/edit stop loss"
+                    >
+                      {trade.stop_loss ? '🟢' : '🛑'} SL: {trade.stop_loss ? `$${Math.round(Number(trade.stop_loss)).toLocaleString('en-US')}` : <span className="text-gray-500">Not set</span>}
+                    </div>
                   </div>
 
                   {isLiquidationWarning && (
@@ -679,6 +801,83 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                 className="bg-blue-600 hover:bg-blue-500 text-white py-3 rounded font-semibold transition-all"
               >
                 Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stop Loss Modal */}
+      {showStopLossModal && editingStopLossTrade && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 border-2 border-orange-500 rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-bold text-white mb-4">🛑 Set Stop Loss</h3>
+
+            <div className="mb-4">
+              <label className="block text-sm text-gray-400 mb-2">Stop Loss Price ($)</label>
+              {/* Quick Stop Loss Buttons - Based on PnL % loss */}
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                {[5, 10, 15, 20].map((pnlLossPercent) => {
+                  const entryPrice = Number(editingStopLossTrade.entry_price);
+                  const tradeLeverage = Number(editingStopLossTrade.leverage);
+                  // Calculate price that would cause this PnL loss
+                  const priceChangePercent = pnlLossPercent / tradeLeverage;
+                  const slPrice = editingStopLossTrade.position_type === 'long'
+                    ? Math.round(entryPrice * (1 - priceChangePercent / 100))
+                    : Math.round(entryPrice * (1 + priceChangePercent / 100));
+
+                  // Disable if this stop loss would trigger instantly due to fee
+                  const tradeFeePercent = tradeLeverage * 0.05;
+                  const isDisabled = pnlLossPercent <= tradeFeePercent;
+
+                  return (
+                    <button
+                      key={pnlLossPercent}
+                      onClick={() => !isDisabled && setEditStopLossPrice(slPrice.toString())}
+                      disabled={isDisabled}
+                      className={`py-1.5 rounded border text-xs font-semibold transition-all ${
+                        isDisabled
+                          ? 'border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed'
+                          : editStopLossPrice === slPrice.toString()
+                          ? 'border-orange-500 bg-orange-900/30 text-orange-400'
+                          : 'border-slate-600 bg-slate-700/30 text-gray-400 hover:border-slate-500'
+                      }`}
+                      title={isDisabled ? `Fee is ${tradeFeePercent.toFixed(0)}% - stop loss would trigger instantly` : ''}
+                    >
+                      -{pnlLossPercent}%
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={editStopLossPrice}
+                onChange={(e) => setEditStopLossPrice(e.target.value)}
+                className="w-full bg-slate-700 text-white px-4 py-3 rounded border border-slate-600 focus:border-orange-500 focus:outline-none text-lg"
+                placeholder="Enter price"
+                autoFocus
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Leave empty to remove stop loss
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  setShowStopLossModal(false);
+                  setEditingStopLossTrade(null);
+                }}
+                className="bg-slate-600 hover:bg-slate-500 text-white py-3 rounded font-semibold transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateStopLoss}
+                className="bg-orange-600 hover:bg-orange-500 text-white py-3 rounded font-semibold transition-all"
+              >
+                {editStopLossPrice ? 'Set' : 'Remove'}
               </button>
             </div>
           </div>

@@ -605,7 +605,7 @@ app.post('/api/claims', claimLimiter, async (req: Request, res: Response) => {
 
 // Open trade
 app.post('/api/trades/open', tradingLimiter, async (req: Request, res: Response) => {
-  const { walletAddress, type, leverage, size, entryPrice } = req.body;
+  const { walletAddress, type, leverage, size, entryPrice, stopLoss } = req.body;
 
   if (!walletAddress || !type || !leverage || !size || !entryPrice) {
     return res.status(400).json({ 
@@ -680,12 +680,30 @@ app.post('/api/trades/open', tradingLimiter, async (req: Request, res: Response)
       [size, walletAddress]
     );
 
+    // Validate stop loss if provided
+    if (stopLoss !== undefined && stopLoss !== null) {
+      if (type === 'long' && stopLoss >= entryPrice) {
+        await pool.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'Stop loss for LONG must be below entry price'
+        });
+      }
+      if (type === 'short' && stopLoss <= entryPrice) {
+        await pool.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          message: 'Stop loss for SHORT must be above entry price'
+        });
+      }
+    }
+
     // Create trade
     const trade = await pool.query(
-      `INSERT INTO trades (user_id, position_type, leverage, entry_price, position_size, liquidation_price, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'open')
+      `INSERT INTO trades (user_id, position_type, leverage, entry_price, position_size, liquidation_price, stop_loss, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'open')
        RETURNING *`,
-      [user.rows[0].id, type, leverage, entryPrice, size, liquidationPrice]
+      [user.rows[0].id, type, leverage, entryPrice, size, liquidationPrice, stopLoss || null]
     );
 
     console.log(`
@@ -904,21 +922,99 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
 
     const liquidatedTrades = [];
 
+    const stoppedTrades: any[] = [];
+
     for (const trade of openTrades.rows) {
       const entryPrice = Number(trade.entry_price);
       const liquidationPrice = Number(trade.liquidation_price);
+      const stopLoss = trade.stop_loss ? Number(trade.stop_loss) : null;
       const collateral = Number(trade.position_size);
       const leverage = Number(trade.leverage);
-      
+
+      // Check if stop loss was hit
+      let shouldStopLoss = false;
+      if (stopLoss) {
+        if (trade.position_type === 'long') {
+          // Long stop loss triggers when price drops to or below stop loss
+          shouldStopLoss = currentPrice <= stopLoss;
+        } else {
+          // Short stop loss triggers when price rises to or above stop loss
+          shouldStopLoss = currentPrice >= stopLoss;
+        }
+      }
+
       // Check if position should be liquidated
       let shouldLiquidate = false;
-      
+
       if (trade.position_type === 'long') {
         // Long position liquidates when price drops to liquidation price
         shouldLiquidate = currentPrice <= liquidationPrice;
       } else {
-        // Short position liquidates when price rises to liquidation price  
+        // Short position liquidates when price rises to liquidation price
         shouldLiquidate = currentPrice >= liquidationPrice;
+      }
+
+      // Handle stop loss first (if hit and not already at liquidation)
+      if (shouldStopLoss && !shouldLiquidate) {
+        await pool.query('BEGIN');
+
+        try {
+          // Calculate P&L at stop loss price
+          const leveragedPositionSize = collateral * leverage;
+          const priceChange = trade.position_type === 'long'
+            ? currentPrice - entryPrice
+            : entryPrice - currentPrice;
+          const priceChangePercentage = priceChange / entryPrice;
+          let pnl = priceChangePercentage * leveragedPositionSize;
+
+          // Deduct trading fee
+          const feePercentage = leverage > 1 ? leverage * 0.05 : 0;
+          const tradingFee = (feePercentage / 100) * collateral;
+          const finalPnl = pnl - tradingFee;
+
+          // Close trade at stop loss (not liquidated)
+          await pool.query(
+            'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_at = NOW() WHERE id = $4',
+            [currentPrice, finalPnl, 'closed', trade.id]
+          );
+
+          // Return collateral + pnl to user (can be positive or negative)
+          const finalAmount = Math.max(0, collateral + finalPnl);
+          if (finalAmount > 0) {
+            await pool.query(
+              'UPDATE users SET paper_balance = paper_balance + $1, last_active = NOW() WHERE id = $2',
+              [finalAmount, trade.user_id]
+            );
+          } else {
+            await pool.query(
+              'UPDATE users SET last_active = NOW() WHERE id = $1',
+              [trade.user_id]
+            );
+          }
+
+          // Update user's army
+          await updateUserArmy(trade.user_id);
+
+          await pool.query('COMMIT');
+
+          stoppedTrades.push({
+            tradeId: trade.id,
+            userId: trade.user_id,
+            type: trade.position_type,
+            leverage: trade.leverage,
+            entryPrice,
+            stopLoss,
+            exitPrice: currentPrice,
+            pnl: finalPnl,
+            returnedAmount: finalAmount
+          });
+
+          console.log(`🛑 STOP LOSS TRIGGERED: Trade #${trade.id} - ${trade.position_type.toUpperCase()} ${leverage}x - P&L: $${finalPnl.toFixed(2)} - Returned: $${finalAmount.toFixed(2)}`);
+        } catch (error) {
+          await pool.query('ROLLBACK');
+          console.error(`Error triggering stop loss for trade #${trade.id}:`, error);
+        }
+        continue; // Skip liquidation check since stop loss was handled
       }
 
       if (shouldLiquidate) {
@@ -980,13 +1076,25 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
       }
     }
 
-    res.json({ 
-      success: true, 
+    const totalClosed = liquidatedTrades.length + stoppedTrades.length;
+    let message = '';
+    if (liquidatedTrades.length > 0 && stoppedTrades.length > 0) {
+      message = `Auto-liquidated ${liquidatedTrades.length} and stopped ${stoppedTrades.length} position(s)`;
+    } else if (liquidatedTrades.length > 0) {
+      message = `Auto-liquidated ${liquidatedTrades.length} position(s)`;
+    } else if (stoppedTrades.length > 0) {
+      message = `Stopped ${stoppedTrades.length} position(s) at stop loss`;
+    } else {
+      message = 'No positions liquidated or stopped';
+    }
+
+    res.json({
+      success: true,
       liquidatedCount: liquidatedTrades.length,
       liquidatedTrades,
-      message: liquidatedTrades.length > 0 
-        ? `Auto-liquidated ${liquidatedTrades.length} position(s)` 
-        : 'No positions liquidated'
+      stoppedCount: stoppedTrades.length,
+      stoppedTrades,
+      message
     });
   } catch (error) {
     console.error('Error in auto-liquidation:', error);
@@ -1100,6 +1208,71 @@ app.post('/api/trades/add-collateral', async (req: Request, res: Response) => {
     await pool.query('ROLLBACK');
     console.error('Error adding collateral:', error);
     res.status(500).json({ success: false, message: 'Failed to add collateral' });
+  }
+});
+
+// Update stop loss for open position
+app.post('/api/trades/update-stop-loss', async (req: Request, res: Response) => {
+  const { tradeId, stopLoss, walletAddress } = req.body;
+
+  if (!tradeId || !walletAddress) {
+    return res.status(400).json({
+      success: false,
+      message: 'Trade ID and wallet address required'
+    });
+  }
+
+  try {
+    // Get trade details
+    const trade = await pool.query(
+      `SELECT t.* FROM trades t
+       JOIN users u ON t.user_id = u.id
+       WHERE t.id = $1 AND t.status = 'open' AND LOWER(u.wallet_address) = LOWER($2)`,
+      [tradeId, walletAddress]
+    );
+
+    if (trade.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Trade not found or already closed'
+      });
+    }
+
+    const t = trade.rows[0];
+    const entryPrice = Number(t.entry_price);
+
+    // Validate stop loss if provided (null means remove stop loss)
+    if (stopLoss !== null && stopLoss !== undefined) {
+      if (t.position_type === 'long' && stopLoss >= entryPrice) {
+        return res.status(400).json({
+          success: false,
+          message: 'Stop loss for LONG must be below entry price'
+        });
+      }
+      if (t.position_type === 'short' && stopLoss <= entryPrice) {
+        return res.status(400).json({
+          success: false,
+          message: 'Stop loss for SHORT must be above entry price'
+        });
+      }
+    }
+
+    // Update stop loss
+    const updatedTrade = await pool.query(
+      'UPDATE trades SET stop_loss = $1 WHERE id = $2 RETURNING *',
+      [stopLoss || null, tradeId]
+    );
+
+    console.log(`🛑 Stop Loss Updated: Trade #${tradeId} - ${t.position_type.toUpperCase()} - Stop Loss: ${stopLoss ? `$${stopLoss}` : 'REMOVED'}`);
+
+    res.json({
+      success: true,
+      trade: updatedTrade.rows[0],
+      message: stopLoss ? `Stop loss set at $${stopLoss}` : 'Stop loss removed'
+    });
+  } catch (error) {
+    console.error('Error updating stop loss:', error);
+    res.status(500).json({ success: false, message: 'Failed to update stop loss' });
   }
 });
 

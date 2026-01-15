@@ -511,7 +511,8 @@ export default function UserProfilePage() {
                       const army = profile.user.army;
                       const armyEmoji = army === 'bears' ? '🐻' : '🐂';
                       const websiteUrl = window.location.origin;
-                      
+                      const username = profile.user.username || 'Trader';
+
                       // Don't use toLocaleString for URL params - it adds commas that get encoded
                       const params = new URLSearchParams({
                         army,
@@ -519,14 +520,17 @@ export default function UserProfilePage() {
                         leverage: trade.leverage.toString(),
                         pnl: Math.round(pnl).toString(),
                         pnlPercent: Math.round(pnlPercentage).toString(),
-                        username: profile.user.username || 'Trader',
+                        username,
                         v: Date.now().toString() // Cache buster
                       });
                       const imageUrl = `${websiteUrl}/api/share-card?${params.toString()}`;
 
                       // Add liquidation status to share text
+                      // If viewing someone else's profile, tag them in the cast
                       const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
-                      const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
+                      const shareText = isOwnProfile
+                        ? `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`
+                        : `${armyEmoji} @${username} ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
 
                       // Check if we're in Farcaster context
                       let isInFarcaster = false;
@@ -690,7 +694,7 @@ export default function UserProfilePage() {
             </div>
             <div className="p-4 max-h-[600px] overflow-y-auto">
               {achievementTab === 'achievements' && (
-                <Achievements stats={profile.stats} showOnlyUnlocked={true} />
+                <Achievements stats={profile.stats} showOnlyUnlocked={true} username={profile.user.username} isOwnProfile={isOwnProfile} />
               )}
               {achievementTab === 'titles' && (
               <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-lg p-6 text-center">
@@ -717,7 +721,7 @@ export default function UserProfilePage() {
               </div>
             )}
             {achievementTab === 'locked' && (
-                <Achievements stats={profile.stats} showOnlyLocked={true} />
+                <Achievements stats={profile.stats} showOnlyLocked={true} username={profile.user.username} isOwnProfile={isOwnProfile} />
               )}
             </div>
           </div>
@@ -812,10 +816,10 @@ export default function UserProfilePage() {
               </a>
             </p>
             <p className="text-sm text-purple-400 font-semibold">
-              Launching on Clanker.world
+              Launching on clanker.world
             </p>
           </div>
-          
+
           <div className="pt-4 border-t border-slate-800">
             <p className="text-xs text-gray-500">
               ⚠️ Paper trading only. No real funds at risk. High leverage trading is educational.

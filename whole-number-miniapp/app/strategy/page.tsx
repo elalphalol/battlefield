@@ -1,16 +1,22 @@
 'use client';
 
 import Link from 'next/link';
+import sdk from '@farcaster/miniapp-sdk';
 
 export default function StrategyPage() {
+  const handleExternalLink = async (url: string) => {
+    try {
+      await sdk.actions.openUrl(url);
+    } catch {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 border-b border-purple-500/30">
         <div className="container mx-auto px-4 py-6">
-          <Link href="/" className="text-purple-400 hover:text-purple-300 mb-4 inline-block">
-            ← Back to BATTLEFIELD
-          </Link>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
             The Whole Number Psychology Strategy
           </h1>
@@ -415,15 +421,15 @@ export default function StrategyPage() {
           </div>
         </section>
 
-        {/* Footer */}
+        {/* CTA */}
         <section className="mb-12">
           <div className="bg-slate-800/50 border border-slate-600 rounded-lg p-6 text-center">
             <h3 className="text-2xl font-bold text-yellow-400 mb-3">Ready to Trade?</h3>
             <p className="text-gray-300 mb-6">
               Put your knowledge to the test on the BATTLEFIELD!
             </p>
-            <Link 
-              href="/"
+            <Link
+              href="/battlefield"
               className="inline-block bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-3 px-8 rounded-lg transition-all"
             >
               Return to BATTLEFIELD ⚔️
@@ -431,24 +437,52 @@ export default function StrategyPage() {
           </div>
         </section>
 
-        {/* Disclaimer */}
-        <section className="text-center text-xs text-gray-500 pb-8">
-          <p>
-            This information is for educational purposes only and does not constitute financial advice. 
-            Trading cryptocurrencies involves substantial risk of loss. Always do your own research.
-          </p>
-        </section>
-
       </div>
 
-      {/* Sticky Back to Battlefield Button */}
-      <Link 
-        href="/"
-        className="fixed bottom-8 right-8 z-40 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-slate-900 p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 font-bold flex items-center gap-2"
-      >
-        <span className="text-2xl">⚔️</span>
-        <span className="hidden sm:inline">Back to Battlefield</span>
-      </Link>
+      {/* Footer */}
+      <footer className="border-t border-slate-700 py-8 pb-12 text-center text-gray-400 space-y-3">
+        <p className="text-sm font-bold">⚔️ <strong>BATTLEFIELD</strong> ⚔️</p>
+
+        <div className="space-y-2">
+          <p className="text-sm">
+            Created by{' '}
+            <button
+              onClick={() => handleExternalLink('https://elalpha.lol')}
+              className="text-purple-400 hover:text-purple-300 underline cursor-pointer font-semibold"
+            >
+              elalpha.lol
+            </button>
+          </p>
+          <p className="text-sm">
+            Follow on Farcaster:{' '}
+            <button
+              onClick={() => handleExternalLink('https://warpcast.com/elalpha.eth')}
+              className="text-purple-400 hover:text-purple-300 cursor-pointer"
+            >
+              @elalpha.eth
+            </button>
+            {' • '}
+            <button
+              onClick={() => handleExternalLink('https://warpcast.com/btcbattle')}
+              className="text-purple-400 hover:text-purple-300 cursor-pointer"
+            >
+              @btcbattle
+            </button>
+          </p>
+          <p className="text-sm text-purple-400 font-semibold">
+            Launching on clanker.world
+          </p>
+        </div>
+
+        <div className="pt-4 border-t border-slate-800">
+          <p className="text-xs text-gray-500">
+            ⚠️ Paper trading only. No real funds at risk. High leverage trading is educational.
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            This is a game. Trade responsibly. DYOR.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
