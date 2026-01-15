@@ -60,9 +60,12 @@ export function AchievementModal({ notification, onDismiss }: AchievementModalPr
     // Generate share text (outside try block so it's accessible in catch)
     const shareText = `Just unlocked ${notification.data.title} on @btcbattle! 🏆\n\n${notification.data.description}${notification.data.points ? `\n\n+${notification.data.points} points earned!` : ''}`;
 
+    // Miniapp URL for the embed - this will show the thumbnail
+    const miniappUrl = 'https://farcaster.xyz/miniapps/5kLec5hSq3bP/battlefield';
+
     try {
-      // For now, use Warpcast composer (achievement card API can be added later)
-      const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}`;
+      // Use Warpcast composer with embed to show thumbnail
+      const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(miniappUrl)}`;
 
       await sdk.actions.openUrl(castUrl);
       handleDismiss();
