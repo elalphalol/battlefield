@@ -22,24 +22,13 @@ const VERCEL_MIGRATION_MANIFEST = {
 };
 
 // Production manifest for btcbattlefield.com (new domain)
-// Using both 'frame' (legacy) and 'miniapp' (new) for compatibility
+// Only use 'frame' section - Farcaster requires frame and miniapp to be identical if both present
 const PRODUCTION_MANIFEST = {
   accountAssociation: {
     header: "eyJmaWQiOjE0NTIzNTEsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg0QzVCMjQzNTk4NzAyMzI4OTk3MjE3QUI2MkU2QTBCOGVEMzU5MTA3In0",
     payload: "eyJkb21haW4iOiJidGNiYXR0bGVmaWVsZC5jb20ifQ",
     signature: "LYewtLzHikt9CHtMGPf6Fn7Oo1fLljax98s/jb0G75taCW+F6KR5i4UYC9Qw9HGgFfdvhRXdlbiWLGf4IV1ujBs="
   },
-  // New miniapp format (required for valid embeds)
-  miniapp: {
-    version: "1",
-    name: "Battlefield",
-    iconUrl: "https://btcbattlefield.com/battlefield-icon.png",
-    homeUrl: "https://btcbattlefield.com",
-    splashImageUrl: "https://btcbattlefield.com/battlefield-icon-200.png",
-    splashBackgroundColor: "#0a0a0a",
-    webhookUrl: "https://btcbattlefield.com/api/farcaster/webhook"
-  },
-  // Legacy frame format for backward compatibility
   frame: {
     version: "1",
     name: "Battlefield",
