@@ -8,6 +8,22 @@ const inter = Inter({ subsets: ["latin"] });
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://battlefield-roan.vercel.app';
 
+// Mini App embed JSON for fc:miniapp meta tag (3:2 ratio image required)
+const miniappEmbed = JSON.stringify({
+  version: "1",
+  imageUrl: `${appUrl}/miniapp-embed.jpg`,
+  button: {
+    title: "Play Battlefield ⚔️",
+    action: {
+      type: "launch_miniapp",
+      url: appUrl,
+      name: "Battlefield",
+      splashImageUrl: `${appUrl}/battlefield-icon-200.png`,
+      splashBackgroundColor: "#0a0a0a"
+    }
+  }
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: 'Battlefield - Bears vs Bulls Bitcoin Trading Game',
@@ -20,9 +36,9 @@ export const metadata: Metadata = {
     siteName: 'Battlefield',
     images: [
       {
-        url: `${appUrl}/opengraph-image.jpg`,
+        url: `${appUrl}/miniapp-embed.jpg`,
         width: 1200,
-        height: 630,
+        height: 800,
         alt: 'Battlefield - Bitcoin Trading Game',
       },
     ],
@@ -31,18 +47,21 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Battlefield - Bitcoin Paper Trading',
     description: 'Paper trade Bitcoin with 200x leverage. Join Bulls or Bears army!',
-    images: [`${appUrl}/opengraph-image.jpg`],
+    images: [`${appUrl}/miniapp-embed.jpg`],
   },
   other: {
+    // Farcaster Mini App embed meta tag (required for thumbnail in casts)
+    'fc:miniapp': miniappEmbed,
+    // Legacy fc:frame for backward compatibility
     'fc:frame': 'vNext',
-    'fc:frame:image': `${appUrl}/opengraph-image.jpg`,
-    'fc:frame:image:aspect_ratio': '1.91:1',
+    'fc:frame:image': `${appUrl}/miniapp-embed.jpg`,
+    'fc:frame:image:aspect_ratio': '3:2',
     'fc:frame:button:1': 'Play Battlefield ⚔️',
-    'fc:frame:button:1:action': 'link',
+    'fc:frame:button:1:action': 'launch_frame',
     'fc:frame:button:1:target': appUrl,
-    'og:image': `${appUrl}/opengraph-image.jpg`,
+    'og:image': `${appUrl}/miniapp-embed.jpg`,
     'og:image:width': '1200',
-    'og:image:height': '630',
+    'og:image:height': '800',
   },
 };
 
