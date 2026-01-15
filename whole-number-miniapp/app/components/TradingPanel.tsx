@@ -7,6 +7,15 @@ import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
 import { TradeResultToast } from './TradeResultToast';
 
+// Farcaster icon component
+const FarcasterIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
+  <img
+    src="/farcaster-icon.svg"
+    alt=""
+    className={className}
+  />
+);
+
 interface Trade {
   id: number;
   position_type: 'long' | 'short';
@@ -782,7 +791,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                       onClick={() => handleCastOpenPosition(trade, pnl, percentage)}
                       className="bg-purple-600 hover:bg-purple-500 text-white py-2 rounded text-xs font-semibold transition-all flex items-center justify-center gap-1"
                     >
-                      🟪 Cast
+                      <FarcasterIcon className="w-4 h-4" /> Cast
                     </button>
                   </div>
                 </div>

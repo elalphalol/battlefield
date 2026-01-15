@@ -10,6 +10,15 @@ import { Avatar } from '../../components/Avatar';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
 
+// Farcaster icon component
+const FarcasterIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <img
+    src="/farcaster-icon.svg"
+    alt=""
+    className={className}
+  />
+);
+
 interface UserProfile {
   user: {
     fid: number;
@@ -614,7 +623,7 @@ export default function UserProfilePage() {
                             onClick={handleCast}
                             className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
                           >
-                            🟪 Cast
+                            <FarcasterIcon className="w-4 h-4" /> Cast
                           </button>
                         </div>
                       </div>

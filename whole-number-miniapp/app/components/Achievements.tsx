@@ -216,7 +216,7 @@ export function Achievements({ stats, showOnlyUnlocked, showOnlyLocked, username
                         className="text-purple-400 hover:text-purple-300 text-xs font-medium flex items-center gap-1 ml-2"
                         title="Share to Farcaster"
                       >
-                        <FarcasterIcon className="w-3 h-3" /> Cast
+                        <FarcasterIcon className="w-4 h-4" /> Cast
                       </button>
                     </div>
                   </div>

@@ -6,6 +6,15 @@ import { getApiUrl } from '../config/api';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
 
+// Farcaster icon component
+const FarcasterIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
+  <img
+    src="/farcaster-icon.svg"
+    alt=""
+    className={className}
+  />
+);
+
 interface ClosedTrade {
   id: number;
   position_type: 'long' | 'short';
@@ -237,7 +246,7 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
                   onClick={handleCast}
                   className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
                 >
-                  🟪 Cast
+                  <FarcasterIcon className="w-4 h-4" /> Cast
                 </button>
               </div>
             </div>
