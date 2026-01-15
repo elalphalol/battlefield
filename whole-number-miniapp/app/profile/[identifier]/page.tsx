@@ -26,6 +26,7 @@ interface UserProfile {
     pfp_url: string;
     wallet_address: string;
     army: 'bears' | 'bulls';
+    referral_code?: string;
   };
   stats: {
     paper_balance: number;
@@ -548,6 +549,7 @@ export default function UserProfilePage() {
                       const armyEmoji = army === 'bears' ? '🐻' : '🐂';
                       const websiteUrl = window.location.origin;
                       const username = profile.user.username || 'Trader';
+                      const referralCode = profile.user.referral_code || '';
 
                       // Don't use toLocaleString for URL params - it adds commas that get encoded
                       const params = new URLSearchParams({
@@ -559,6 +561,10 @@ export default function UserProfilePage() {
                         username,
                         v: Date.now().toString() // Cache buster
                       });
+                      // Add referral code if available
+                      if (referralCode) {
+                        params.set('ref', referralCode);
+                      }
                       const imageUrl = `${websiteUrl}/api/share-card?${params.toString()}`;
 
                       // Add liquidation/stop loss status to share text

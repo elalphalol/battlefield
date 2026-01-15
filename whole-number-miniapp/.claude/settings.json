@@ -27,6 +27,33 @@
             "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qiE 'psql.*DROP|psql.*TRUNCATE|psql.*DELETE FROM'; then echo '[Hook] Destructive DB operation - backup recommended'; fi"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qiE 'rm -rf .next|rm -rf node_modules'; then echo '[Hook] Removing large directory - this may take a moment'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'npm run build'; then echo '[Hook] Starting build - this may take 30-60 seconds'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qiE 'pg_dump|pg_restore'; then echo '[Hook] Database backup/restore operation starting'; fi"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -108,6 +135,87 @@
           {
             "type": "command",
             "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'FATAL|PANIC|out of memory|Cannot allocate'; then echo '\\n[Hook] Critical system error detected! Check server resources.'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'ENOSPC|No space left on device'; then echo '\\n[Hook] Disk full! Run /cleanup to free space.'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'SIGKILL|killed|OOMKilled'; then echo '\\n[Hook] Process killed (likely OOM). Check memory usage with /performance.'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'EADDRINUSE|address already in use'; then echo '\\n[Hook] Port already in use! Check: lsof -i :3000 or lsof -i :3001'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'permission denied|EACCES'; then echo '\\n[Hook] Permission denied. May need sudo or check file ownership.'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'npm ERR|ERESOLVE|peer dep'; then echo '\\n[Hook] NPM dependency error. Try: rm -rf node_modules package-lock.json && npm install'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'liquidat'; then LIQS=$(echo \"$CLAUDE_TOOL_OUTPUT\" | grep -ciE 'liquidat'); if [ \"$LIQS\" -gt 5 ]; then echo \"\\n[Hook] Multiple liquidations detected ($LIQS). Market may be volatile.\"; fi; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'SSL|certificate|CERT_'; then echo '\\n[Hook] SSL/Certificate issue detected. Check nginx SSL config or cert expiry.'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'Module not found|Cannot resolve'; then echo '\\n[Hook] Missing module. Run: npm install'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'npm run build' && echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'Compiled successfully'; then echo '\\n[Hook] ✅ Build successful!'; fi"
           }
         ]
       }

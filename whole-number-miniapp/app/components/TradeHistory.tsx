@@ -33,6 +33,8 @@ interface ClosedTrade {
 interface UserData {
   army: 'bears' | 'bulls';
   username?: string;
+  referral_code?: string;
+  rank?: number;
 }
 
 interface TradeHistoryProps {
@@ -60,10 +62,29 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
   const fetchUserData = async () => {
     if (!address) return;
     try {
-      const response = await fetch(getApiUrl(`api/users/${address}`));
-      const data = await response.json();
-      if (data.success) {
-        setUserData(data.user);
+      // Fetch user data and leaderboard rank in parallel
+      const [userResponse, leaderboardResponse] = await Promise.all([
+        fetch(getApiUrl(`api/users/${address}`)),
+        fetch(getApiUrl('api/leaderboard?limit=500'))
+      ]);
+
+      const userData = await userResponse.json();
+      const leaderboardData = await leaderboardResponse.json();
+
+      if (userData.success) {
+        // Find user's rank in leaderboard
+        let rank = 0;
+        if (leaderboardData.success && leaderboardData.leaderboard) {
+          const userIndex = leaderboardData.leaderboard.findIndex(
+            (entry: { wallet_address: string }) =>
+              entry.wallet_address?.toLowerCase() === address?.toLowerCase()
+          );
+          if (userIndex !== -1) {
+            rank = userIndex + 1; // Rank is 1-indexed
+          }
+        }
+
+        setUserData({ ...userData.user, rank });
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -124,7 +145,9 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
           const generateImageUrl = () => {
             const army = userData?.army || 'bulls';
             const username = userData?.username || address?.slice(0, 8);
-            
+            const referralCode = userData?.referral_code || '';
+            const rank = userData?.rank || 0;
+
             // Don't use toLocaleString for URL params - it adds commas that get encoded
             const params = new URLSearchParams({
               army,
@@ -135,6 +158,16 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
               username: username || 'Trader',
               v: Date.now().toString() // Cache buster
             });
+
+            // Add referral code if available
+            if (referralCode) {
+              params.set('ref', referralCode);
+            }
+
+            // Add rank if available
+            if (rank > 0) {
+              params.set('rank', rank.toString());
+            }
 
             return `${window.location.origin}/api/share-card?${params.toString()}`;
           };

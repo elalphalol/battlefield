@@ -1568,7 +1568,8 @@ app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
         username: user.username || `Trader ${user.fid}`,
         pfp_url: user.pfp_url,
         wallet_address: user.wallet_address,
-        army: user.army
+        army: user.army,
+        referral_code: user.referral_code
       },
       stats: {
         paper_balance: Number(user.paper_balance),
@@ -3524,7 +3525,7 @@ app.get('/api/admin/activity', async (req: Request, res: Response) => {
         t.id,
         'trade' as type,
         CASE
-          WHEN t.status = 'closed' AND t.stop_loss IS NOT NULL AND ABS(t.exit_price - t.stop_loss) < 1 THEN 'stopped'
+          WHEN t.closed_by = 'stop_loss' THEN 'stopped'
           ELSE t.status
         END as action,
         t.position_type,
