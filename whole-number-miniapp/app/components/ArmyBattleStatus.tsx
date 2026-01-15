@@ -60,14 +60,15 @@ export function ArmyBattleStatus() {
     return null;
   }
 
-  const bullsTotal = armyStats.bulls.totalPnl;
-  const bearsTotal = armyStats.bears.totalPnl;
+  const bullsTotal = armyStats.bulls.totalPnl || 0;
+  const bearsTotal = armyStats.bears.totalPnl || 0;
   const difference = Math.abs(bullsTotal - bearsTotal);
   const winningArmy = bullsTotal > bearsTotal ? 'bulls' : 'bears';
-  const totalPnl = bullsTotal + bearsTotal;
-  
+
   // Calculate percentage for progress bar (50% is the middle)
-  const bullsPercentage = totalPnl === 0 ? 50 : ((bullsTotal / (bullsTotal + Math.abs(bearsTotal))) * 100);
+  // Handle edge cases where both could be 0 or negative
+  const totalAbsolute = Math.abs(bullsTotal) + Math.abs(bearsTotal);
+  const bullsPercentage = totalAbsolute === 0 ? 50 : Math.min(100, Math.max(0, (bullsTotal / totalAbsolute + 1) * 50));
 
   // Calculate time remaining
   const getTimeRemaining = () => {

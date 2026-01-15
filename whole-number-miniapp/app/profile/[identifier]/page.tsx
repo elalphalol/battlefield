@@ -58,6 +58,8 @@ interface UserProfile {
     position_size: number;
     pnl: number;
     status: 'closed' | 'liquidated';
+    stop_loss: number | null;
+    closed_by: 'manual' | 'stop_loss' | 'liquidation' | null;
     opened_at: string;
     closed_at: string;
   }>;
@@ -80,9 +82,15 @@ export default function UserProfilePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceLoaded, setPriceLoaded] = useState(false);
-  const [achievementTab, setAchievementTab] = useState<'missions' | 'achievements' | 'titles' | 'locked'>('missions');
+  const [achievementTab, setAchievementTab] = useState<'missions' | 'achievements' | 'titles' | 'locked' | 'referrals'>('missions');
   const [currentUserFid, setCurrentUserFid] = useState<number | null>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [referralData, setReferralData] = useState<{
+    referralCode: string;
+    referralCount: number;
+    referralEarnings: number;
+    referrals: Array<{ username: string; pfp_url: string; status: string; created_at: string; completed_at: string | null }>;
+  } | null>(null);
 
   // Fetch BTC price
   useEffect(() => {
@@ -147,13 +155,15 @@ export default function UserProfilePage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const priceParam = currentPrice ? `&currentPrice=${currentPrice}` : '';
       const response = await fetch(getApiUrl(`api/profile/${identifier}?page=${page}${priceParam}`));
       const data = await response.json();
 
       if (data.success) {
         setProfile(data.profile);
+        // Fetch referral data
+        fetchReferralData(data.profile.user.wallet_address);
       } else {
         setError(data.message || 'Failed to load profile');
       }
@@ -162,6 +172,23 @@ export default function UserProfilePage() {
       setError('Failed to load profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReferralData = async (walletAddress: string) => {
+    try {
+      const response = await fetch(getApiUrl(`api/referrals/${walletAddress}`));
+      const data = await response.json();
+      if (data.success) {
+        setReferralData({
+          referralCode: data.referralCode,
+          referralCount: data.referralCount,
+          referralEarnings: data.referralEarnings,
+          referrals: data.referrals
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching referral data:', err);
     }
   };
 
@@ -342,8 +369,7 @@ export default function UserProfilePage() {
                   pfpUrl={profile.user.pfp_url}
                   username={profile.user.username}
                   army={profile.user.army}
-                  totalTrades={profile.stats.total_trades}
-                  winRate={profile.stats.win_rate}
+                  winningTrades={profile.stats.winning_trades}
                   size="xl"
                   showDecorations={true}
                 />
@@ -515,6 +541,7 @@ export default function UserProfilePage() {
                     const pnlPercentage = (pnl / Number(trade.position_size)) * 100;
                     const isProfit = pnl >= 0;
                     const isLiquidated = trade.status === 'liquidated';
+                    const wasStopLoss = trade.closed_by === 'stop_loss';
 
                     const handleCast = async () => {
                       const army = profile.user.army;
@@ -534,12 +561,34 @@ export default function UserProfilePage() {
                       });
                       const imageUrl = `${websiteUrl}/api/share-card?${params.toString()}`;
 
-                      // Add liquidation status to share text
+                      // Add liquidation/stop loss status to share text
                       // If viewing someone else's profile, tag them in the cast
-                      const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
-                      const shareText = isOwnProfile
-                        ? `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`
-                        : `${armyEmoji} @${username} ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
+                      let statusText: string;
+                      let statusEmoji = '';
+                      const exitPrice = Math.round(Number(trade.exit_price)).toLocaleString('en-US');
+                      if (isLiquidated) {
+                        statusText = '💥 LIQUIDATED';
+                        statusEmoji = ' 💥';
+                      } else if (wasStopLoss) {
+                        statusText = `Tactical exit at stop loss`;
+                        statusEmoji = ' 🛡️';
+                      } else if (isProfit) {
+                        statusText = 'won';
+                      } else {
+                        statusText = 'lost';
+                      }
+
+                      // Build share text with exit price for stop loss trades
+                      let shareText: string;
+                      if (wasStopLoss) {
+                        shareText = isOwnProfile
+                          ? `${armyEmoji} ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | Exit: $${exitPrice} | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${statusEmoji}\n\n⚔️ Bears vs Bulls`
+                          : `${armyEmoji} @${username} ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | Exit: $${exitPrice} | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${statusEmoji}\n\n⚔️ Bears vs Bulls`;
+                      } else {
+                        shareText = isOwnProfile
+                          ? `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${statusEmoji}\n\n⚔️ Bears vs Bulls`
+                          : `${armyEmoji} @${username} ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${statusEmoji}\n\n⚔️ Bears vs Bulls`;
+                      }
 
                       // Check if we're in Farcaster context
                       let isInFarcaster = false;
@@ -572,6 +621,8 @@ export default function UserProfilePage() {
                         className={`border-2 rounded-lg p-3 relative ${
                           isLiquidated
                             ? 'border-red-900 bg-red-950/30 overflow-hidden'
+                            : wasStopLoss
+                            ? 'border-yellow-700 bg-yellow-950/20 overflow-visible'
                             : isProfit
                             ? 'border-green-900 bg-green-950/30 overflow-visible'
                             : 'border-red-700 bg-red-950/20 overflow-visible'
@@ -594,6 +645,12 @@ export default function UserProfilePage() {
                             <span className="text-sm font-bold text-white">
                               {trade.position_type.toUpperCase()} {trade.leverage}x
                             </span>
+                            {/* Stop Loss Indicator - inline with position type */}
+                            {wasStopLoss && (
+                              <span className="text-xs bg-yellow-600/80 text-yellow-100 px-1.5 py-0.5 rounded font-bold">
+                                🛡️
+                              </span>
+                            )}
                           </div>
                           <div className={`text-sm font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
                             {isProfit ? '+' : ''}${Math.round(pnl).toLocaleString('en-US')}
@@ -635,11 +692,11 @@ export default function UserProfilePage() {
           </div>
         </div>
 
-        {/* Profile Tab Navigation - 4 Tabs */}
-        <div className="grid grid-cols-4 gap-2">
+        {/* Profile Tab Navigation - 5 Tabs */}
+        <div className="grid grid-cols-5 gap-1">
           <button
             onClick={() => setAchievementTab('missions')}
-            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+            className={`py-3 px-1 rounded-lg font-bold text-xs transition-all ${
               achievementTab === 'missions'
                 ? 'bg-yellow-500 text-slate-900'
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
@@ -649,7 +706,7 @@ export default function UserProfilePage() {
           </button>
           <button
             onClick={() => setAchievementTab('achievements')}
-            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+            className={`py-3 px-1 rounded-lg font-bold text-xs transition-all ${
               achievementTab === 'achievements'
                 ? 'bg-yellow-500 text-slate-900'
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
@@ -659,7 +716,7 @@ export default function UserProfilePage() {
           </button>
           <button
             onClick={() => setAchievementTab('titles')}
-            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+            className={`py-3 px-1 rounded-lg font-bold text-xs transition-all ${
               achievementTab === 'titles'
                 ? 'bg-yellow-500 text-slate-900'
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
@@ -669,13 +726,23 @@ export default function UserProfilePage() {
           </button>
           <button
             onClick={() => setAchievementTab('locked')}
-            className={`py-3 px-2 rounded-lg font-bold text-xs md:text-sm transition-all ${
+            className={`py-3 px-1 rounded-lg font-bold text-xs transition-all ${
               achievementTab === 'locked'
                 ? 'bg-yellow-500 text-slate-900'
                 : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
             }`}
           >
             Locked
+          </button>
+          <button
+            onClick={() => setAchievementTab('referrals')}
+            className={`py-3 px-1 rounded-lg font-bold text-xs transition-all ${
+              achievementTab === 'referrals'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+            }`}
+          >
+            Referrals
           </button>
         </div>
 
@@ -693,6 +760,112 @@ export default function UserProfilePage() {
             <Missions walletAddress={profile.user.wallet_address} readOnly={!isOwnProfile} />
           </>
         ) : (
+          achievementTab === 'referrals' ? (
+            <div className="bg-slate-800 border-2 border-green-500 rounded-lg">
+              <div className="p-4 border-b border-slate-700">
+                <h2 className="text-xl font-bold text-yellow-400">🔗 Referrals</h2>
+              </div>
+              <div className="p-4 space-y-4">
+                {referralData ? (
+                  <>
+                    {/* Referral Code Display */}
+                    <div className="bg-slate-900/50 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm mb-2">Your Referral Code</p>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="text-xl md:text-2xl font-mono font-bold text-white bg-slate-800 px-3 py-2 rounded">{referralData.referralCode}</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(referralData.referralCode);
+                            toast.success('Code copied!');
+                          }}
+                          className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                        >
+                          Copy Code
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Share Link */}
+                    <div className="bg-slate-900/50 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm mb-2">Share Link</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <input
+                          value={`btcbattlefield.com?ref=${referralData.referralCode}`}
+                          readOnly
+                          className="flex-1 min-w-0 bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-mono"
+                        />
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`https://btcbattlefield.com?ref=${referralData.referralCode}`);
+                            toast.success('Link copied!');
+                          }}
+                          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                        >
+                          Copy
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await sdk.actions.composeCast({
+                                text: `Join me in BATTLEFIELD and we both get $5,000 paper money! 🎁\n\nUse my code: ${referralData.referralCode}\n\nhttps://btcbattlefield.com?ref=${referralData.referralCode}`,
+                              });
+                            } catch {
+                              toast.error('Failed to open cast composer');
+                            }
+                          }}
+                          className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-1"
+                        >
+                          <FarcasterIcon className="w-4 h-4" /> Cast
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-900/50 rounded-lg p-4 text-center">
+                        <p className="text-3xl font-bold text-green-400">{referralData.referralCount}</p>
+                        <p className="text-gray-400 text-sm">Friends Referred</p>
+                      </div>
+                      <div className="bg-slate-900/50 rounded-lg p-4 text-center">
+                        <p className="text-3xl font-bold text-yellow-400">${referralData.referralEarnings.toLocaleString()}</p>
+                        <p className="text-gray-400 text-sm">Total Earned</p>
+                      </div>
+                    </div>
+
+                    {/* Reward Info */}
+                    <div className="bg-green-900/30 border border-green-600 rounded-lg p-4">
+                      <p className="text-green-400 font-bold mb-1">🎁 Referral Rewards</p>
+                      <p className="text-gray-300 text-sm">You and your friend each get <span className="text-yellow-400 font-bold">$5,000</span> paper money when they open their first trade!</p>
+                    </div>
+
+                    {/* Referral List */}
+                    {referralData.referrals.length > 0 && (
+                      <div className="bg-slate-900/50 rounded-lg p-4">
+                        <p className="text-gray-400 text-sm mb-3">Your Referrals</p>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {referralData.referrals.map((ref, idx) => (
+                            <div key={idx} className="flex items-center justify-between bg-slate-800 rounded-lg p-2">
+                              <div className="flex items-center gap-2">
+                                <img src={ref.pfp_url || '/battlefield-logo.jpg'} alt="" className="w-8 h-8 rounded-full" />
+                                <span className="text-white font-medium text-sm">{ref.username}</span>
+                              </div>
+                              <span className={`text-xs font-bold px-2 py-1 rounded ${ref.status === 'completed' ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'}`}>
+                                {ref.status === 'completed' ? '✓ Completed' : '⏳ Pending'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <p>Loading referral data...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
           <div className="bg-slate-800 border-2 border-purple-500 rounded-lg">
             <div className="p-4 border-b border-slate-700">
               <h2 className="text-xl font-bold text-yellow-400">
@@ -722,7 +895,7 @@ export default function UserProfilePage() {
                   </p>
                 </div>
                 <div className="w-full bg-slate-700 rounded-full h-3">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500"
                     style={{ width: `${(calculateAchievementPoints(profile.stats) / 1485) * 100}%` }}
                   />
@@ -734,7 +907,7 @@ export default function UserProfilePage() {
               )}
             </div>
           </div>
-        )}
+        ))}
 
         {/* Full Trading History with Pagination - Button to expand */}
         {profile.pagination.totalPages > 1 && (
@@ -861,17 +1034,19 @@ export default function UserProfilePage() {
             </button>
 
             <button
-              className="flex flex-col items-center gap-1 px-2 py-1 -mt-4"
+              onClick={isOwnProfile ? undefined : () => router.push('/battlefield')}
+              className={`flex flex-col items-center gap-1 px-2 py-1 -mt-4 ${!isOwnProfile ? 'cursor-pointer' : ''}`}
             >
               <Avatar
                 pfpUrl={profile.user.pfp_url}
                 username={profile.user.username}
                 army={profile.user.army}
-                totalTrades={profile.stats.total_trades}
-                winRate={profile.stats.win_rate}
+                winningTrades={profile.stats.winning_trades}
                 size="lg"
               />
-              <span className="text-[10px] font-bold text-yellow-400">Profile</span>
+              <span className="text-[10px] font-bold text-yellow-400">
+                {isOwnProfile ? 'Profile' : 'Home'}
+              </span>
             </button>
 
             <button

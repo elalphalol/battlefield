@@ -16,6 +16,7 @@ interface LeaderboardEntry {
   paper_balance: number;
   total_pnl: number;
   total_trades: number;
+  winning_trades: number;
   win_rate: number;
   current_streak: number;
   best_streak: number;
@@ -201,8 +202,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                     pfpUrl={entry.pfp_url}
                     username={entry.username || `Trader ${entry.fid}`}
                     army={entry.army}
-                    totalTrades={entry.total_trades}
-                    winRate={entry.win_rate}
+                    winningTrades={entry.winning_trades}
                     size="md"
                   />
 

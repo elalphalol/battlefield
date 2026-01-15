@@ -173,10 +173,32 @@ interface Mission {
   claims_count?: number;
 }
 
+interface ReferralStats {
+  totalReferrals: number;
+  pendingReferrals: number;
+  completedReferrals: number;
+  totalRewardsDistributed: number;
+}
+
+interface TopReferrer {
+  username: string;
+  pfp_url: string;
+  referral_count: number;
+  earnings_dollars: number;
+}
+
+interface ReferralActivity {
+  referrer_username: string;
+  referred_username: string;
+  status: string;
+  created_at: string;
+  completed_at: string | null;
+}
+
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'missions'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'missions' | 'referrals'>('analytics');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -201,6 +223,12 @@ export default function AdminPage() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [missionsLoading, setMissionsLoading] = useState(false);
   const [editingMission, setEditingMission] = useState<Mission | null>(null);
+
+  // Referrals state
+  const [referralStats, setReferralStats] = useState<ReferralStats | null>(null);
+  const [topReferrers, setTopReferrers] = useState<TopReferrer[]>([]);
+  const [referralActivity, setReferralActivity] = useState<ReferralActivity[]>([]);
+  const [referralsLoading, setReferralsLoading] = useState(false);
 
   const handleLogin = () => {
     if (password === ADMIN_PASSWORD) {
@@ -273,6 +301,30 @@ export default function AdminPage() {
       fetchMissions();
     }
   }, [isAuthenticated, activeTab]);
+
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'referrals') {
+      fetchReferrals();
+    }
+  }, [isAuthenticated, activeTab]);
+
+  const fetchReferrals = async () => {
+    setReferralsLoading(true);
+    try {
+      const response = await fetch(getApiUrl('api/admin/referrals'));
+      const data = await response.json();
+      if (data.success) {
+        setReferralStats(data.stats);
+        setTopReferrers(data.topReferrers);
+        setReferralActivity(data.recentActivity);
+      }
+    } catch (error) {
+      console.error('Error fetching referrals:', error);
+      toast.error('Failed to fetch referral data');
+    } finally {
+      setReferralsLoading(false);
+    }
+  };
 
   const fetchUsers = async () => {
     setUsersLoading(true);
@@ -463,7 +515,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-4 gap-4 mb-6">
           <button
             onClick={() => setActiveTab('analytics')}
             className={`py-4 rounded-lg font-bold text-lg transition-all ${
@@ -493,6 +545,16 @@ export default function AdminPage() {
             }`}
           >
             Missions
+          </button>
+          <button
+            onClick={() => setActiveTab('referrals')}
+            className={`py-4 rounded-lg font-bold text-lg transition-all ${
+              activeTab === 'referrals'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
+            }`}
+          >
+            Referrals
           </button>
         </div>
 
@@ -1130,6 +1192,111 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Referrals Tab */}
+        {activeTab === 'referrals' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-yellow-400">Referral System</h2>
+              <button
+                onClick={fetchReferrals}
+                className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold text-sm"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {referralsLoading ? (
+              <div className="p-8 text-center text-gray-400">Loading referral data...</div>
+            ) : (
+              <>
+                {/* Stats Cards */}
+                {referralStats && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 text-center">
+                      <p className="text-3xl font-bold text-white">{referralStats.totalReferrals}</p>
+                      <p className="text-gray-400 text-sm">Total Referrals</p>
+                    </div>
+                    <div className="bg-slate-800 border border-yellow-600 rounded-lg p-4 text-center">
+                      <p className="text-3xl font-bold text-yellow-400">{referralStats.pendingReferrals}</p>
+                      <p className="text-gray-400 text-sm">Pending</p>
+                    </div>
+                    <div className="bg-slate-800 border border-green-600 rounded-lg p-4 text-center">
+                      <p className="text-3xl font-bold text-green-400">{referralStats.completedReferrals}</p>
+                      <p className="text-gray-400 text-sm">Completed</p>
+                    </div>
+                    <div className="bg-slate-800 border border-purple-600 rounded-lg p-4 text-center">
+                      <p className="text-3xl font-bold text-purple-400">${referralStats.totalRewardsDistributed.toLocaleString()}</p>
+                      <p className="text-gray-400 text-sm">Rewards Given</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Top Referrers */}
+                <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
+                  <div className="p-4 border-b border-slate-700">
+                    <h3 className="text-lg font-bold text-yellow-400">Top Referrers</h3>
+                  </div>
+                  <div className="p-4">
+                    {topReferrers.length > 0 ? (
+                      <div className="space-y-3">
+                        {topReferrers.map((referrer, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-slate-700/50 rounded-lg p-3">
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg font-bold text-yellow-400">#{idx + 1}</span>
+                              <img src={referrer.pfp_url || '/battlefield-logo.jpg'} alt="" className="w-10 h-10 rounded-full" />
+                              <span className="text-white font-medium">{referrer.username}</span>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-green-400 font-bold">{referrer.referral_count} referrals</p>
+                              <p className="text-gray-400 text-sm">${referrer.earnings_dollars.toLocaleString()} earned</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 text-center py-4">No referrers yet</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Recent Activity */}
+                <div className="bg-slate-800 border-2 border-slate-700 rounded-lg">
+                  <div className="p-4 border-b border-slate-700">
+                    <h3 className="text-lg font-bold text-yellow-400">Recent Activity</h3>
+                  </div>
+                  <div className="p-4">
+                    {referralActivity.length > 0 ? (
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {referralActivity.map((activity, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-slate-700/50 rounded-lg p-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-medium">{activity.referrer_username}</span>
+                              <span className="text-gray-400">→</span>
+                              <span className="text-white font-medium">{activity.referred_username}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs font-bold px-2 py-1 rounded ${
+                                activity.status === 'completed' ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'
+                              }`}>
+                                {activity.status === 'completed' ? '✓ Completed' : '⏳ Pending'}
+                              </span>
+                              <span className="text-gray-500 text-xs">
+                                {new Date(activity.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 text-center py-4">No referral activity yet</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 

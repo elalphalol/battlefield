@@ -40,6 +40,14 @@ if (process.env.NEYNAR_API_KEY) {
 // Target accounts to follow for missions (FIDs will be fetched dynamically)
 const TARGET_FOLLOW_USERNAMES = ['btcbattle', 'elalpha.eth'];
 
+// Cache for target account FIDs (to avoid repeated lookups)
+const targetFidCache: Map<string, { fid: number; cachedAt: number }> = new Map();
+const FID_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// Rate limiting for follow verification (1 attempt per 5 minutes per user)
+const verifyRateLimitCache: Map<number, number> = new Map(); // userId -> lastAttemptTimestamp
+const VERIFY_RATE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
+
 // Database connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -300,9 +308,26 @@ app.get('/health', async (req: Request, res: Response) => {
 // USER ENDPOINTS
 // ============================================
 
+// Helper: Generate referral code from username
+function generateReferralCode(username: string, fid?: number | null): string {
+  // Start with username
+  let name = (username || '').toLowerCase();
+
+  // Strip common ENS suffixes (e.g., elalpha.eth -> elalpha, name.base.eth -> name)
+  name = name.replace(/\.base\.eth$/, '').replace(/\.eth$/, '');
+
+  // Clean: alphanumeric only, max 20 chars
+  const clean = name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+  if (clean.length >= 3) return `${clean}.battle`;
+  // Fallback to FID
+  if (fid) return `soldier${fid}.battle`;
+  // Last resort: random
+  return `soldier${Math.random().toString(36).slice(2, 8)}.battle`;
+}
+
 // Get or create user
 app.post('/api/users', async (req: Request, res: Response) => {
-  const { fid, walletAddress, username, pfpUrl, army } = req.body;
+  const { fid, walletAddress, username, pfpUrl, army, referralCode } = req.body;
 
   // Wallet address is REQUIRED, FID is optional (null for non-Farcaster users)
   if (!walletAddress) {
@@ -343,15 +368,45 @@ app.post('/api/users', async (req: Request, res: Response) => {
       return res.json({ success: true, user: updated.rows[0], isNew: false });
     }
 
+    // Check for valid referrer (if referral code provided)
+    let referrerId: number | null = null;
+    if (referralCode) {
+      const referrerResult = await pool.query(
+        'SELECT id, username FROM users WHERE LOWER(referral_code) = LOWER($1)',
+        [referralCode]
+      );
+      if (referrerResult.rows.length > 0) {
+        referrerId = referrerResult.rows[0].id;
+        console.log(`🔗 New user referred by: ${referrerResult.rows[0].username}`);
+      } else {
+        console.log(`⚠️ Invalid referral code: ${referralCode}`);
+      }
+    }
+
+    // Generate referral code for new user
+    const finalUsername = username || `Trader${walletAddress.slice(2, 8)}`;
+    const newUserReferralCode = generateReferralCode(finalUsername, fid);
+
     // Create new user (FID can be null for regular wallet users)
     const newUser = await pool.query(
-      `INSERT INTO users (fid, wallet_address, username, pfp_url, army, paper_balance)
-       VALUES ($1, LOWER($2), $3, $4, $5, 10000.00)
+      `INSERT INTO users (fid, wallet_address, username, pfp_url, army, paper_balance, referral_code, referred_by)
+       VALUES ($1, LOWER($2), $3, $4, $5, 10000.00, $6, $7)
        RETURNING *`,
-      [fid, walletAddress, username || `Trader${walletAddress.slice(2, 8)}`, pfpUrl || '/battlefield-logo.jpg', army || 'bulls']
+      [fid, walletAddress, finalUsername, pfpUrl || '/battlefield-logo.jpg', army || 'bulls', newUserReferralCode, referrerId]
     );
 
-    console.log(`✅ Created new user: ${newUser.rows[0].username} (FID: ${fid || 'null - regular wallet'})`);
+    // If referred, create pending referral entry
+    if (referrerId) {
+      await pool.query(
+        `INSERT INTO referrals (referrer_id, referred_user_id, status)
+         VALUES ($1, $2, 'pending')
+         ON CONFLICT (referred_user_id) DO NOTHING`,
+        [referrerId, newUser.rows[0].id]
+      );
+      console.log(`📝 Created pending referral: referrer ${referrerId} → new user ${newUser.rows[0].id}`);
+    }
+
+    console.log(`✅ Created new user: ${newUser.rows[0].username} (FID: ${fid || 'null - regular wallet'}, Referral Code: ${newUserReferralCode})`);
     res.json({ success: true, user: newUser.rows[0], isNew: true });
   } catch (error) {
     console.error('Error creating/updating user:', error);
@@ -418,6 +473,108 @@ app.get('/api/users/:walletAddress', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch user' });
+  }
+});
+
+// ============================================
+// REFERRAL ENDPOINTS
+// ============================================
+
+// Get user's referral stats
+app.get('/api/referrals/:walletAddress', async (req: Request, res: Response) => {
+  const { walletAddress } = req.params;
+
+  try {
+    // Get user and their referral info
+    const userResult = await pool.query(
+      `SELECT id, username, referral_code, referral_count, referral_earnings FROM users
+       WHERE LOWER(wallet_address) = LOWER($1)`,
+      [walletAddress]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Get list of referred users
+    const referralsResult = await pool.query(
+      `SELECT u.username, u.pfp_url, r.status, r.created_at, r.completed_at
+       FROM referrals r
+       JOIN users u ON u.id = r.referred_user_id
+       WHERE r.referrer_id = $1
+       ORDER BY r.created_at DESC
+       LIMIT 20`,
+      [user.id]
+    );
+
+    res.json({
+      success: true,
+      referralCode: user.referral_code,
+      referralCount: user.referral_count || 0,
+      referralEarnings: Number(user.referral_earnings || 0) / 100, // Convert cents to dollars
+      referrals: referralsResult.rows
+    });
+  } catch (error) {
+    console.error('Error fetching referral stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch referral stats' });
+  }
+});
+
+// Admin: Get referral analytics
+app.get('/api/admin/referrals', async (req: Request, res: Response) => {
+  try {
+    // Overall stats
+    const statsResult = await pool.query(`
+      SELECT
+        COUNT(*) as total_referrals,
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_referrals,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_referrals,
+        COALESCE(SUM(CASE WHEN status = 'completed' THEN referrer_reward + referred_reward ELSE 0 END), 0) as total_rewards_cents
+      FROM referrals
+    `);
+
+    // Top referrers
+    const topReferrersResult = await pool.query(`
+      SELECT u.username, u.pfp_url, u.referral_count, u.referral_earnings / 100 as earnings_dollars
+      FROM users u
+      WHERE u.referral_count > 0
+      ORDER BY u.referral_count DESC
+      LIMIT 10
+    `);
+
+    // Recent activity
+    const recentActivityResult = await pool.query(`
+      SELECT
+        referrer.username as referrer_username,
+        referred.username as referred_username,
+        r.status,
+        r.created_at,
+        r.completed_at
+      FROM referrals r
+      JOIN users referrer ON referrer.id = r.referrer_id
+      JOIN users referred ON referred.id = r.referred_user_id
+      ORDER BY r.created_at DESC
+      LIMIT 20
+    `);
+
+    const stats = statsResult.rows[0];
+
+    res.json({
+      success: true,
+      stats: {
+        totalReferrals: Number(stats.total_referrals),
+        pendingReferrals: Number(stats.pending_referrals),
+        completedReferrals: Number(stats.completed_referrals),
+        totalRewardsDistributed: Number(stats.total_rewards_cents) / 100 // Convert cents to dollars
+      },
+      topReferrers: topReferrersResult.rows,
+      recentActivity: recentActivityResult.rows
+    });
+  } catch (error) {
+    console.error('Error fetching admin referral stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch referral stats' });
   }
 });
 
@@ -720,6 +877,15 @@ app.post('/api/trades/open', tradingLimiter, async (req: Request, res: Response)
     // Update mission progress for trade missions
     updateMissionProgress(user.rows[0].id, 'trade', 1);
 
+    // Update trading streak (unique days of trading)
+    updateTradingStreakProgress(user.rows[0].id);
+
+    // Check for "Two Faces" mission - having both long and short open at same time
+    checkTwoFacesMission(user.rows[0].id);
+
+    // Check for referral reward on first trade
+    checkReferralReward(user.rows[0].id);
+
     res.json({ success: true, trade: trade.rows[0] });
   } catch (error) {
     await pool.query('ROLLBACK');
@@ -731,18 +897,25 @@ app.post('/api/trades/open', tradingLimiter, async (req: Request, res: Response)
 // Helper function to update user's army based on P&L from longs vs shorts
 async function updateUserArmy(userId: number) {
   try {
+    // Get current army before update
+    const currentArmyResult = await pool.query(
+      'SELECT army FROM users WHERE id = $1',
+      [userId]
+    );
+    const currentArmy = currentArmyResult.rows[0]?.army;
+
     // Get total P&L from long positions
     const longPnl = await pool.query(
-      `SELECT COALESCE(SUM(pnl), 0) as total_pnl 
-       FROM trades 
+      `SELECT COALESCE(SUM(pnl), 0) as total_pnl
+       FROM trades
        WHERE user_id = $1 AND position_type = 'long' AND status IN ('closed', 'liquidated')`,
       [userId]
     );
 
     // Get total P&L from short positions
     const shortPnl = await pool.query(
-      `SELECT COALESCE(SUM(pnl), 0) as total_pnl 
-       FROM trades 
+      `SELECT COALESCE(SUM(pnl), 0) as total_pnl
+       FROM trades
        WHERE user_id = $1 AND position_type = 'short' AND status IN ('closed', 'liquidated')`,
       [userId]
     );
@@ -760,7 +933,13 @@ async function updateUserArmy(userId: number) {
     );
 
     console.log(`👤 User ${userId} army updated to ${newArmy.toUpperCase()} (LONG P&L: $${longTotal.toFixed(2)}, SHORT P&L: $${shortTotal.toFixed(2)})`);
-    
+
+    // Check if army changed - trigger "The Betrayer" mission
+    if (currentArmy && currentArmy !== newArmy) {
+      console.log(`🗡️ User ${userId} switched from ${currentArmy.toUpperCase()} to ${newArmy.toUpperCase()} - The Betrayer!`);
+      updateMissionProgress(userId, 'army_change', 1);
+    }
+
     return newArmy;
   } catch (error) {
     console.error('Error updating user army:', error);
@@ -853,9 +1032,11 @@ app.post('/api/trades/close', tradingLimiter, async (req: Request, res: Response
     `);
 
     // Update trade (store CAPPED final P&L - player never loses more than collateral)
+    // closed_by is 'manual' for user-initiated closes, or 'liquidation' if manually closed at liquidation
+    const closedBy = isLiquidated ? 'liquidation' : 'manual';
     await pool.query(
-      'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_at = NOW() WHERE id = $4',
-      [exitPrice, finalPnl, status, tradeId]
+      'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_by = $4, closed_at = NOW() WHERE id = $5',
+      [exitPrice, finalPnl, status, closedBy, tradeId]
     );
 
     // Update user balance (triggers will update stats)
@@ -974,8 +1155,8 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
 
           // Close trade at stop loss (not liquidated)
           await pool.query(
-            'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_at = NOW() WHERE id = $4',
-            [currentPrice, finalPnl, 'closed', trade.id]
+            'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_by = $4, closed_at = NOW() WHERE id = $5',
+            [currentPrice, finalPnl, 'closed', 'stop_loss', trade.id]
           );
 
           // Return collateral + pnl to user (can be positive or negative)
@@ -1043,8 +1224,8 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
 
           // Mark as liquidated (store capped final P&L)
           await pool.query(
-            'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_at = NOW() WHERE id = $4',
-            [currentPrice, finalPnl, 'liquidated', trade.id]
+            'UPDATE trades SET exit_price = $1, pnl = $2, status = $3, closed_by = $4, closed_at = NOW() WHERE id = $5',
+            [currentPrice, finalPnl, 'liquidated', 'liquidation', trade.id]
           );
 
           // No money returned on liquidation (user loses entire collateral)
@@ -1443,6 +1624,8 @@ app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
         position_size: Number(trade.position_size),
         pnl: Number(trade.pnl),
         status: trade.status,
+        stop_loss: trade.stop_loss ? Number(trade.stop_loss) : null,
+        closed_by: trade.closed_by || null,
         opened_at: trade.opened_at,
         closed_at: trade.closed_at
       })),
@@ -2249,6 +2432,30 @@ function getOnetimePeriod(): { start: Date; end: Date } {
   return { start, end };
 }
 
+// Helper: Get target account FID with caching (saves 2 API calls per verification)
+async function getTargetFid(username: string): Promise<number | null> {
+  if (!neynarClient) return null;
+
+  // Check cache first
+  const cached = targetFidCache.get(username);
+  if (cached && Date.now() - cached.cachedAt < FID_CACHE_TTL) {
+    console.log(`📦 Using cached FID for @${username}: ${cached.fid}`);
+    return cached.fid;
+  }
+
+  // Fetch from API
+  try {
+    const userResponse = await neynarClient.lookupUserByUsername({ username });
+    const fid = userResponse.user.fid;
+    targetFidCache.set(username, { fid, cachedAt: Date.now() });
+    console.log(`🔄 Fetched and cached FID for @${username}: ${fid}`);
+    return fid;
+  } catch (err) {
+    console.error(`Failed to look up user ${username}:`, err);
+    return null;
+  }
+}
+
 // Helper: Verify if a user follows the target accounts on Farcaster
 async function verifyFollowsTargetAccounts(userFid: number): Promise<{ follows: boolean; followedAccounts: string[]; missingAccounts: string[] }> {
   if (!neynarClient) {
@@ -2277,22 +2484,20 @@ async function verifyFollowsTargetAccounts(userFid: number): Promise<{ follows: 
       cursor = response.next?.cursor ?? undefined;
     } while (cursor && followingSet.size < 1000); // Safety limit
 
-    // Look up target account FIDs by username
+    // Look up target account FIDs (uses cache - saves API calls)
     const followedAccounts: string[] = [];
     const missingAccounts: string[] = [];
 
     for (const username of TARGET_FOLLOW_USERNAMES) {
-      try {
-        const userResponse = await neynarClient.lookupUserByUsername({ username });
-        const targetFid = userResponse.user.fid;
+      const targetFid = await getTargetFid(username);
+      if (targetFid === null) {
+        missingAccounts.push(username);
+        continue;
+      }
 
-        if (followingSet.has(targetFid)) {
-          followedAccounts.push(username);
-        } else {
-          missingAccounts.push(username);
-        }
-      } catch (err) {
-        console.error(`Failed to look up user ${username}:`, err);
+      if (followingSet.has(targetFid)) {
+        followedAccounts.push(username);
+      } else {
         missingAccounts.push(username);
       }
     }
@@ -2533,6 +2738,27 @@ app.get('/api/missions/verify-follow/:walletAddress', async (req: Request, res: 
       });
     }
 
+    // Rate limiting: 1 verification attempt per 5 minutes per user
+    const lastAttempt = verifyRateLimitCache.get(user.id);
+    const now = Date.now();
+    if (lastAttempt && now - lastAttempt < VERIFY_RATE_LIMIT_MS) {
+      const waitSeconds = Math.ceil((VERIFY_RATE_LIMIT_MS - (now - lastAttempt)) / 1000);
+      const waitMinutes = Math.ceil(waitSeconds / 60);
+      console.log(`⏳ Rate limited verification for user ${user.id} (${user.username}), wait ${waitSeconds}s`);
+      return res.status(429).json({
+        success: false,
+        verified: false,
+        rateLimited: true,
+        message: `Please wait ${waitMinutes} minute${waitMinutes > 1 ? 's' : ''} before verifying again.`,
+        retryAfterSeconds: waitSeconds,
+        followedAccounts: [],
+        missingAccounts: TARGET_FOLLOW_USERNAMES
+      });
+    }
+
+    // Update rate limit timestamp
+    verifyRateLimitCache.set(user.id, now);
+
     // Verify follows via Neynar
     const verification = await verifyFollowsTargetAccounts(user.fid);
 
@@ -2586,7 +2812,7 @@ app.post('/api/missions/complete', async (req: Request, res: Response) => {
     const mission = missionResult.rows[0];
 
     // For follow missions, verify the follow before completing
-    if (mission.objective_type === 'follow') {
+    if (mission.objective_type === 'follow' || mission.objective_type === 'follow_both') {
       if (!user.fid) {
         return res.status(400).json({
           success: false,
@@ -2646,32 +2872,25 @@ async function updateClaimStreakProgress(userId: number): Promise<void> {
 
     // Get user's claims from the past few days
     const claimsResult = await pool.query(
-      `SELECT DATE(created_at AT TIME ZONE 'UTC') as claim_date
+      `SELECT DATE(claimed_at AT TIME ZONE 'UTC') as claim_date
        FROM claims
-       WHERE user_id = $1 AND created_at >= $2
+       WHERE user_id = $1 AND claimed_at >= $2
        ORDER BY claim_date DESC`,
       [userId, period.start]
     );
 
-    // Calculate consecutive days (including today)
+    // Count unique claim days within the weekly period
     const claimDates = claimsResult.rows.map(r => r.claim_date.toISOString().split('T')[0]);
-    const uniqueDates = [...new Set(claimDates)];
+    const uniqueDays = [...new Set(claimDates)].length;
 
-    // Count consecutive days from today backwards
-    let consecutiveDays = 0;
-    const today = new Date();
-    for (let i = 0; i < uniqueDates.length; i++) {
-      const expectedDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - i));
-      const expectedDateStr = expectedDate.toISOString().split('T')[0];
+    console.log(`💵 Claim days for user ${userId}: ${uniqueDays} unique days this week (dates: ${[...new Set(claimDates)].join(', ')})`);
 
-      if (uniqueDates.includes(expectedDateStr)) {
-        consecutiveDays++;
-      } else {
-        break;
-      }
+    if (uniqueDays === 0) {
+      console.log(`⚠️ No claims found this week`);
+      return;
     }
 
-    // Update mission progress with the streak count (not increment, but set to current streak)
+    // Update mission progress with unique days count
     await pool.query(
       `INSERT INTO user_missions (user_id, mission_id, progress, period_start, period_end)
        VALUES ($1, $2, $3, $4, $5)
@@ -2679,20 +2898,147 @@ async function updateClaimStreakProgress(userId: number): Promise<void> {
        DO UPDATE SET progress = $3
        WHERE user_missions.is_completed = false
        RETURNING progress`,
-      [userId, mission.id, consecutiveDays, period.start, period.end]
+      [userId, mission.id, uniqueDays, period.start, period.end]
     );
 
     // Check if completed
-    if (consecutiveDays >= mission.objective_value) {
+    if (uniqueDays >= mission.objective_value) {
       await pool.query(
         `UPDATE user_missions SET is_completed = true, completed_at = NOW()
          WHERE user_id = $1 AND mission_id = $2 AND period_start = $3 AND is_completed = false`,
         [userId, mission.id, period.start]
       );
-      console.log(`🎯 Claim streak mission completed: ${consecutiveDays} consecutive days for user ${userId}`);
+      console.log(`🎯 Claim mission completed: ${uniqueDays} unique days for user ${userId}`);
     }
   } catch (error) {
     console.error('Error updating claim streak progress:', error);
+  }
+}
+
+// Helper: Check and award referral bonus on first trade
+async function checkReferralReward(userId: number): Promise<void> {
+  try {
+    // Check if user was referred and has a pending referral
+    const referralResult = await pool.query(
+      `SELECT r.id, r.referrer_id, r.referrer_reward, r.referred_reward, u.username as referrer_username
+       FROM referrals r
+       JOIN users u ON u.id = r.referrer_id
+       WHERE r.referred_user_id = $1 AND r.status = 'pending'`,
+      [userId]
+    );
+
+    if (referralResult.rows.length === 0) {
+      return; // No pending referral
+    }
+
+    const referral = referralResult.rows[0];
+
+    // Check if this is their first trade (should only have 1 trade now - the one just opened)
+    const tradeCount = await pool.query(
+      'SELECT COUNT(*) as count FROM trades WHERE user_id = $1',
+      [userId]
+    );
+
+    if (Number(tradeCount.rows[0].count) !== 1) {
+      return; // Not first trade, already processed
+    }
+
+    // Award referrer $5,000
+    const referrerReward = Number(referral.referrer_reward) / 100; // Convert cents to dollars
+    await pool.query(
+      'UPDATE users SET paper_balance = paper_balance + $1, referral_count = referral_count + 1, referral_earnings = referral_earnings + $2 WHERE id = $3',
+      [referrerReward, referral.referrer_reward, referral.referrer_id]
+    );
+
+    // Award referred user $5,000
+    const referredReward = Number(referral.referred_reward) / 100; // Convert cents to dollars
+    await pool.query(
+      'UPDATE users SET paper_balance = paper_balance + $1 WHERE id = $2',
+      [referredReward, userId]
+    );
+
+    // Update referral status to completed
+    await pool.query(
+      `UPDATE referrals SET status = 'completed', completed_at = NOW() WHERE id = $1`,
+      [referral.id]
+    );
+
+    console.log(`🎉 Referral bonus awarded! Referrer ${referral.referrer_username} (+$${referrerReward}) and user ${userId} (+$${referredReward})`);
+  } catch (error) {
+    console.error('Error checking referral reward:', error);
+  }
+}
+
+// Helper: Check Two Faces mission (both long and short open at same time)
+async function checkTwoFacesMission(userId: number): Promise<void> {
+  try {
+    // Check if user has both long and short positions open
+    const openTrades = await pool.query(
+      `SELECT DISTINCT position_type FROM trades WHERE user_id = $1 AND status = 'open'`,
+      [userId]
+    );
+
+    const positionTypes = openTrades.rows.map(r => r.position_type);
+    const hasBoth = positionTypes.includes('long') && positionTypes.includes('short');
+
+    if (hasBoth) {
+      // Complete the two_faces mission
+      updateMissionProgress(userId, 'two_faces', 1);
+      console.log(`🎭 Two Faces mission triggered for user ${userId}`);
+    }
+  } catch (error) {
+    console.error('Error checking Two Faces mission:', error);
+  }
+}
+
+// Helper: Update trading streak progress (track unique days of trading)
+async function updateTradingStreakProgress(userId: number): Promise<void> {
+  try {
+    // Get the weekly_streak mission
+    const missionResult = await pool.query(
+      `SELECT id, objective_value FROM missions WHERE mission_key = 'weekly_streak' AND is_active = true`
+    );
+
+    if (missionResult.rows.length === 0) return;
+
+    const mission = missionResult.rows[0];
+    const period = getWeeklyPeriod();
+
+    // Count unique trading days within this weekly period
+    const tradingDaysResult = await pool.query(
+      `SELECT COUNT(DISTINCT DATE(opened_at)) as unique_days
+       FROM trades
+       WHERE user_id = $1
+         AND opened_at >= $2
+         AND opened_at < $3`,
+      [userId, period.start, period.end]
+    );
+
+    const uniqueDays = parseInt(tradingDaysResult.rows[0].unique_days) || 0;
+
+    // Upsert progress with the count of unique days (not increment)
+    await pool.query(
+      `INSERT INTO user_missions (user_id, mission_id, progress, period_start, period_end)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, mission_id, period_start)
+       DO UPDATE SET progress = $3
+       WHERE user_missions.is_completed = false`,
+      [userId, mission.id, uniqueDays, period.start, period.end]
+    );
+
+    // Check if completed
+    if (uniqueDays >= mission.objective_value) {
+      await pool.query(
+        `UPDATE user_missions SET is_completed = true, completed_at = NOW()
+         WHERE user_id = $1 AND mission_id = $2 AND period_start = $3 AND is_completed = false`,
+        [userId, mission.id, period.start]
+      );
+      console.log(`🎯 Trading streak mission completed: ${uniqueDays} unique days for user ${userId}`);
+    } else {
+      console.log(`📊 Trading streak updated: ${uniqueDays}/${mission.objective_value} days for user ${userId}`);
+    }
+  } catch (error) {
+    console.error('Error updating trading streak progress:', error);
   }
 }
 

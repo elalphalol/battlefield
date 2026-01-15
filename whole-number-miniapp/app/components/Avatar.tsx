@@ -8,8 +8,7 @@ interface AvatarProps {
   pfpUrl?: string | null;
   username?: string;
   army?: 'bears' | 'bulls' | null;
-  totalTrades?: number;
-  winRate?: number;
+  winningTrades?: number;
   size?: AvatarSize;
   showBorderBadge?: boolean;
   showDecorations?: boolean;
@@ -101,14 +100,13 @@ export function Avatar({
   pfpUrl,
   username,
   army,
-  totalTrades = 0,
-  winRate = 0,
+  winningTrades = 0,
   size = 'md',
   showBorderBadge = false,
   showDecorations = false,
   className = '',
 }: AvatarProps) {
-  const tier = getBorderTier(totalTrades, winRate);
+  const tier = getBorderTier(winningTrades);
   const borderClasses = getBorderClasses(tier);
   const borderEmoji = getBorderEmoji(tier);
   const sizeConfig = sizeClasses[size];
@@ -155,7 +153,7 @@ export function Avatar({
             flex items-center justify-center
             font-bold z-20
           `}
-          title={`${getBorderInfo(totalTrades, winRate).name} Border`}
+          title={`${getBorderInfo(winningTrades).name} Border`}
         >
           {borderEmoji}
         </div>
@@ -165,8 +163,8 @@ export function Avatar({
 }
 
 // Small badge component to show border tier inline
-export function BorderBadge({ totalTrades, winRate }: { totalTrades: number; winRate: number }) {
-  const info = getBorderInfo(totalTrades, winRate);
+export function BorderBadge({ winningTrades }: { winningTrades: number }) {
+  const info = getBorderInfo(winningTrades);
 
   if (info.tier === 'none') return null;
 

@@ -1,4 +1,4 @@
-// Avatar Border System - Auto-unlock based on player stats
+// Avatar Border System - Auto-unlock based on winning trades
 
 export type BorderTier = 'none' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 
@@ -11,21 +11,21 @@ export interface BorderInfo {
 }
 
 /**
- * Calculate border tier based on total trades and win rate
+ * Calculate border tier based on winning trades only
  * Requirements:
- * - None: < 10 trades
- * - Bronze: 10+ trades (any win rate)
- * - Silver: 25+ trades, 40%+ win rate
- * - Gold: 50+ trades, 50%+ win rate
- * - Platinum: 100+ trades, 60%+ win rate
- * - Diamond: 200+ trades, 70%+ win rate
+ * - None: < 25 winning trades
+ * - Bronze: 25+ winning trades
+ * - Silver: 125+ winning trades
+ * - Gold: 450+ winning trades
+ * - Platinum: 750+ winning trades
+ * - Diamond: 1500+ winning trades
  */
-export function getBorderTier(totalTrades: number, winRate: number): BorderTier {
-  if (totalTrades >= 200 && winRate >= 70) return 'diamond';
-  if (totalTrades >= 100 && winRate >= 60) return 'platinum';
-  if (totalTrades >= 50 && winRate >= 50) return 'gold';
-  if (totalTrades >= 25 && winRate >= 40) return 'silver';
-  if (totalTrades >= 10) return 'bronze';
+export function getBorderTier(winningTrades: number): BorderTier {
+  if (winningTrades >= 1500) return 'diamond';
+  if (winningTrades >= 750) return 'platinum';
+  if (winningTrades >= 450) return 'gold';
+  if (winningTrades >= 125) return 'silver';
+  if (winningTrades >= 25) return 'bronze';
   return 'none';
 }
 
@@ -79,11 +79,11 @@ export function getBorderEmoji(tier: BorderTier): string {
  */
 export function getNextTierRequirement(tier: BorderTier): string | null {
   const requirements: Record<BorderTier, string | null> = {
-    none: '10 trades to unlock Bronze',
-    bronze: '25 trades + 40% win rate for Silver',
-    silver: '50 trades + 50% win rate for Gold',
-    gold: '100 trades + 60% win rate for Platinum',
-    platinum: '200 trades + 70% win rate for Diamond',
+    none: '25 wins to unlock Bronze',
+    bronze: '125 wins for Silver',
+    silver: '450 wins for Gold',
+    gold: '750 wins for Platinum',
+    platinum: '1500 wins for Diamond',
     diamond: null, // Max tier
   };
   return requirements[tier];
@@ -92,8 +92,8 @@ export function getNextTierRequirement(tier: BorderTier): string | null {
 /**
  * Get complete border info object
  */
-export function getBorderInfo(totalTrades: number, winRate: number): BorderInfo {
-  const tier = getBorderTier(totalTrades, winRate);
+export function getBorderInfo(winningTrades: number): BorderInfo {
+  const tier = getBorderTier(winningTrades);
   return {
     tier,
     name: getBorderName(tier),

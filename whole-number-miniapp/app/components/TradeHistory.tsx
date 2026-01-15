@@ -25,6 +25,7 @@ interface ClosedTrade {
   pnl: number;
   status: 'closed' | 'liquidated';
   stop_loss: number | null;
+  closed_by: 'manual' | 'stop_loss' | 'liquidation' | null;
   opened_at: string;
   closed_at: string;
 }
@@ -117,9 +118,8 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
           const pnlPercentage = (pnl / Number(trade.position_size)) * 100;
           const isProfit = pnl >= 0;
           const isLiquidated = trade.status === 'liquidated';
-          // Check if trade was closed by stop loss (stop_loss set and exit price is at/near stop loss)
-          const wasStopLoss = trade.stop_loss !== null && trade.status === 'closed' &&
-            Math.abs(Number(trade.exit_price) - Number(trade.stop_loss)) < 1;
+          // Check if trade was closed by stop loss using the closed_by field
+          const wasStopLoss = trade.closed_by === 'stop_loss';
 
           const generateImageUrl = () => {
             const army = userData?.army || 'bulls';
@@ -143,10 +143,30 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
             const imageUrl = generateImageUrl();
             const army = userData?.army || 'bulls';
             const armyEmoji = army === 'bears' ? '🐻' : '🐂';
+            const exitPrice = Math.round(Number(trade.exit_price)).toLocaleString('en-US');
 
-            // Add liquidation status to share text
-            const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
-            const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
+            // Generate status text based on trade outcome
+            let statusText: string;
+            let statusEmoji = '';
+            if (isLiquidated) {
+              statusText = '💥 LIQUIDATED';
+              statusEmoji = ' 💥';
+            } else if (wasStopLoss) {
+              statusText = 'Tactical exit at stop loss';
+              statusEmoji = ' 🛡️';
+            } else if (isProfit) {
+              statusText = 'won';
+            } else {
+              statusText = 'lost';
+            }
+
+            // Build share text with exit price for stop loss trades
+            let shareText: string;
+            if (wasStopLoss) {
+              shareText = `${armyEmoji} ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | Exit: $${exitPrice} | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${statusEmoji}\n\n⚔️ Bears vs Bulls`;
+            } else {
+              shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${statusEmoji}\n\n⚔️ Bears vs Bulls`;
+            }
 
             // Track the cast for mission progress
             try {
@@ -198,15 +218,6 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
                 </div>
               )}
 
-              {/* Stop Loss Indicator */}
-              {wasStopLoss && (
-                <div className="absolute top-1 right-1 z-10">
-                  <span className="text-xs bg-yellow-600/80 text-yellow-100 px-2 py-0.5 rounded font-bold">
-                    🛡️ SL
-                  </span>
-                </div>
-              )}
-
               <div className="flex items-start justify-between mb-2 relative z-20">
                 <div className="flex items-center gap-2">
                   <span className={`text-sm ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
@@ -215,6 +226,12 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
                   <span className="text-sm font-bold text-white">
                     {trade.position_type.toUpperCase()} {trade.leverage}x
                   </span>
+                  {/* Stop Loss Indicator - inline with position type */}
+                  {wasStopLoss && (
+                    <span className="text-xs bg-yellow-600/80 text-yellow-100 px-1.5 py-0.5 rounded font-bold">
+                      🛡️
+                    </span>
+                  )}
                 </div>
                 <div className={`text-right ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
                   <div className="text-sm font-bold whitespace-nowrap">

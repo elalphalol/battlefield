@@ -61,7 +61,7 @@ export default function BattlefieldHome() {
     isStopLoss: boolean;
   } | null>(null);
 
-  // Check URL params on mount to set initial tab
+  // Check URL params on mount to set initial tab and capture referral code
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
@@ -75,6 +75,13 @@ export default function BattlefieldHome() {
       }
     } else if (tab === 'missions') {
       setActiveTab('missions');
+    }
+
+    // Capture referral code from URL
+    const refCode = params.get('ref') || params.get('referral');
+    if (refCode) {
+      localStorage.setItem('pendingReferral', refCode);
+      console.log('📝 Referral code captured:', refCode);
     }
   }, []);
   
@@ -210,6 +217,9 @@ export default function BattlefieldHome() {
           console.log('⚠️ Creating regular wallet user (no Farcaster):', { fid, username, pfpUrl });
         }
 
+        // Check for pending referral code
+        const pendingReferral = typeof window !== 'undefined' ? localStorage.getItem('pendingReferral') : null;
+
         // Create new user
         const createResponse = await fetch(getApiUrl('api/users'), {
           method: 'POST',
@@ -219,7 +229,8 @@ export default function BattlefieldHome() {
             walletAddress: address,
             username,
             pfpUrl,
-            army: 'bulls' // Default army for backend
+            army: 'bulls', // Default army for backend
+            referralCode: pendingReferral // Pass referral code if present
           })
         });
 
@@ -229,6 +240,11 @@ export default function BattlefieldHome() {
           setPreviousUserData(null);
           setUserData(createData.user);
           console.log('✅ User created successfully:', createData.user);
+          // Clear pending referral after successful creation
+          if (pendingReferral) {
+            localStorage.removeItem('pendingReferral');
+            console.log('✅ Referral code applied:', pendingReferral);
+          }
         }
       }
     } catch (error) {
@@ -520,11 +536,11 @@ export default function BattlefieldHome() {
 
             {/* Content Sections */}
             {battleSection === 'strategy' ? (
-              <div>
+              <div key="strategy-section">
                 <StrategyGuide />
               </div>
             ) : battleSection === 'tips' ? (
-              <div className="space-y-6">
+              <div key="tips-section" className="space-y-6">
                 {/* Trading Tips */}
                 <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
                   <h2 className="text-2xl font-bold text-yellow-400 mb-6">💡 Trading Tips & Best Practices</h2>
@@ -621,24 +637,32 @@ export default function BattlefieldHome() {
                 <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
                   <h2 className="text-2xl font-bold text-cyan-400 mb-4">🖼️ Avatar Frames</h2>
                   <p className="text-gray-400 text-sm mb-6">
-                    Unlock special avatar borders based on your trading stats. Higher tiers have epic decorative frames!
+                    Unlock special avatar borders based on your winning trades. Higher tiers have epic decorative frames!
                   </p>
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
-                      <div className="w-14 h-14 rounded-full border-2 border-slate-600 bg-slate-800 flex items-center justify-center mb-2">
-                        <span className="text-2xl">👤</span>
+                      <div className="w-14 h-14 rounded-full border-2 border-slate-600 bg-slate-800 flex items-center justify-center mb-2 overflow-hidden">
+                        {userData?.pfp_url ? (
+                          <img src={userData.pfp_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-2xl">👤</span>
+                        )}
                       </div>
                       <p className="font-semibold text-gray-400 text-sm">No Frame</p>
-                      <p className="text-[10px] text-gray-500">&lt;10 trades</p>
+                      <p className="text-[10px] text-gray-500">&lt;25 wins</p>
                     </div>
 
                     <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
-                      <div className="w-14 h-14 rounded-full border-4 border-amber-600 bg-slate-800 flex items-center justify-center mb-2">
-                        <span className="text-2xl">🔶</span>
+                      <div className="w-14 h-14 rounded-full border-4 border-amber-600 bg-slate-800 flex items-center justify-center mb-2 overflow-hidden">
+                        {userData?.pfp_url ? (
+                          <img src={userData.pfp_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-2xl">👤</span>
+                        )}
                       </div>
                       <p className="font-semibold text-amber-600 text-sm">Bronze</p>
-                      <p className="text-[10px] text-gray-400">10+ trades</p>
+                      <p className="text-[10px] text-gray-400">25+ wins</p>
                     </div>
 
                     <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
@@ -649,12 +673,16 @@ export default function BattlefieldHome() {
                           <polygon points="100,85 100,100 85,100" fill="#d1d5db" opacity="0.8" />
                           <polygon points="0,85 0,100 15,100" fill="#d1d5db" opacity="0.8" />
                         </svg>
-                        <div className="w-14 h-14 rounded-full border-4 border-gray-300 bg-slate-800 flex items-center justify-center z-10">
-                          <span className="text-2xl">⬡</span>
+                        <div className="w-14 h-14 rounded-full border-4 border-gray-300 bg-slate-800 flex items-center justify-center z-10 overflow-hidden">
+                          {userData?.pfp_url ? (
+                            <img src={userData.pfp_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-2xl">👤</span>
+                          )}
                         </div>
                       </div>
                       <p className="font-semibold text-gray-300 text-sm">Silver</p>
-                      <p className="text-[10px] text-gray-400">25+ trades, 40% WR</p>
+                      <p className="text-[10px] text-gray-400">125+ wins</p>
                     </div>
 
                     <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
@@ -669,12 +697,16 @@ export default function BattlefieldHome() {
                           <polygon points="88,88 82,94 76,88 82,82" fill="#eab308" />
                           <polygon points="12,88 18,94 24,88 18,82" fill="#eab308" />
                         </svg>
-                        <div className="w-14 h-14 rounded-full border-4 border-yellow-400 bg-slate-800 flex items-center justify-center z-10">
-                          <span className="text-2xl">⭐</span>
+                        <div className="w-14 h-14 rounded-full border-4 border-yellow-400 bg-slate-800 flex items-center justify-center z-10 overflow-hidden">
+                          {userData?.pfp_url ? (
+                            <img src={userData.pfp_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-2xl">👤</span>
+                          )}
                         </div>
                       </div>
                       <p className="font-semibold text-yellow-400 text-sm">Gold</p>
-                      <p className="text-[10px] text-gray-400">50+ trades, 50% WR</p>
+                      <p className="text-[10px] text-gray-400">450+ wins</p>
                     </div>
 
                     <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
@@ -689,12 +721,16 @@ export default function BattlefieldHome() {
                           <polygon points="85,85 92,92 78,88 82,78" fill="#22d3ee" />
                           <polygon points="15,85 8,92 22,88 18,78" fill="#22d3ee" />
                         </svg>
-                        <div className="w-14 h-14 rounded-full border-4 border-cyan-300 shadow-[0_0_15px_rgba(103,232,249,0.5)] bg-slate-800 flex items-center justify-center z-10">
-                          <span className="text-2xl">✦</span>
+                        <div className="w-14 h-14 rounded-full border-4 border-cyan-300 shadow-[0_0_15px_rgba(103,232,249,0.5)] bg-slate-800 flex items-center justify-center z-10 overflow-hidden">
+                          {userData?.pfp_url ? (
+                            <img src={userData.pfp_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-2xl">👤</span>
+                          )}
                         </div>
                       </div>
                       <p className="font-semibold text-cyan-300 text-sm">Platinum</p>
-                      <p className="text-[10px] text-gray-400">100+ trades, 60% WR</p>
+                      <p className="text-[10px] text-gray-400">750+ wins</p>
                     </div>
 
                     <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
@@ -711,17 +747,21 @@ export default function BattlefieldHome() {
                           <polygon points="88,88 94,94 82,98 78,86 86,82 98,82" fill="#c084fc" />
                           <polygon points="12,88 6,94 18,98 22,86 14,82 2,82" fill="#c084fc" />
                         </svg>
-                        <div className="w-14 h-14 rounded-full border-4 border-purple-400 shadow-[0_0_20px_rgba(192,132,252,0.6)] bg-slate-800 flex items-center justify-center z-10">
-                          <span className="text-2xl">💎</span>
+                        <div className="w-14 h-14 rounded-full border-4 border-purple-400 shadow-[0_0_20px_rgba(192,132,252,0.6)] bg-slate-800 flex items-center justify-center z-10 overflow-hidden">
+                          {userData?.pfp_url ? (
+                            <img src={userData.pfp_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-2xl">👤</span>
+                          )}
                         </div>
                       </div>
                       <p className="font-semibold text-purple-400 text-sm">Diamond</p>
-                      <p className="text-[10px] text-gray-400">200+ trades, 70% WR</p>
+                      <p className="text-[10px] text-gray-400">1500+ wins</p>
                     </div>
                   </div>
 
                   <p className="text-xs text-gray-500 mt-4 text-center">
-                    Frames auto-unlock based on your stats. Keep trading to level up!
+                    Frames auto-unlock based on your winning trades. Keep winning to level up!
                   </p>
                 </div>
 
@@ -823,10 +863,18 @@ export default function BattlefieldHome() {
                 </div>
               </div>
             ) : battleSection === 'market' ? (
-              <div>
+              <div key="market-section">
+                {/* Loading state when BTC price not ready */}
+                {btcPrice === 0 || isLoading ? (
+                  <div className="bg-slate-800/50 rounded-lg p-8 border border-slate-700 text-center">
+                    <div className="animate-spin text-4xl mb-4">🎯</div>
+                    <p className="text-gray-400">Loading market data...</p>
+                  </div>
+                ) : (
+                <div className="space-y-6">
                 {/* Battlefield Visual - TOP */}
-                <div className="mb-6">
-                  <BattlefieldVisual 
+                <div>
+                  <BattlefieldVisual
                     coordinate={coordinate}
                     wholeNumber={wholeNumber}
                     nextWholeNumber={nextWholeNumber}
@@ -858,33 +906,33 @@ export default function BattlefieldHome() {
                     </div>
 
                     <div className={`bg-slate-900/50 rounded-lg p-4 border-2 ${
-                      recommendation.action.toLowerCase().includes('long') ? 'border-green-500/50' : 
-                      recommendation.action.toLowerCase().includes('short') ? 'border-red-500/50' : 
+                      recommendation?.action?.toLowerCase().includes('long') ? 'border-green-500/50' :
+                      recommendation?.action?.toLowerCase().includes('short') ? 'border-red-500/50' :
                       'border-yellow-500/50'
                     }`}>
                       <h4 className="font-bold text-white mb-2">Recommended Action</h4>
                       <div className={`text-2xl font-bold ${
-                        recommendation.action.toLowerCase().includes('long') ? 'text-green-400' : 
-                        recommendation.action.toLowerCase().includes('short') ? 'text-red-400' : 
+                        recommendation?.action?.toLowerCase().includes('long') ? 'text-green-400' :
+                        recommendation?.action?.toLowerCase().includes('short') ? 'text-red-400' :
                         'text-yellow-400'
                       }`}>
-                        {recommendation.action.toUpperCase()}
+                        {recommendation?.action?.toUpperCase() || 'LOADING...'}
                       </div>
                     </div>
 
                     <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
                       <h4 className="font-bold text-blue-400 mb-2">Current Zone</h4>
                       <p className="text-sm text-gray-300">
-                        <strong>Zone:</strong> {zoneInfo.name}<br />
-                        <strong>Description:</strong> {zoneInfo.description}
+                        <strong>Zone:</strong> {zoneInfo?.name || 'Loading...'}<br />
+                        <strong>Description:</strong> {zoneInfo?.description || 'Loading...'}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Battle Alerts */}
-                <div className="mb-6">
-                  <BattleAlerts 
+                <div>
+                  <BattleAlerts
                     btcPrice={btcPrice}
                     coordinate={coordinate}
                     beamsBroken={strategy.beamsBroken}
@@ -915,15 +963,17 @@ export default function BattlefieldHome() {
                     <div className="bg-blue-900/20 rounded-lg p-3 border border-blue-500/30">
                       <h4 className="font-bold text-blue-400 mb-1">🔄 Switching Armies</h4>
                       <p className="text-sm text-gray-300">
-                        Want to switch? Close winning positions in the opposite direction. 
+                        Want to switch? Close winning positions in the opposite direction.
                         If you&apos;re Bulls but Bears are winning, close some long wins and open/close winning shorts!
                       </p>
                     </div>
                   </div>
                 </div>
+                </div>
+                )}
               </div>
             ) : battleSection === 'status' ? (
-              <div>
+              <div key="status-section">
                 {/* Army Battle Status - TOP */}
                 <div className="mb-6">
                   <ArmyBattleStatus />
@@ -963,7 +1013,7 @@ export default function BattlefieldHome() {
 
               </div>
             ) : (
-              <div>
+              <div key="predictions-section">
                 {/* Prediction Markets */}
                 <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
                   <h3 className="text-2xl font-bold text-yellow-400 mb-4 text-center">🎯 Army Prediction Market</h3>
@@ -1044,8 +1094,7 @@ export default function BattlefieldHome() {
                   pfpUrl={userData.pfp_url}
                   username={userData.username}
                   army={userData.army}
-                  totalTrades={userData.total_trades}
-                  winRate={userData.total_trades > 0 ? (userData.winning_trades / userData.total_trades) * 100 : 0}
+                  winningTrades={userData.winning_trades}
                   size="lg"
                 />
                 <span className="text-[10px] font-bold text-yellow-400">Profile</span>

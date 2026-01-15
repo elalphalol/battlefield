@@ -18,6 +18,15 @@
             "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'git commit|git push'; then cd /var/www/battlefield/whole-number-miniapp && npm run lint --silent 2>/dev/null || echo 'Warning: Lint check skipped or has warnings'; fi"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qiE 'psql.*DROP|psql.*TRUNCATE|psql.*DELETE FROM'; then echo '[Hook] Destructive DB operation - backup recommended'; fi"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -26,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'duplicate key.*_pkey|Failed to open trade|Failed to claim'; then echo '[Hook] Sequence issue detected - run /fix-sequences'; fi"
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'duplicate key.*_pkey|Failed to open trade|Failed to claim'; then echo '\\n[Hook] Sequence issue detected - run /fix-sequences'; fi"
           }
         ]
       },
@@ -38,7 +47,75 @@
             "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'Build failed|error TS[0-9]+|Cannot find module'; then echo '\\n[Hook] Build error detected. Check TypeScript compilation.'; fi"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'client reference manifest.*does not exist|InvariantError'; then echo '\\n[Hook] Next.js build corruption! Run: rm -rf .next && npm run build'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'ECONNREFUSED.*5432|connection refused.*postgres'; then echo '\\n[Hook] Database connection error! Check: systemctl status postgresql'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'pm2 restart'; then sleep 2; if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'battlefield-backend'; then curl -s --max-time 3 http://localhost:3001/health | grep -q ok && echo '[Hook] Backend healthy' || echo '[Hook] Backend health check failed'; fi; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'errored|stopped|status.*errored'; then echo '\\n[Hook] PM2 process crashed! Check logs: pm2 logs --lines 50'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'pm2 list|pm2 status'; then MEM=$(pm2 jlist 2>/dev/null | grep -oP '\"memory\":\\s*\\d+' | grep -oP '\\d+' | awk '{sum+=$1} END {print int(sum/1024/1024)}'); if [ \"$MEM\" -gt 500 ]; then echo \"\\n[Hook] High memory usage: ${MEM}MB - consider restart\"; fi; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'rate limit|too many requests|429'; then echo '\\n[Hook] API rate limit detected! Wait before retrying.'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'FATAL|PANIC|out of memory|Cannot allocate'; then echo '\\n[Hook] Critical system error detected! Check server resources.'; fi"
+          }
+        ]
       }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)"
     ]
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface Alert {
   id: string;
@@ -20,7 +20,7 @@ interface BattleAlertsProps {
   };
 }
 
-export function BattleAlerts({ btcPrice, coordinate, beamsBroken }: BattleAlertsProps) {
+export function BattleAlerts({ btcPrice = 0, coordinate = 0, beamsBroken }: BattleAlertsProps) {
   const [alerts, setAlerts] = useState<Alert[]>([
     {
       id: '1',
@@ -31,15 +31,23 @@ export function BattleAlerts({ btcPrice, coordinate, beamsBroken }: BattleAlerts
     }
   ]);
 
+  // Track which alerts we've already added to prevent duplicates
+  const addedAlertsRef = useRef<Set<string>>(new Set(['1']));
+
+  // Safety checks for props
+  const safeCoordinate = typeof coordinate === 'number' && !isNaN(coordinate) ? coordinate : 0;
+  const safeBeamsBroken = beamsBroken || { beam226: false, beam113: false, beam086: false };
+
   useEffect(() => {
     // Add alert when entering dip buy zone (888-700)
-    if (coordinate >= 700 && coordinate <= 888) {
-      const alertId = `dip-${coordinate}`;
-      if (!alerts.some(a => a.id === alertId)) {
+    if (safeCoordinate >= 700 && safeCoordinate <= 888) {
+      const alertId = `dip-${Math.floor(safeCoordinate / 50) * 50}`; // Group by 50s to reduce spam
+      if (!addedAlertsRef.current.has(alertId)) {
+        addedAlertsRef.current.add(alertId);
         setAlerts(prev => [{
           id: alertId,
           icon: '🟢',
-          message: `Entered DIP BUY ZONE (${coordinate})! Watch for long opportunities.`,
+          message: `Entered DIP BUY ZONE (${safeCoordinate})! Watch for long opportunities.`,
           type: 'success',
           timestamp: new Date()
         }, ...prev.slice(0, 3)]);
@@ -47,9 +55,10 @@ export function BattleAlerts({ btcPrice, coordinate, beamsBroken }: BattleAlerts
     }
 
     // Add alert when beams break
-    if (beamsBroken.beam086) {
+    if (safeBeamsBroken.beam086) {
       const alertId = 'beam-086';
-      if (!alerts.some(a => a.id === alertId)) {
+      if (!addedAlertsRef.current.has(alertId)) {
+        addedAlertsRef.current.add(alertId);
         setAlerts(prev => [{
           id: alertId,
           icon: '🔨',
@@ -59,14 +68,14 @@ export function BattleAlerts({ btcPrice, coordinate, beamsBroken }: BattleAlerts
         }, ...prev.slice(0, 3)]);
       }
     }
-  }, [coordinate, beamsBroken, alerts]);
+  }, [safeCoordinate, safeBeamsBroken.beam086]);
 
   return (
     <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
       <h2 className="text-2xl font-bold text-yellow-400 mb-4 text-center flex items-center justify-center gap-2">
         <span>🚨</span> BATTLE ALERTS
       </h2>
-      
+
       <div className="space-y-3">
         {alerts.map((alert) => (
           <div

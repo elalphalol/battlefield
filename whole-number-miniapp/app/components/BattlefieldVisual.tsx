@@ -15,27 +15,32 @@ interface BattlefieldVisualProps {
   };
 }
 
-export function BattlefieldVisual({ 
-  coordinate, 
-  wholeNumber, 
-  nextWholeNumber, 
-  beamsBroken,
-  zoneInfo 
+export function BattlefieldVisual({
+  coordinate = 0,
+  wholeNumber = 0,
+  nextWholeNumber = 0,
+  beamsBroken = { beam226: false, beam113: false, beam086: false },
+  zoneInfo = { name: 'Loading...', signal: 'neutral' as const }
 }: BattlefieldVisualProps) {
+  // Safety check - ensure we have valid numbers
+  const safeCoordinate = typeof coordinate === 'number' && !isNaN(coordinate) ? coordinate : 0;
+  const safeWholeNumber = typeof wholeNumber === 'number' && !isNaN(wholeNumber) ? wholeNumber : 0;
+  const safeNextWholeNumber = typeof nextWholeNumber === 'number' && !isNaN(nextWholeNumber) ? nextWholeNumber : 0;
+
   // Calculate position percentage (0-100)
-  const positionPercent = (coordinate / 1000) * 100;
-  
+  const positionPercent = (safeCoordinate / 1000) * 100;
+
   // Determine zone colors
   const getZoneColor = () => {
-    if (coordinate >= 900) return 'from-green-600 to-emerald-600';
-    if (coordinate >= 700) return 'from-yellow-600 to-amber-600';
-    if (coordinate >= 500) return 'from-blue-600 to-cyan-600';
-    if (coordinate >= 300) return 'from-orange-600 to-red-600';
+    if (safeCoordinate >= 900) return 'from-green-600 to-emerald-600';
+    if (safeCoordinate >= 700) return 'from-yellow-600 to-amber-600';
+    if (safeCoordinate >= 500) return 'from-blue-600 to-cyan-600';
+    if (safeCoordinate >= 300) return 'from-orange-600 to-red-600';
     return 'from-red-600 to-red-800';
   };
 
   // Calculate army percentages (visual representation)
-  const bullPercent = coordinate / 10; // 0-100
+  const bullPercent = safeCoordinate / 10; // 0-100
   const bearPercent = 100 - bullPercent;
 
   return (
@@ -53,7 +58,7 @@ export function BattlefieldVisual({
       <div className="bg-gradient-to-r from-slate-700 to-slate-800 rounded-lg p-8 mb-6 border border-slate-600">
         <div className="text-center">
           <div className={`text-8xl font-black bg-gradient-to-r ${getZoneColor()} bg-clip-text text-transparent mb-2`}>
-            {coordinate.toString().padStart(3, '0')}
+            {safeCoordinate.toString().padStart(3, '0')}
           </div>
           <p className="text-gray-400 text-lg">Current Coordinate</p>
         </div>
@@ -64,13 +69,13 @@ export function BattlefieldVisual({
         <div className="text-center">
           <div className="text-xl font-bold text-red-400">⚠️</div>
           <div className="text-2xl font-bold text-white mt-1">
-            ${(wholeNumber / 1000).toFixed(0)}K
+            ${(safeWholeNumber / 1000).toFixed(0)}K
           </div>
         </div>
         <div className="text-center">
           <div className="text-xl font-bold text-green-400">⚡</div>
           <div className="text-2xl font-bold text-white mt-1">
-            ${(nextWholeNumber / 1000).toFixed(0)}K
+            ${(safeNextWholeNumber / 1000).toFixed(0)}K
           </div>
         </div>
       </div>
