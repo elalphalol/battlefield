@@ -137,15 +137,15 @@ export function ArmyBattleStatus() {
             <div className="space-y-2">
               <div className="text-sm text-gray-400">Combined P&L</div>
               <div className={`text-3xl font-bold ${bullsTotal >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {bullsTotal >= 0 ? '+' : ''}${bullsTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                {bullsTotal >= 0 ? '+' : ''}${Math.round(bullsTotal).toLocaleString('en-US')}
               </div>
             </div>
           </div>
 
           {/* Bears Army */}
           <div className={`bg-gradient-to-br ${
-            winningArmy === 'bears' 
-              ? 'from-red-900/40 to-red-800/20 border-2 border-red-500 shadow-lg shadow-red-500/20' 
+            winningArmy === 'bears'
+              ? 'from-red-900/40 to-red-800/20 border-2 border-red-500 shadow-lg shadow-red-500/20'
               : 'from-red-900/20 to-red-800/10 border border-red-500/30'
           } rounded-lg p-5 relative overflow-hidden transition-all duration-500`}>
             {winningArmy === 'bears' && (
@@ -163,7 +163,7 @@ export function ArmyBattleStatus() {
             <div className="space-y-2">
               <div className="text-sm text-gray-400">Combined P&L</div>
               <div className={`text-3xl font-bold ${bearsTotal >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {bearsTotal >= 0 ? '+' : ''}${bearsTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                {bearsTotal >= 0 ? '+' : ''}${Math.round(bearsTotal).toLocaleString('en-US')}
               </div>
             </div>
           </div>
@@ -186,7 +186,7 @@ export function ArmyBattleStatus() {
             />
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-xs font-bold text-white drop-shadow-lg">
-                {winningArmy === 'bulls' ? '🐂' : '🐻'} {winningArmy.toUpperCase()} WINNING BY ${difference.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                {winningArmy === 'bulls' ? '🐂' : '🐻'} {winningArmy.toUpperCase()} WINNING BY ${Math.round(difference).toLocaleString('en-US')}
               </span>
             </div>
           </div>

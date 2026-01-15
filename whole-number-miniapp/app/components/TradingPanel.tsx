@@ -117,7 +117,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     }
 
     if (!address || positionSize > Number(paperBalance)) {
-      toast.error(`Insufficient balance. Available: $${Number(paperBalance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
+      toast.error(`Insufficient balance. Available: $${Math.round(Number(paperBalance)).toLocaleString('en-US')}`);
       return;
     }
 
@@ -148,8 +148,11 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       console.log('📊 Response data:', data);
 
       if (data.success) {
-        // Silently open position - no alert
         console.log('✅ Trade opened successfully');
+        // Show confirmation toast with trade details
+        const emoji = tradeType === 'long' ? '🐂' : '🐻';
+        const direction = tradeType === 'long' ? 'LONG' : 'SHORT';
+        toast.success(`${emoji} ${direction} ${leverage}x opened! $${positionSize.toLocaleString()}`);
         fetchOpenTrades();
         onTradeComplete();
       } else {
@@ -319,16 +322,16 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       army,
       type: trade.position_type,
       leverage: trade.leverage.toString(),
-      pnl: pnl.toFixed(2),
-      pnlPercent: percentage.toFixed(1),
+      pnl: Math.round(pnl).toString(),
+      pnlPercent: Math.round(percentage).toString(),
       username: username || 'Trader',
       v: Date.now().toString()
     });
     const imageUrl = `${websiteUrl}/api/share-card?${params.toString()}`;
 
     // Open position text
-    const statusText = pnl >= 0 ? `up +$${Math.abs(pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : `down -$${Math.abs(pnl).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    const shareText = `${armyEmoji} I have an OPEN position on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | Currently ${statusText} (${percentage >= 0 ? '+' : ''}${percentage.toFixed(1)}%)\n\n💭 Should I close it?\n\n⚔️ Bears vs Bulls`;
+    const statusText = pnl >= 0 ? `up +$${Math.round(Math.abs(pnl)).toLocaleString('en-US')}` : `down -$${Math.round(Math.abs(pnl)).toLocaleString('en-US')}`;
+    const shareText = `${armyEmoji} I have an OPEN position on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | Currently ${statusText} (${percentage >= 0 ? '+' : ''}${Math.round(percentage)}%)\n\n💭 Should I close it?\n\n⚔️ Bears vs Bulls`;
 
     // Track the cast for mission progress
     try {
@@ -516,7 +519,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
           />
           <div className="flex justify-between text-xs text-gray-400 mt-1">
             <span>0%</span>
-            <span className="text-gray-500">{positionSizePercent.toFixed(2)}%</span>
+            <span className="text-gray-500">{Math.round(positionSizePercent)}%</span>
             <span>100%</span>
           </div>
         </div>
@@ -525,23 +528,23 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         <div className="bg-slate-700/50 rounded-lg p-4 mb-4 space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-400">Collateral:</span>
-            <span className="text-cyan-400 font-bold">${positionSize.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            <span className="text-cyan-400 font-bold">${Math.round(positionSize).toLocaleString('en-US')}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Total Size ({leverage}x):</span>
-            <span className="text-purple-400 font-bold">${(positionSize * leverage).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            <span className="text-purple-400 font-bold">${Math.round(positionSize * leverage).toLocaleString('en-US')}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Entry Price:</span>
-            <span className="text-white font-bold">${btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            <span className="text-white font-bold">${Math.round(btcPrice).toLocaleString('en-US')}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Liquidation Price:</span>
-            <span className="text-red-400 font-bold">${calculateLiquidationPrice().toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            <span className="text-red-400 font-bold">${Math.round(calculateLiquidationPrice()).toLocaleString('en-US')}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Available Balance:</span>
-            <span className="text-green-400 font-bold">${Number(paperBalance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            <span className="text-green-400 font-bold">${Math.round(Number(paperBalance)).toLocaleString('en-US')}</span>
           </div>
         </div>
 
@@ -592,19 +595,19 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                       </span>
                     </div>
                     <div className={`font-bold text-sm text-right ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {pnl >= 0 ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      {pnl >= 0 ? '+' : ''}${Math.round(pnl).toLocaleString('en-US')}
                       <div className="text-xs">
-                        ({percentage >= 0 ? '+' : ''}{percentage.toFixed(1)}%)
+                        ({percentage >= 0 ? '+' : ''}{Math.round(percentage)}%)
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 mb-3">
-                    <div>Entry: ${Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                    <div>Now: ${btcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                    <div>Size: ${Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
-                    <div>Total: ${(Number(trade.position_size) * Number(trade.leverage)).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
-                    <div className="col-span-2">Liq: ${Number(trade.liquidation_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div>Entry: ${Math.round(Number(trade.entry_price)).toLocaleString('en-US')}</div>
+                    <div>Now: ${Math.round(btcPrice).toLocaleString('en-US')}</div>
+                    <div>Size: ${Math.round(Number(trade.position_size)).toLocaleString('en-US')}</div>
+                    <div>Total: ${Math.round(Number(trade.position_size) * Number(trade.leverage)).toLocaleString('en-US')}</div>
+                    <div className="col-span-2">Liq: ${Math.round(Number(trade.liquidation_price)).toLocaleString('en-US')}</div>
                   </div>
 
                   {isLiquidationWarning && (

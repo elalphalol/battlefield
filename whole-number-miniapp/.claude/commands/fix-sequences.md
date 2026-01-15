@@ -25,3 +25,6 @@ The fix resets each sequence to MAX(id) + 1 for the corresponding table.
 - `trades` - Trading positions
 - `users` - User accounts
 - `referrals` - Referral records
+- `claims` - Paper money claims
+- `missions` - Mission definitions
+- `user_missions` - User mission progress

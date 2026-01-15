@@ -24,6 +24,7 @@ interface Mission {
 
 interface MissionsProps {
   walletAddress?: string;
+  readOnly?: boolean;
 }
 
 function formatReward(cents: number): string {
@@ -50,7 +51,7 @@ function formatTimeRemaining(endDate: string): string {
   return `${hours}h ${minutes}m`;
 }
 
-export function Missions({ walletAddress }: MissionsProps) {
+export function Missions({ walletAddress, readOnly = false }: MissionsProps) {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [dailyReset, setDailyReset] = useState<string>('');
   const [weeklyReset, setWeeklyReset] = useState<string>('');
@@ -218,6 +219,7 @@ export function Missions({ walletAddress }: MissionsProps) {
                 onFollow={mission.mission_key === 'follow_btcbattle' ? handleFollowMission : undefined}
                 isClaiming={claimingId === mission.id}
                 isCompleting={completingKey === mission.mission_key}
+                readOnly={readOnly}
               />
             ))}
           </div>
@@ -240,6 +242,7 @@ export function Missions({ walletAddress }: MissionsProps) {
               onClaim={handleClaim}
               isClaiming={claimingId === mission.id}
               isCompleting={completingKey === mission.mission_key}
+              readOnly={readOnly}
             />
           ))}
         </div>
@@ -261,6 +264,7 @@ export function Missions({ walletAddress }: MissionsProps) {
               onClaim={handleClaim}
               isClaiming={claimingId === mission.id}
               isCompleting={false}
+              readOnly={readOnly}
             />
           ))}
         </div>
@@ -275,9 +279,10 @@ interface MissionCardProps {
   onFollow?: () => void;
   isClaiming: boolean;
   isCompleting: boolean;
+  readOnly?: boolean;
 }
 
-function MissionCard({ mission, onClaim, onFollow, isClaiming, isCompleting }: MissionCardProps) {
+function MissionCard({ mission, onClaim, onFollow, isClaiming, isCompleting, readOnly = false }: MissionCardProps) {
   const progressPercent = Math.min(100, (mission.progress / mission.objective_value) * 100);
   const isFollowMission = mission.mission_key === 'follow_btcbattle';
 
@@ -333,6 +338,13 @@ function MissionCard({ mission, onClaim, onFollow, isClaiming, isCompleting }: M
 
           {mission.is_claimed ? (
             <span className="text-green-500 text-xl">✓</span>
+          ) : readOnly ? (
+            // Show status indicator in read-only mode
+            mission.is_completed ? (
+              <span className="text-xs text-green-400 font-medium">Ready to claim</span>
+            ) : (
+              <span className="text-xs text-gray-500">In progress</span>
+            )
           ) : mission.is_completed ? (
             <button
               onClick={() => onClaim(mission.id)}

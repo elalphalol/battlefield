@@ -52,7 +52,7 @@ export default function BattlefieldHome() {
   const [strategy] = useState(() => new WholeNumberStrategy());
   const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
   const [previousUserData, setPreviousUserData] = useState<UserData | null>(null);
-  
+
   // Check URL params on mount to set initial tab
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -825,7 +825,7 @@ export default function BattlefieldHome() {
                 activeTab === 'missions' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-2xl">📋</span>
+              <span className="text-2xl">🏅</span>
               <span className="text-xs font-bold">Missions</span>
             </button>
           </div>

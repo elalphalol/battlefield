@@ -40,10 +40,7 @@ export function TradeResultToast({ isVisible, pnl, isLiquidated, onDismiss }: Tr
   const [message, setMessage] = useState('');
 
   const isWin = pnl >= 0 && !isLiquidated;
-  const formattedPnl = Math.abs(pnl).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  const formattedPnl = Math.round(Math.abs(pnl)).toLocaleString('en-US');
 
   useEffect(() => {
     if (isVisible) {

@@ -31,9 +31,9 @@ const PRODUCTION_MANIFEST = {
   frame: {
     version: "next",
     name: "Battlefield",
-    iconUrl: "https://btcbattlefield.com/battlefield-logo.jpg",
+    iconUrl: "https://btcbattlefield.com/battlefield-icon-200.png",
     imageUrl: "https://btcbattlefield.com/opengraph-image.jpg",
-    splashImageUrl: "https://btcbattlefield.com/opengraph-image.jpg",
+    splashImageUrl: "https://btcbattlefield.com/battlefield-icon-200.png",
     splashBackgroundColor: "#0a0a0a",
     homeUrl: "https://btcbattlefield.com",
     webhookUrl: "https://btcbattlefield.com/api/farcaster/webhook"

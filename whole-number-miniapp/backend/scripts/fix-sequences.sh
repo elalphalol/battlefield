@@ -26,7 +26,7 @@ echo "🔧 Fixing database sequences..."
 echo "   Database: $DB_NAME @ $DB_HOST:$DB_PORT"
 
 # Tables and their sequences to fix
-TABLES=("trades" "users" "referrals")
+TABLES=("trades" "users" "referrals" "claims" "missions" "user_missions")
 
 for TABLE in "${TABLES[@]}"; do
     SEQ_NAME="${TABLE}_id_seq"

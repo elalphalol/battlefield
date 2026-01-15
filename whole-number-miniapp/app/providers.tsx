@@ -58,6 +58,16 @@ export function Providers({ children }: { children: ReactNode }) {
         <OnchainKitProvider
           apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
           chain={base}
+          config={{
+            appearance: {
+              mode: 'auto',
+              name: 'Battlefield',
+              logo: 'https://btcbattlefield.com/battlefield-icon-200.png',
+            },
+          }}
+          miniKit={{
+            enabled: true,
+          }}
         >
           <Toaster
             position="top-center"

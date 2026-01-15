@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'duplicate key.*trades_pkey\\|Failed to open trade'; then echo 'Sequence issue detected - run /fix-sequences'; fi"
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'duplicate key.*_pkey|Failed to open trade|Failed to claim'; then echo '[Hook] Sequence issue detected - run /fix-sequences'; fi"
           }
         ]
       },

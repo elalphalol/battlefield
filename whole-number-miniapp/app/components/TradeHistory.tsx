@@ -117,8 +117,8 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
               army,
               type: trade.position_type,
               leverage: trade.leverage.toString(),
-              pnl: pnl.toFixed(2),
-              pnlPercent: pnlPercentage.toFixed(1),
+              pnl: Math.round(pnl).toString(),
+              pnlPercent: Math.round(pnlPercentage).toString(),
               username: username || 'Trader',
               v: Date.now().toString() // Cache buster
             });
@@ -133,7 +133,7 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
 
             // Add liquidation status to share text
             const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
-            const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
+            const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
 
             // Track the cast for mission progress
             try {
@@ -194,23 +194,23 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
                 </div>
                 <div className={`text-right ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
                   <div className="text-sm font-bold whitespace-nowrap">
-                    {isProfit ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    {isProfit ? '+' : ''}${Math.round(pnl).toLocaleString('en-US')}
                   </div>
                   <div className="text-xs">
-                    ({isProfit ? '+' : ''}{pnlPercentage.toFixed(1)}%)
+                    ({isProfit ? '+' : ''}{Math.round(pnlPercentage)}%)
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-xs text-gray-400">
                 <div>
-                  <span className="text-gray-500">Entry:</span> ${Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  <span className="text-gray-500">Entry:</span> ${Math.round(Number(trade.entry_price)).toLocaleString('en-US')}
                 </div>
                 <div>
-                  <span className="text-gray-500">Exit:</span> ${Number(trade.exit_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  <span className="text-gray-500">Exit:</span> ${Math.round(Number(trade.exit_price)).toLocaleString('en-US')}
                 </div>
                 <div>
-                  <span className="text-gray-500">Size:</span> ${Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  <span className="text-gray-500">Size:</span> ${Math.round(Number(trade.position_size)).toLocaleString('en-US')}
                 </div>
               </div>
 

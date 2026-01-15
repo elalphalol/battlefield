@@ -71,6 +71,8 @@ export default function UserProfilePage() {
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceLoaded, setPriceLoaded] = useState(false);
   const [achievementTab, setAchievementTab] = useState<'missions' | 'achievements' | 'titles' | 'locked'>('missions');
+  const [currentUserFid, setCurrentUserFid] = useState<number | null>(null);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
 
   // Fetch BTC price
   useEffect(() => {
@@ -97,6 +99,31 @@ export default function UserProfilePage() {
     const interval = setInterval(fetchPrice, 10000); // Update every 10 seconds
     return () => clearInterval(interval);
   }, [priceLoaded]);
+
+  // Get current user's FID from Farcaster context
+  useEffect(() => {
+    const getCurrentUserFid = async () => {
+      try {
+        const context = await sdk.context;
+        if (context && context.user && context.user.fid) {
+          setCurrentUserFid(context.user.fid);
+        }
+      } catch {
+        // Not in Farcaster context
+        setCurrentUserFid(null);
+      }
+    };
+    getCurrentUserFid();
+  }, []);
+
+  // Check if viewing own profile
+  useEffect(() => {
+    if (profile && currentUserFid) {
+      setIsOwnProfile(profile.user.fid === currentUserFid);
+    } else {
+      setIsOwnProfile(false);
+    }
+  }, [profile, currentUserFid]);
 
   // Load profile once when price is loaded or when page/identifier changes
   useEffect(() => {
@@ -360,7 +387,7 @@ export default function UserProfilePage() {
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
             <p className="text-gray-400 text-sm mb-1">Total P&L</p>
             <p className={`text-2xl font-bold ${profile.stats.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {profile.stats.total_pnl >= 0 ? '+' : ''}${profile.stats.total_pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+              {profile.stats.total_pnl >= 0 ? '+' : ''}${Math.round(profile.stats.total_pnl).toLocaleString('en-US')}
             </p>
           </div>
 
@@ -368,7 +395,7 @@ export default function UserProfilePage() {
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
             <p className="text-gray-400 text-sm mb-1">Win Rate</p>
             <p className="text-2xl font-bold text-white">
-              {profile.stats.win_rate.toFixed(1)}%
+              {Math.round(profile.stats.win_rate)}%
             </p>
             <p className="text-xs text-gray-500">
               {profile.stats.winning_trades}/{profile.stats.total_trades} trades
@@ -442,7 +469,7 @@ export default function UserProfilePage() {
                         <div className="text-right">
                           {pos.current_pnl !== undefined ? (
                             <p className={`text-xl font-bold ${pos.current_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {pos.current_pnl >= 0 ? '+' : ''}${pos.current_pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                              {pos.current_pnl >= 0 ? '+' : ''}${Math.round(pos.current_pnl).toLocaleString('en-US')}
                             </p>
                           ) : (
                             <p className="text-xs text-gray-500">P&L: N/A</p>
@@ -489,16 +516,16 @@ export default function UserProfilePage() {
                         army,
                         type: trade.position_type,
                         leverage: trade.leverage.toString(),
-                        pnl: pnl.toFixed(2),
-                        pnlPercent: pnlPercentage.toFixed(1),
+                        pnl: Math.round(pnl).toString(),
+                        pnlPercent: Math.round(pnlPercentage).toString(),
                         username: profile.user.username || 'Trader',
                         v: Date.now().toString() // Cache buster
                       });
                       const imageUrl = `${websiteUrl}/api/share-card?${params.toString()}`;
-                      
+
                       // Add liquidation status to share text
                       const statusText = isLiquidated ? '💥 LIQUIDATED' : (isProfit ? 'won' : 'lost');
-                      const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${pnlPercentage.toFixed(1)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
+                      const shareText = `${armyEmoji} Just ${statusText} ${isProfit ? '+' : ''}$${Math.round(pnl).toLocaleString('en-US')} on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | ${isProfit ? '+' : ''}${Math.round(pnlPercentage)}%${isLiquidated ? ' 💥' : ''}\n\n⚔️ Bears vs Bulls`;
 
                       // Check if we're in Farcaster context
                       let isInFarcaster = false;
@@ -555,22 +582,22 @@ export default function UserProfilePage() {
                             </span>
                           </div>
                           <div className={`text-sm font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-                            {isProfit ? '+' : ''}${pnl.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            {isProfit ? '+' : ''}${Math.round(pnl).toLocaleString('en-US')}
                             <span className="text-xs ml-1">
-                              ({isProfit ? '+' : ''}{pnlPercentage.toFixed(1)}%)
+                              ({isProfit ? '+' : ''}{Math.round(pnlPercentage)}%)
                             </span>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-3 gap-2 text-xs text-gray-400">
                           <div>
-                            <span className="text-gray-500">Entry:</span> ${Number(trade.entry_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            <span className="text-gray-500">Entry:</span> ${Math.round(Number(trade.entry_price)).toLocaleString('en-US')}
                           </div>
                           <div>
-                            <span className="text-gray-500">Exit:</span> ${Number(trade.exit_price).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            <span className="text-gray-500">Exit:</span> ${Math.round(Number(trade.exit_price)).toLocaleString('en-US')}
                           </div>
                           <div>
-                            <span className="text-gray-500">Size:</span> ${Number(trade.position_size).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            <span className="text-gray-500">Size:</span> ${Math.round(Number(trade.position_size)).toLocaleString('en-US')}
                           </div>
                         </div>
 
@@ -640,7 +667,17 @@ export default function UserProfilePage() {
 
         {/* Tab Content */}
         {achievementTab === 'missions' ? (
-          <Missions walletAddress={profile.user.wallet_address} />
+          <>
+            {!isOwnProfile && (
+              <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-3 mb-4 flex items-center gap-2">
+                <span className="text-lg">👀</span>
+                <p className="text-sm text-gray-400">
+                  Viewing <span className="text-yellow-400 font-medium">{profile.user.username}&apos;s</span> mission progress (read-only)
+                </p>
+              </div>
+            )}
+            <Missions walletAddress={profile.user.wallet_address} readOnly={!isOwnProfile} />
+          </>
         ) : (
           <div className="bg-slate-800 border-2 border-purple-500 rounded-lg">
             <div className="p-4 border-b border-slate-700">
@@ -664,7 +701,7 @@ export default function UserProfilePage() {
                 <div className="flex items-center justify-center gap-4 text-sm mb-3">
                   <p className="text-gray-400">
                     {calculateAchievementPoints(profile.stats)} / 1485 Achievements (
-                    {((calculateAchievementPoints(profile.stats) / 1485) * 100).toFixed(1)}%)
+                    {Math.round((calculateAchievementPoints(profile.stats) / 1485) * 100)}%)
                   </p>
                   <p className="text-yellow-400 font-bold">
                     ⭐ {calculateAchievementPoints(profile.stats)} / 1485 Points
@@ -789,7 +826,7 @@ export default function UserProfilePage() {
         </footer>
       </div>
 
-      {/* Bottom Navigation - 5 buttons: Leaders, Battle, Profile, Trade, Learn */}
+      {/* Bottom Navigation - 5 buttons: Leaders, Battle, Profile, Trade, Missions */}
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t-2 border-slate-700 z-50">
         <div className="container mx-auto px-2">
           <div className="flex justify-around items-center py-2">
@@ -800,7 +837,7 @@ export default function UserProfilePage() {
               <span className="text-2xl">🏆</span>
               <span className="text-xs font-bold">Leaders</span>
             </button>
-            
+
             <button
               onClick={() => router.push('/battlefield?tab=battle')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
@@ -808,7 +845,7 @@ export default function UserProfilePage() {
               <span className="text-2xl">⚔️</span>
               <span className="text-xs font-bold">Battle</span>
             </button>
-            
+
             <button
               className="flex flex-col items-center gap-1 px-2 py-1 -mt-4"
             >
@@ -821,7 +858,7 @@ export default function UserProfilePage() {
               </div>
               <span className="text-[10px] font-bold text-yellow-400">Profile</span>
             </button>
-            
+
             <button
               onClick={() => router.push('/battlefield')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
@@ -829,13 +866,13 @@ export default function UserProfilePage() {
               <span className="text-2xl">🎯</span>
               <span className="text-xs font-bold">Trade</span>
             </button>
-            
+
             <button
-              onClick={() => router.push('/battlefield?tab=learn')}
+              onClick={() => router.push('/battlefield?tab=missions')}
               className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
             >
-              <span className="text-2xl">📚</span>
-              <span className="text-xs font-bold">Learn</span>
+              <span className="text-2xl">🏅</span>
+              <span className="text-xs font-bold">Missions</span>
             </button>
           </div>
         </div>

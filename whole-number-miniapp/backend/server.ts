@@ -2423,6 +2423,551 @@ async function updateMissionProgress(userId: number, objectiveType: string, incr
 }
 
 // ============================================
+// ADMIN API ENDPOINTS
+// ============================================
+
+/// Admin: Get comprehensive analytics dashboard
+app.get('/api/admin/analytics', async (req: Request, res: Response) => {
+  try {
+    // === USER OVERVIEW ===
+    const userOverview = await pool.query(`
+      SELECT
+        COUNT(*) as total_users,
+        COUNT(CASE WHEN last_active >= NOW() - INTERVAL '24 hours' THEN 1 END) as active_24h,
+        COUNT(CASE WHEN last_active >= NOW() - INTERVAL '7 days' THEN 1 END) as active_7d,
+        COUNT(CASE WHEN last_active >= NOW() - INTERVAL '30 days' THEN 1 END) as active_30d,
+        COUNT(CASE WHEN total_trades > 0 THEN 1 END) as users_with_trades,
+        COUNT(CASE WHEN total_trades >= 10 THEN 1 END) as power_traders,
+        COUNT(CASE WHEN total_trades >= 20 THEN 1 END) as super_traders
+      FROM users
+    `);
+    const userStats = userOverview.rows[0];
+
+    // === TRADING ACTIVITY BY DAY (last 14 days) ===
+    const tradingByDay = await pool.query(`
+      SELECT
+        DATE(opened_at) as day,
+        COUNT(*) as trades_opened,
+        COUNT(CASE WHEN status = 'closed' THEN 1 END) as closed,
+        COUNT(CASE WHEN status = 'liquidated' THEN 1 END) as liquidated,
+        COUNT(DISTINCT user_id) as unique_traders,
+        ROUND(AVG(leverage)::numeric, 1) as avg_leverage,
+        ROUND(SUM(position_size)::numeric, 0) as total_volume
+      FROM trades
+      WHERE opened_at >= NOW() - INTERVAL '14 days'
+      GROUP BY DATE(opened_at)
+      ORDER BY day DESC
+    `);
+
+    // === LEVERAGE DISTRIBUTION ===
+    const leverageStats = await pool.query(`
+      SELECT
+        leverage,
+        COUNT(*) as trade_count,
+        ROUND(COUNT(*)::numeric / NULLIF((SELECT COUNT(*) FROM trades), 0) * 100, 1) as percentage,
+        COUNT(DISTINCT user_id) as unique_users
+      FROM trades
+      GROUP BY leverage
+      ORDER BY trade_count DESC
+      LIMIT 10
+    `);
+
+    // === ARMY ANALYSIS ===
+    const armyStats = await pool.query(`
+      SELECT
+        army,
+        COUNT(*) as users,
+        ROUND(AVG(total_pnl)::numeric, 0) as avg_pnl,
+        ROUND(SUM(total_pnl)::numeric, 0) as total_pnl,
+        ROUND(AVG(total_trades)::numeric, 1) as avg_trades
+      FROM users
+      WHERE army IS NOT NULL
+      GROUP BY army
+    `);
+
+    // === LONG VS SHORT ANALYSIS ===
+    const positionTypeStats = await pool.query(`
+      SELECT
+        position_type,
+        COUNT(*) as count,
+        ROUND(COUNT(*)::numeric / NULLIF((SELECT COUNT(*) FROM trades), 0) * 100, 1) as percentage,
+        COUNT(CASE WHEN status = 'closed' AND pnl > 0 THEN 1 END) as wins,
+        COUNT(CASE WHEN status = 'closed' AND pnl <= 0 THEN 1 END) as losses,
+        COUNT(CASE WHEN status = 'liquidated' THEN 1 END) as liquidations,
+        ROUND(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END)::numeric, 0) as profit,
+        ROUND(SUM(CASE WHEN pnl < 0 THEN pnl ELSE 0 END)::numeric, 0) as loss
+      FROM trades
+      GROUP BY position_type
+    `);
+
+    // === TOP TRADERS ===
+    const topTraders = await pool.query(`
+      SELECT
+        COALESCE(u.username, LEFT(u.wallet_address, 8) || '...') as username,
+        u.army,
+        u.total_trades,
+        ROUND(u.total_pnl::numeric, 0) as pnl,
+        u.winning_trades,
+        ROUND((u.winning_trades::float / NULLIF(u.total_trades, 0) * 100)::numeric, 0) as win_rate,
+        u.times_liquidated as liquidations,
+        ROUND(u.paper_balance::numeric, 0) as balance
+      FROM users u
+      WHERE u.total_trades > 0
+      ORDER BY u.total_trades DESC
+      LIMIT 15
+    `);
+
+    // === HOURLY ACTIVITY (UTC) ===
+    const hourlyActivity = await pool.query(`
+      SELECT
+        EXTRACT(HOUR FROM opened_at)::int as hour_utc,
+        COUNT(*) as trades,
+        COUNT(DISTINCT user_id) as unique_traders
+      FROM trades
+      WHERE opened_at >= NOW() - INTERVAL '7 days'
+      GROUP BY EXTRACT(HOUR FROM opened_at)
+      ORDER BY trades DESC
+      LIMIT 12
+    `);
+
+    // === NEW USER SIGNUPS BY DAY ===
+    const newUsers = await pool.query(`
+      SELECT
+        DATE(created_at) as day,
+        COUNT(*) as new_users
+      FROM users
+      WHERE created_at >= NOW() - INTERVAL '14 days'
+      GROUP BY DATE(created_at)
+      ORDER BY day DESC
+    `);
+
+    // === RETENTION FUNNEL ===
+    const retentionFunnel = await pool.query(`
+      SELECT
+        'Registered' as metric, COUNT(*)::int as count FROM users
+      UNION ALL
+      SELECT 'Made 1+ trades', COUNT(*)::int FROM users WHERE total_trades >= 1
+      UNION ALL
+      SELECT 'Made 5+ trades', COUNT(*)::int FROM users WHERE total_trades >= 5
+      UNION ALL
+      SELECT 'Made 10+ trades', COUNT(*)::int FROM users WHERE total_trades >= 10
+      UNION ALL
+      SELECT 'Made 20+ trades', COUNT(*)::int FROM users WHERE total_trades >= 20
+      UNION ALL
+      SELECT 'Balance > 0', COUNT(*)::int FROM users WHERE paper_balance > 0
+      UNION ALL
+      SELECT 'Positive P&L', COUNT(*)::int FROM users WHERE total_pnl > 0
+      UNION ALL
+      SELECT 'Got liquidated', COUNT(*)::int FROM users WHERE times_liquidated > 0
+    `);
+
+    // === CURRENT STATE ===
+    const currentState = await pool.query(`
+      SELECT
+        COUNT(DISTINCT user_id) as users_with_open,
+        COUNT(*) as total_open,
+        ROUND(SUM(position_size)::numeric, 0) as collateral_at_risk
+      FROM trades
+      WHERE status = 'open'
+    `);
+
+    // === MISSIONS ENGAGEMENT ===
+    const missionsEngagement = await pool.query(`
+      SELECT
+        m.title,
+        m.mission_type,
+        COUNT(um.id) as total_progress,
+        COUNT(CASE WHEN um.is_completed THEN 1 END) as completed,
+        COUNT(CASE WHEN um.is_claimed THEN 1 END) as claimed,
+        ROUND(m.reward_amount / 100.0, 0) as reward
+      FROM missions m
+      LEFT JOIN user_missions um ON m.id = um.mission_id
+      GROUP BY m.id, m.title, m.mission_type, m.reward_amount, m.display_order
+      ORDER BY m.mission_type, m.display_order
+    `);
+
+    // === CLAIMS ACTIVITY ===
+    const claimsActivity = await pool.query(`
+      SELECT
+        DATE(claimed_at) as day,
+        COUNT(*) as claims,
+        COUNT(DISTINCT user_id) as unique_claimers,
+        ROUND(SUM(amount)::numeric, 0) as total_claimed
+      FROM claims
+      WHERE claimed_at >= NOW() - INTERVAL '14 days'
+      GROUP BY DATE(claimed_at)
+      ORDER BY day DESC
+    `);
+
+    // Build legacy format for backward compatibility
+    const totalUsers = parseInt(userStats.total_users);
+    const activeUsers24h = parseInt(userStats.active_24h);
+    const totalTrades = tradingByDay.rows.reduce((sum: number, r: { trades_opened: string }) => sum + parseInt(r.trades_opened || '0'), 0) ||
+      (await pool.query('SELECT COUNT(*) as c FROM trades')).rows[0].c;
+    const totalVolume = tradingByDay.rows.reduce((sum: number, r: { total_volume: string }) => sum + parseFloat(r.total_volume || '0'), 0);
+
+    let bullsCount = 0, bearsCount = 0, bullsPnl = 0, bearsPnl = 0;
+    for (const row of armyStats.rows) {
+      if (row.army === 'bulls') {
+        bullsCount = parseInt(row.users);
+        bullsPnl = parseFloat(row.total_pnl);
+      } else if (row.army === 'bears') {
+        bearsCount = parseInt(row.users);
+        bearsPnl = parseFloat(row.total_pnl);
+      }
+    }
+
+    const missionsClaimed = missionsEngagement.rows.reduce((sum: number, r: { claimed: string }) => sum + parseInt(r.claimed || '0'), 0);
+    const missionsRewards = missionsEngagement.rows.reduce((sum: number, r: { claimed: string; reward: string }) => sum + (parseInt(r.claimed || '0') * parseFloat(r.reward || '0') * 100), 0);
+
+    res.json({
+      success: true,
+      analytics: {
+        // Legacy fields
+        totalUsers,
+        activeUsers24h,
+        totalTrades: parseInt((await pool.query('SELECT COUNT(*) as c FROM trades')).rows[0].c),
+        totalVolume: parseFloat((await pool.query('SELECT COALESCE(SUM(position_size), 0) as v FROM trades')).rows[0].v),
+        bullsCount,
+        bearsCount,
+        bullsPnl,
+        bearsPnl,
+        totalMissionsClaimed: missionsClaimed,
+        totalMissionsRewards: missionsRewards,
+
+        // New detailed stats
+        userOverview: {
+          total: parseInt(userStats.total_users),
+          active24h: parseInt(userStats.active_24h),
+          active7d: parseInt(userStats.active_7d),
+          active30d: parseInt(userStats.active_30d),
+          withTrades: parseInt(userStats.users_with_trades),
+          powerTraders: parseInt(userStats.power_traders),
+          superTraders: parseInt(userStats.super_traders)
+        },
+        tradingByDay: tradingByDay.rows,
+        leverageDistribution: leverageStats.rows,
+        armyAnalysis: armyStats.rows,
+        positionTypeAnalysis: positionTypeStats.rows,
+        topTraders: topTraders.rows,
+        hourlyActivity: hourlyActivity.rows,
+        newUsersByDay: newUsers.rows,
+        retentionFunnel: retentionFunnel.rows,
+        currentState: currentState.rows[0],
+        missionsEngagement: missionsEngagement.rows,
+        claimsActivity: claimsActivity.rows
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching admin analytics:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch analytics' });
+  }
+});
+
+// Admin: Get users list with pagination and search
+app.get('/api/admin/users', async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const search = req.query.search as string || '';
+    const offset = (page - 1) * limit;
+
+    let whereClause = '';
+    const params: (string | number)[] = [];
+
+    if (search) {
+      whereClause = `WHERE username ILIKE $1 OR wallet_address ILIKE $1 OR fid::text = $2`;
+      params.push(`%${search}%`, search);
+    }
+
+    // Get total count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as count FROM users ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0].count);
+
+    // Get users
+    const usersResult = await pool.query(
+      `SELECT id, fid, username, wallet_address, army, paper_balance, total_pnl,
+              total_trades, winning_trades, times_liquidated, battle_tokens_earned,
+              created_at, last_active
+       FROM users
+       ${whereClause}
+       ORDER BY last_active DESC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
+    );
+
+    res.json({
+      success: true,
+      users: usersResult.rows,
+      total,
+      page,
+      limit
+    });
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch users' });
+  }
+});
+
+// Admin: Update user balance
+app.post('/api/admin/users/balance', async (req: Request, res: Response) => {
+  try {
+    const { userId, newBalance } = req.body;
+
+    if (!userId || newBalance === undefined) {
+      return res.status(400).json({ success: false, message: 'Missing userId or newBalance' });
+    }
+
+    await pool.query(
+      'UPDATE users SET paper_balance = $1 WHERE id = $2',
+      [newBalance, userId]
+    );
+
+    console.log(`[ADMIN] Updated user ${userId} balance to ${newBalance}`);
+    res.json({ success: true, message: 'Balance updated' });
+  } catch (error) {
+    console.error('Error updating user balance:', error);
+    res.status(500).json({ success: false, message: 'Failed to update balance' });
+  }
+});
+
+// Admin: Reset user stats
+app.post('/api/admin/users/reset', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'Missing userId' });
+    }
+
+    await pool.query(
+      `UPDATE users SET
+        paper_balance = 10000,
+        total_pnl = 0,
+        total_trades = 0,
+        winning_trades = 0,
+        current_streak = 0,
+        best_streak = 0,
+        times_liquidated = 0,
+        total_volume = 0
+       WHERE id = $1`,
+      [userId]
+    );
+
+    // Close all open trades
+    await pool.query(
+      `UPDATE trades SET status = 'closed', exit_price = entry_price, pnl = 0, closed_at = NOW()
+       WHERE user_id = $1 AND status = 'open'`,
+      [userId]
+    );
+
+    console.log(`[ADMIN] Reset stats for user ${userId}`);
+    res.json({ success: true, message: 'User stats reset' });
+  } catch (error) {
+    console.error('Error resetting user stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to reset stats' });
+  }
+});
+
+// Admin: Get all missions with stats
+app.get('/api/admin/missions', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        m.*,
+        COALESCE(
+          (SELECT COUNT(*) FROM user_missions um WHERE um.mission_id = m.id AND um.is_completed = true),
+          0
+        ) as completions_count,
+        COALESCE(
+          (SELECT COUNT(*) FROM user_missions um WHERE um.mission_id = m.id AND um.is_claimed = true),
+          0
+        ) as claims_count
+      FROM missions m
+      ORDER BY m.mission_type, m.display_order
+    `);
+
+    res.json({
+      success: true,
+      missions: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching admin missions:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch missions' });
+  }
+});
+
+// Admin: Update mission
+app.post('/api/admin/missions/update', async (req: Request, res: Response) => {
+  try {
+    const { id, title, description, objective_value, reward_amount, icon } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Missing mission id' });
+    }
+
+    await pool.query(
+      `UPDATE missions SET
+        title = COALESCE($1, title),
+        description = COALESCE($2, description),
+        objective_value = COALESCE($3, objective_value),
+        reward_amount = COALESCE($4, reward_amount),
+        icon = COALESCE($5, icon)
+       WHERE id = $6`,
+      [title, description, objective_value, reward_amount, icon, id]
+    );
+
+    console.log(`[ADMIN] Updated mission ${id}`);
+    res.json({ success: true, message: 'Mission updated' });
+  } catch (error) {
+    console.error('Error updating mission:', error);
+    res.status(500).json({ success: false, message: 'Failed to update mission' });
+  }
+});
+
+// Admin: Toggle mission active status
+app.post('/api/admin/missions/toggle', async (req: Request, res: Response) => {
+  try {
+    const { missionId, isActive } = req.body;
+
+    if (!missionId || isActive === undefined) {
+      return res.status(400).json({ success: false, message: 'Missing missionId or isActive' });
+    }
+
+    await pool.query(
+      'UPDATE missions SET is_active = $1 WHERE id = $2',
+      [isActive, missionId]
+    );
+
+    console.log(`[ADMIN] Toggled mission ${missionId} active=${isActive}`);
+    res.json({ success: true, message: 'Mission toggled' });
+  } catch (error) {
+    console.error('Error toggling mission:', error);
+    res.status(500).json({ success: false, message: 'Failed to toggle mission' });
+  }
+});
+
+// Admin: Get recent activity feed
+app.get('/api/admin/activity', async (req: Request, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50;
+
+    // Get recent trades (opened, closed, liquidated)
+    const recentTrades = await pool.query(`
+      SELECT
+        t.id,
+        'trade' as type,
+        t.status as action,
+        t.position_type,
+        t.leverage,
+        ROUND(t.position_size::numeric, 0) as amount,
+        ROUND(t.pnl::numeric, 0) as pnl,
+        COALESCE(u.username, LEFT(u.wallet_address, 8) || '...') as username,
+        u.army,
+        CASE
+          WHEN t.status = 'open' THEN t.opened_at
+          ELSE COALESCE(t.closed_at, t.opened_at)
+        END as timestamp
+      FROM trades t
+      JOIN users u ON t.user_id = u.id
+      WHERE t.opened_at >= NOW() - INTERVAL '24 hours'
+         OR t.closed_at >= NOW() - INTERVAL '24 hours'
+      ORDER BY CASE
+        WHEN t.status = 'open' THEN t.opened_at
+        ELSE COALESCE(t.closed_at, t.opened_at)
+      END DESC
+      LIMIT $1
+    `, [limit]);
+
+    // Get recent user signups
+    const recentSignups = await pool.query(`
+      SELECT
+        id,
+        'signup' as type,
+        'new_user' as action,
+        COALESCE(username, LEFT(wallet_address, 8) || '...') as username,
+        army,
+        created_at as timestamp
+      FROM users
+      WHERE created_at >= NOW() - INTERVAL '24 hours'
+      ORDER BY created_at DESC
+      LIMIT $1
+    `, [limit]);
+
+    // Get recent claims
+    const recentClaims = await pool.query(`
+      SELECT
+        c.id,
+        'claim' as type,
+        'claimed' as action,
+        ROUND(c.amount::numeric, 0) as amount,
+        COALESCE(u.username, LEFT(u.wallet_address, 8) || '...') as username,
+        u.army,
+        c.claimed_at as timestamp
+      FROM claims c
+      JOIN users u ON c.user_id = u.id
+      WHERE c.claimed_at >= NOW() - INTERVAL '24 hours'
+      ORDER BY c.claimed_at DESC
+      LIMIT $1
+    `, [limit]);
+
+    // Get recent mission completions
+    const recentMissions = await pool.query(`
+      SELECT
+        um.id,
+        'mission' as type,
+        CASE WHEN um.is_claimed THEN 'mission_claimed' ELSE 'mission_completed' END as action,
+        m.title as mission_title,
+        m.icon as mission_icon,
+        ROUND(m.reward_amount / 100.0, 0) as amount,
+        COALESCE(u.username, LEFT(u.wallet_address, 8) || '...') as username,
+        u.army,
+        COALESCE(um.claimed_at, um.completed_at) as timestamp
+      FROM user_missions um
+      JOIN missions m ON um.mission_id = m.id
+      JOIN users u ON um.user_id = u.id
+      WHERE (um.completed_at >= NOW() - INTERVAL '24 hours' OR um.claimed_at >= NOW() - INTERVAL '24 hours')
+        AND um.is_completed = true
+      ORDER BY COALESCE(um.claimed_at, um.completed_at) DESC
+      LIMIT $1
+    `, [limit]);
+
+    // Combine and sort all activities
+    const allActivities = [
+      ...recentTrades.rows.map(r => ({
+        ...r,
+        timestamp: new Date(r.timestamp)
+      })),
+      ...recentSignups.rows.map(r => ({
+        ...r,
+        timestamp: new Date(r.timestamp)
+      })),
+      ...recentClaims.rows.map(r => ({
+        ...r,
+        timestamp: new Date(r.timestamp)
+      })),
+      ...recentMissions.rows.map(r => ({
+        ...r,
+        timestamp: new Date(r.timestamp)
+      }))
+    ]
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, limit);
+
+    res.json({
+      success: true,
+      activities: allActivities
+    });
+  } catch (error) {
+    console.error('Error fetching admin activity:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch activity' });
+  }
+});
+
+// ============================================
 // ERROR HANDLING
 // ============================================
 
