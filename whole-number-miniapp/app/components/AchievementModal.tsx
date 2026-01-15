@@ -60,8 +60,8 @@ export function AchievementModal({ notification, onDismiss }: AchievementModalPr
     // Generate share text (outside try block so it's accessible in catch)
     const shareText = `Just unlocked ${notification.data.title} on @btcbattle! 🏆\n\n${notification.data.description}${notification.data.points ? `\n\n+${notification.data.points} points earned!` : ''}`;
 
-    // Use btcbattlefield.com URL which has fc:miniapp meta tag for proper thumbnail
-    const miniappUrl = 'https://btcbattlefield.com';
+    // Use farcaster.xyz miniapp URL which shows thumbnail correctly in casts
+    const miniappUrl = 'https://farcaster.xyz/miniapps/5kLec5hSq3bP/battlefield';
 
     try {
       // Use Warpcast composer with embed to show thumbnail
