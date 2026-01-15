@@ -29,10 +29,10 @@ const PRODUCTION_MANIFEST = {
     signature: "LYewtLzHikt9CHtMGPf6Fn7Oo1fLljax98s/jb0G75taCW+F6KR5i4UYC9Qw9HGgFfdvhRXdlbiWLGf4IV1ujBs="
   },
   frame: {
-    version: "next",
+    version: "1",
     name: "Battlefield",
     iconUrl: "https://btcbattlefield.com/battlefield-icon-200.png",
-    imageUrl: "https://btcbattlefield.com/opengraph-image.jpg",
+    imageUrl: "https://btcbattlefield.com/miniapp-embed.jpg",
     splashImageUrl: "https://btcbattlefield.com/battlefield-icon-200.png",
     splashBackgroundColor: "#0a0a0a",
     homeUrl: "https://btcbattlefield.com",
