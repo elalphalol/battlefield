@@ -324,11 +324,22 @@ export function useAchievementDetector(userStats: UserStats | null, previousStat
     }
 
     // Check win streaks (toast notifications for smaller milestones)
-    if (userStats.current_streak > previousStats.current_streak) {
-      if (userStats.current_streak === 3) {
+    // Only show if streak actually increased (not just re-render with same data)
+    if (userStats.current_streak > previousStats.current_streak && typeof window !== 'undefined') {
+      // Use sessionStorage to track shown streak notifications (resets on page refresh)
+      const lastShownStreak = parseInt(sessionStorage.getItem('last_shown_streak') || '0', 10);
+
+      if (userStats.current_streak === 3 && lastShownStreak < 3) {
+        sessionStorage.setItem('last_shown_streak', '3');
         toast.success('🔥 3-win streak! You\'re on fire!', { duration: 4000, icon: '🔥' });
-      } else if (userStats.current_streak === 5) {
+      } else if (userStats.current_streak === 5 && lastShownStreak < 5) {
+        sessionStorage.setItem('last_shown_streak', '5');
         toast.success('🔥🔥 5-win streak! Unstoppable!', { duration: 5000, icon: '🔥' });
+      }
+
+      // Reset the tracker when streak is broken
+      if (userStats.current_streak < lastShownStreak) {
+        sessionStorage.setItem('last_shown_streak', '0');
       }
     }
   }, [userStats, previousStats, notify]);
