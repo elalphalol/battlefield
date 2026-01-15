@@ -21,6 +21,7 @@ import { ArmyBattleStatus } from '../components/ArmyBattleStatus';
 import { ArmySelection } from '../components/ArmySelection';
 import { NotificationManager } from '../components/NotificationManager';
 import { Missions } from '../components/Missions';
+import { Avatar } from '../components/Avatar';
 import { useBTCPrice } from '../hooks/useBTCPrice';
 import { useAchievementDetector } from '../hooks/useAchievementDetector';
 import { WholeNumberStrategy } from '../lib/strategy';
@@ -579,6 +580,211 @@ export default function BattlefieldHome() {
                   <h2 className="text-2xl font-bold text-yellow-400 mb-4">🕐 Market Sessions</h2>
                   <MarketCycle />
                 </div>
+
+                {/* Avatar Frames */}
+                <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+                  <h2 className="text-2xl font-bold text-cyan-400 mb-4">🖼️ Avatar Frames</h2>
+                  <p className="text-gray-400 text-sm mb-6">
+                    Unlock special avatar borders based on your trading stats. Higher tiers have epic decorative frames!
+                  </p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
+                      <div className="w-14 h-14 rounded-full border-2 border-slate-600 bg-slate-800 flex items-center justify-center mb-2">
+                        <span className="text-2xl">👤</span>
+                      </div>
+                      <p className="font-semibold text-gray-400 text-sm">No Frame</p>
+                      <p className="text-[10px] text-gray-500">&lt;10 trades</p>
+                    </div>
+
+                    <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
+                      <div className="w-14 h-14 rounded-full border-4 border-amber-600 bg-slate-800 flex items-center justify-center mb-2">
+                        <span className="text-2xl">🔶</span>
+                      </div>
+                      <p className="font-semibold text-amber-600 text-sm">Bronze</p>
+                      <p className="text-[10px] text-gray-400">10+ trades</p>
+                    </div>
+
+                    <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
+                      <div className="relative w-[72px] h-[72px] flex items-center justify-center mb-2">
+                        <svg className="absolute inset-0 w-[72px] h-[72px]" viewBox="0 0 100 100">
+                          <polygon points="0,15 0,0 15,0" fill="#d1d5db" opacity="0.8" />
+                          <polygon points="85,0 100,0 100,15" fill="#d1d5db" opacity="0.8" />
+                          <polygon points="100,85 100,100 85,100" fill="#d1d5db" opacity="0.8" />
+                          <polygon points="0,85 0,100 15,100" fill="#d1d5db" opacity="0.8" />
+                        </svg>
+                        <div className="w-14 h-14 rounded-full border-4 border-gray-300 bg-slate-800 flex items-center justify-center z-10">
+                          <span className="text-2xl">⬡</span>
+                        </div>
+                      </div>
+                      <p className="font-semibold text-gray-300 text-sm">Silver</p>
+                      <p className="text-[10px] text-gray-400">25+ trades, 40% WR</p>
+                    </div>
+
+                    <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
+                      <div className="relative w-[72px] h-[72px] flex items-center justify-center mb-2">
+                        <svg className="absolute inset-0 w-[72px] h-[72px]" viewBox="0 0 100 100" style={{ filter: 'drop-shadow(0 0 4px rgba(250,204,21,0.5))' }}>
+                          <polygon points="50,0 54,12 50,8 46,12" fill="#facc15" />
+                          <polygon points="100,50 88,54 92,50 88,46" fill="#facc15" />
+                          <polygon points="50,100 46,88 50,92 54,88" fill="#facc15" />
+                          <polygon points="0,50 12,46 8,50 12,54" fill="#facc15" />
+                          <polygon points="12,12 18,6 24,12 18,18" fill="#eab308" />
+                          <polygon points="88,12 82,6 76,12 82,18" fill="#eab308" />
+                          <polygon points="88,88 82,94 76,88 82,82" fill="#eab308" />
+                          <polygon points="12,88 18,94 24,88 18,82" fill="#eab308" />
+                        </svg>
+                        <div className="w-14 h-14 rounded-full border-4 border-yellow-400 bg-slate-800 flex items-center justify-center z-10">
+                          <span className="text-2xl">⭐</span>
+                        </div>
+                      </div>
+                      <p className="font-semibold text-yellow-400 text-sm">Gold</p>
+                      <p className="text-[10px] text-gray-400">50+ trades, 50% WR</p>
+                    </div>
+
+                    <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
+                      <div className="relative w-[72px] h-[72px] flex items-center justify-center mb-2">
+                        <svg className="absolute inset-0 w-[72px] h-[72px]" viewBox="0 0 100 100" style={{ filter: 'drop-shadow(0 0 8px rgba(103,232,249,0.6))' }}>
+                          <polygon points="50,-4 54,14 50,10 46,14" fill="#67e8f9" />
+                          <polygon points="104,50 86,54 90,50 86,46" fill="#67e8f9" />
+                          <polygon points="50,104 46,86 50,90 54,86" fill="#67e8f9" />
+                          <polygon points="-4,50 14,46 10,50 14,54" fill="#67e8f9" />
+                          <polygon points="15,15 8,8 22,12 18,22" fill="#22d3ee" />
+                          <polygon points="85,15 92,8 78,12 82,22" fill="#22d3ee" />
+                          <polygon points="85,85 92,92 78,88 82,78" fill="#22d3ee" />
+                          <polygon points="15,85 8,92 22,88 18,78" fill="#22d3ee" />
+                        </svg>
+                        <div className="w-14 h-14 rounded-full border-4 border-cyan-300 shadow-[0_0_15px_rgba(103,232,249,0.5)] bg-slate-800 flex items-center justify-center z-10">
+                          <span className="text-2xl">✦</span>
+                        </div>
+                      </div>
+                      <p className="font-semibold text-cyan-300 text-sm">Platinum</p>
+                      <p className="text-[10px] text-gray-400">100+ trades, 60% WR</p>
+                    </div>
+
+                    <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col items-center text-center">
+                      <div className="relative w-[72px] h-[72px] flex items-center justify-center mb-2">
+                        <svg className="absolute inset-0 w-[72px] h-[72px] animate-pulse" viewBox="0 0 100 100" style={{ filter: 'drop-shadow(0 0 10px rgba(192,132,252,0.7))' }}>
+                          <polygon points="50,-6 54,16 50,10 46,16" fill="#c084fc" />
+                          <polygon points="35,2 40,18 35,14 30,16" fill="#a855f7" />
+                          <polygon points="65,2 60,18 65,14 70,16" fill="#a855f7" />
+                          <polygon points="106,50 84,54 88,50 84,46" fill="#c084fc" />
+                          <polygon points="-6,50 16,46 12,50 16,54" fill="#c084fc" />
+                          <polygon points="50,106 46,84 50,88 54,84" fill="#c084fc" />
+                          <polygon points="12,12 6,6 18,2 22,14 14,18 2,18" fill="#c084fc" />
+                          <polygon points="88,12 94,6 82,2 78,14 86,18 98,18" fill="#c084fc" />
+                          <polygon points="88,88 94,94 82,98 78,86 86,82 98,82" fill="#c084fc" />
+                          <polygon points="12,88 6,94 18,98 22,86 14,82 2,82" fill="#c084fc" />
+                        </svg>
+                        <div className="w-14 h-14 rounded-full border-4 border-purple-400 shadow-[0_0_20px_rgba(192,132,252,0.6)] bg-slate-800 flex items-center justify-center z-10">
+                          <span className="text-2xl">💎</span>
+                        </div>
+                      </div>
+                      <p className="font-semibold text-purple-400 text-sm">Diamond</p>
+                      <p className="text-[10px] text-gray-400">200+ trades, 70% WR</p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-500 mt-4 text-center">
+                    Frames auto-unlock based on your stats. Keep trading to level up!
+                  </p>
+                </div>
+
+                {/* Achievements Summary */}
+                <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+                  <h2 className="text-2xl font-bold text-purple-400 mb-4">🏆 Achievements</h2>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Unlock achievements by trading. Your best achievement determines your player title!
+                  </p>
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="bg-slate-900/50 p-2 rounded">
+                        <span className="text-blue-400 font-bold">📊 Trading</span>
+                        <p className="text-xs text-gray-400">1 to 1000 trades</p>
+                      </div>
+                      <div className="bg-slate-900/50 p-2 rounded">
+                        <span className="text-green-400 font-bold">💰 P&L</span>
+                        <p className="text-xs text-gray-400">$100 to $100K profit</p>
+                      </div>
+                      <div className="bg-slate-900/50 p-2 rounded">
+                        <span className="text-purple-400 font-bold">🎯 Win Rate</span>
+                        <p className="text-xs text-gray-400">50% to 80%+</p>
+                      </div>
+                      <div className="bg-slate-900/50 p-2 rounded">
+                        <span className="text-orange-400 font-bold">🔥 Streaks</span>
+                        <p className="text-xs text-gray-400">3 to 50 wins</p>
+                      </div>
+                      <div className="bg-slate-900/50 p-2 rounded">
+                        <span className="text-yellow-400 font-bold">🏅 Rankings</span>
+                        <p className="text-xs text-gray-400">Top 100 to #1</p>
+                      </div>
+                      <div className="bg-slate-900/50 p-2 rounded">
+                        <span className="text-cyan-400 font-bold">🛡️ Survival</span>
+                        <p className="text-xs text-gray-400">No liquidations</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 text-center">
+                      32 total achievements • View full list in <a href="/glossary" className="text-yellow-400 underline">Glossary</a>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Missions Summary */}
+                <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+                  <h2 className="text-2xl font-bold text-yellow-400 mb-4">🎯 Missions</h2>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Complete missions to earn paper money rewards!
+                  </p>
+
+                  <div className="space-y-3">
+                    <div className="bg-yellow-900/20 p-3 rounded border border-yellow-500/30">
+                      <h4 className="font-bold text-yellow-400 text-sm mb-1">📅 Daily (Reset 12:00 UTC)</h4>
+                      <ul className="text-xs text-gray-300 space-y-1">
+                        <li>• Open a Trade → <span className="text-green-400">$2,000</span></li>
+                        <li>• Win a Trade → <span className="text-green-400">$3,000</span></li>
+                      </ul>
+                    </div>
+                    <div className="bg-purple-900/20 p-3 rounded border border-purple-500/30">
+                      <h4 className="font-bold text-purple-400 text-sm mb-1">📆 Weekly (Reset Mon 12:00 UTC)</h4>
+                      <ul className="text-xs text-gray-300 space-y-1">
+                        <li>• Trading Streak (5 days) → <span className="text-green-400">$25,000</span></li>
+                        <li>• Win 5 Trades → <span className="text-green-400">$20,000</span></li>
+                        <li>• Paper Collector (10 claims) → <span className="text-green-400">$15,000</span></li>
+                        <li>• Army Loyalty → <span className="text-green-400">$10,000</span></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trading Fees */}
+                <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+                  <h2 className="text-2xl font-bold text-red-400 mb-4">⚙️ Trading Fees</h2>
+                  <div className="bg-slate-900/50 p-4 rounded">
+                    <p className="text-sm text-gray-300 mb-2">
+                      <span className="font-bold text-white">Fee Formula:</span> Leverage × 0.05%
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                      <span>10x = 0.5%</span>
+                      <span>50x = 2.5%</span>
+                      <span>100x = 5%</span>
+                      <span>200x = 10%</span>
+                    </div>
+                    <p className="text-xs text-yellow-400 mt-2">
+                      Fees are deducted when closing, not opening.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Full Glossary Link */}
+                <div className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border border-yellow-500/50 rounded-lg p-4 text-center">
+                  <p className="text-yellow-400 font-bold mb-2">📚 Want the full guide?</p>
+                  <a
+                    href="/glossary"
+                    className="inline-block bg-yellow-500 text-slate-900 px-4 py-2 rounded-lg font-bold hover:bg-yellow-400 transition"
+                  >
+                    Open Complete Glossary
+                  </a>
+                </div>
               </div>
             ) : battleSection === 'market' ? (
               <div>
@@ -798,13 +1004,14 @@ export default function BattlefieldHome() {
                 onClick={() => router.push(`/profile/${userData.fid || userData.wallet_address}`)}
                 className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
               >
-                <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
-                  {userData?.pfp_url ? (
-                    <img src={userData.pfp_url} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <img src="/battlefield-logo.jpg" alt="Profile" className="w-full h-full object-cover" />
-                  )}
-                </div>
+                <Avatar
+                  pfpUrl={userData.pfp_url}
+                  username={userData.username}
+                  army={userData.army}
+                  totalTrades={userData.total_trades}
+                  winRate={userData.total_trades > 0 ? (userData.winning_trades / userData.total_trades) * 100 : 0}
+                  size="lg"
+                />
                 <span className="text-[10px] font-bold text-yellow-400">Profile</span>
               </button>
             )}

@@ -18,6 +18,7 @@ import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import cron from 'node-cron';
 import rateLimit from 'express-rate-limit';
+import { NeynarAPIClient, Configuration } from '@neynar/nodejs-sdk';
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +26,19 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Initialize Neynar client for Farcaster API (follow verification)
+let neynarClient: NeynarAPIClient | null = null;
+if (process.env.NEYNAR_API_KEY) {
+  const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY });
+  neynarClient = new NeynarAPIClient(config);
+  console.log('✅ Neynar client initialized for Farcaster verification');
+} else {
+  console.warn('⚠️ NEYNAR_API_KEY not set - follow verification disabled');
+}
+
+// Target accounts to follow for missions (FIDs will be fetched dynamically)
+const TARGET_FOLLOW_USERNAMES = ['btcbattle', 'elalpha.eth'];
 
 // Database connection pool
 const pool = new Pool({
@@ -2062,6 +2076,64 @@ function getOnetimePeriod(): { start: Date; end: Date } {
   return { start, end };
 }
 
+// Helper: Verify if a user follows the target accounts on Farcaster
+async function verifyFollowsTargetAccounts(userFid: number): Promise<{ follows: boolean; followedAccounts: string[]; missingAccounts: string[] }> {
+  if (!neynarClient) {
+    console.warn('Neynar client not initialized - cannot verify follow');
+    return { follows: false, followedAccounts: [], missingAccounts: TARGET_FOLLOW_USERNAMES };
+  }
+
+  try {
+    // Get user's following list (fetch up to 150 at a time, paginate if needed)
+    const followingSet = new Set<number>();
+    let cursor: string | undefined = undefined;
+
+    // Fetch user's following (may need pagination for users following many accounts)
+    do {
+      const response = await neynarClient.fetchUserFollowing({
+        fid: userFid,
+        limit: 100,
+        cursor
+      });
+
+      // response.users is Array<Follower>, each Follower has a .user property with .fid
+      for (const follower of response.users) {
+        followingSet.add(follower.user.fid);
+      }
+
+      cursor = response.next?.cursor ?? undefined;
+    } while (cursor && followingSet.size < 1000); // Safety limit
+
+    // Look up target account FIDs by username
+    const followedAccounts: string[] = [];
+    const missingAccounts: string[] = [];
+
+    for (const username of TARGET_FOLLOW_USERNAMES) {
+      try {
+        const userResponse = await neynarClient.lookupUserByUsername({ username });
+        const targetFid = userResponse.user.fid;
+
+        if (followingSet.has(targetFid)) {
+          followedAccounts.push(username);
+        } else {
+          missingAccounts.push(username);
+        }
+      } catch (err) {
+        console.error(`Failed to look up user ${username}:`, err);
+        missingAccounts.push(username);
+      }
+    }
+
+    const follows = missingAccounts.length === 0;
+    console.log(`🔍 Follow verification for FID ${userFid}: follows=${follows}, followed=${followedAccounts.join(',')}, missing=${missingAccounts.join(',')}`);
+
+    return { follows, followedAccounts, missingAccounts };
+  } catch (error) {
+    console.error('Error verifying follows:', error);
+    return { follows: false, followedAccounts: [], missingAccounts: TARGET_FOLLOW_USERNAMES };
+  }
+}
+
 // Helper: Get mission period based on type
 function getMissionPeriod(missionType: string): { start: Date; end: Date } {
   switch (missionType) {
@@ -2261,7 +2333,52 @@ app.post('/api/missions/:missionId/claim', async (req: Request, res: Response) =
   }
 });
 
-// POST /api/missions/complete - Mark manual mission as complete (follow)
+// GET /api/missions/verify-follow/:walletAddress - Verify if user follows target accounts
+app.get('/api/missions/verify-follow/:walletAddress', async (req: Request, res: Response) => {
+  const { walletAddress } = req.params;
+
+  try {
+    // Get user with FID
+    const userResult = await pool.query(
+      'SELECT id, fid, username FROM users WHERE LOWER(wallet_address) = LOWER($1)',
+      [walletAddress]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    if (!user.fid) {
+      return res.json({
+        success: false,
+        verified: false,
+        message: 'No Farcaster account linked. Please connect via Farcaster to verify follows.',
+        followedAccounts: [],
+        missingAccounts: TARGET_FOLLOW_USERNAMES
+      });
+    }
+
+    // Verify follows via Neynar
+    const verification = await verifyFollowsTargetAccounts(user.fid);
+
+    res.json({
+      success: true,
+      verified: verification.follows,
+      followedAccounts: verification.followedAccounts,
+      missingAccounts: verification.missingAccounts,
+      message: verification.follows
+        ? 'All accounts followed! You can claim the reward.'
+        : `Please follow: ${verification.missingAccounts.map(u => '@' + u).join(', ')}`
+    });
+  } catch (error) {
+    console.error('Error verifying follow:', error);
+    res.status(500).json({ success: false, message: 'Failed to verify follow status' });
+  }
+});
+
+// POST /api/missions/complete - Mark manual mission as complete (with verification)
 app.post('/api/missions/complete', async (req: Request, res: Response) => {
   const { walletAddress, missionKey } = req.body;
 
@@ -2270,9 +2387,9 @@ app.post('/api/missions/complete', async (req: Request, res: Response) => {
   }
 
   try {
-    // Get user
+    // Get user with FID
     const userResult = await pool.query(
-      'SELECT id FROM users WHERE LOWER(wallet_address) = LOWER($1)',
+      'SELECT id, fid, username FROM users WHERE LOWER(wallet_address) = LOWER($1)',
       [walletAddress]
     );
 
@@ -2280,7 +2397,8 @@ app.post('/api/missions/complete', async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const userId = userResult.rows[0].id;
+    const user = userResult.rows[0];
+    const userId = user.id;
 
     // Get mission
     const missionResult = await pool.query(
@@ -2293,6 +2411,32 @@ app.post('/api/missions/complete', async (req: Request, res: Response) => {
     }
 
     const mission = missionResult.rows[0];
+
+    // For follow missions, verify the follow before completing
+    if (mission.objective_type === 'follow') {
+      if (!user.fid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please connect your Farcaster account to complete this mission.',
+          requiresFarcaster: true
+        });
+      }
+
+      // Verify follows via Neynar
+      const verification = await verifyFollowsTargetAccounts(user.fid);
+
+      if (!verification.follows) {
+        return res.status(400).json({
+          success: false,
+          message: `Please follow: ${verification.missingAccounts.map(u => '@' + u).join(', ')}`,
+          verified: false,
+          missingAccounts: verification.missingAccounts
+        });
+      }
+
+      console.log(`✅ Follow verification passed for user ${userId} (FID: ${user.fid})`);
+    }
+
     const period = getMissionPeriod(mission.mission_type);
 
     // Upsert user mission progress

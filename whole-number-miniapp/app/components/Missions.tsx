@@ -155,26 +155,53 @@ export function Missions({ walletAddress, readOnly = false }: MissionsProps) {
         }
       }, 1500);
 
-      // Mark mission as complete after user has time to follow both
-      setTimeout(async () => {
-        try {
-          const response = await fetch(getApiUrl('api/missions/complete'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ walletAddress, missionKey: 'follow_btcbattle' })
-          });
+      // Show toast with instructions
+      toast('👆 Follow both accounts, then tap "Verify" to complete!', { duration: 5000 });
 
-          const data = await response.json();
-          if (data.success) {
-            toast.success('🎉 +$5,000 Mission completed! Claim your reward!');
-            fetchMissions();
-          }
-        } catch (error) {
-          console.error('Error completing follow mission:', error);
-        }
-      }, 4000);
     } catch (error) {
       console.error('Error with follow mission:', error);
+    } finally {
+      setCompletingKey(null);
+    }
+  };
+
+  // Verify follow and complete mission
+  const handleVerifyFollow = async () => {
+    if (!walletAddress) return;
+
+    setCompletingKey('follow_btcbattle');
+
+    try {
+      // First verify the follow
+      const verifyResponse = await fetch(getApiUrl(`api/missions/verify-follow/${walletAddress}`));
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyData.verified) {
+        if (verifyData.missingAccounts && verifyData.missingAccounts.length > 0) {
+          toast.error(`Please follow: ${verifyData.missingAccounts.map((u: string) => '@' + u).join(', ')}`);
+        } else {
+          toast.error(verifyData.message || 'Please follow both accounts first');
+        }
+        return;
+      }
+
+      // If verified, complete the mission
+      const response = await fetch(getApiUrl('api/missions/complete'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress, missionKey: 'follow_btcbattle' })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('🎉 Follow verified! +$5,000 - Claim your reward!');
+        fetchMissions();
+      } else {
+        toast.error(data.message || 'Failed to complete mission');
+      }
+    } catch (error) {
+      console.error('Error verifying follow:', error);
+      toast.error('Failed to verify follow status');
     } finally {
       setCompletingKey(null);
     }
@@ -217,6 +244,7 @@ export function Missions({ walletAddress, readOnly = false }: MissionsProps) {
                 mission={mission}
                 onClaim={handleClaim}
                 onFollow={mission.mission_key === 'follow_btcbattle' ? handleFollowMission : undefined}
+                onVerify={mission.mission_key === 'follow_btcbattle' ? handleVerifyFollow : undefined}
                 isClaiming={claimingId === mission.id}
                 isCompleting={completingKey === mission.mission_key}
                 readOnly={readOnly}
@@ -277,12 +305,13 @@ interface MissionCardProps {
   mission: Mission;
   onClaim: (id: number) => void;
   onFollow?: () => void;
+  onVerify?: () => void;
   isClaiming: boolean;
   isCompleting: boolean;
   readOnly?: boolean;
 }
 
-function MissionCard({ mission, onClaim, onFollow, isClaiming, isCompleting, readOnly = false }: MissionCardProps) {
+function MissionCard({ mission, onClaim, onFollow, onVerify, isClaiming, isCompleting, readOnly = false }: MissionCardProps) {
   const progressPercent = Math.min(100, (mission.progress / mission.objective_value) * 100);
   const isFollowMission = mission.mission_key === 'follow_btcbattle';
 
@@ -353,14 +382,23 @@ function MissionCard({ mission, onClaim, onFollow, isClaiming, isCompleting, rea
             >
               {isClaiming ? '...' : 'Claim'}
             </button>
-          ) : isFollowMission && onFollow ? (
-            <button
-              onClick={onFollow}
-              disabled={isCompleting}
-              className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-sm font-bold transition-all disabled:opacity-50"
-            >
-              {isCompleting ? '...' : 'Follow'}
-            </button>
+          ) : isFollowMission && onFollow && onVerify ? (
+            <div className="flex gap-1">
+              <button
+                onClick={onFollow}
+                disabled={isCompleting}
+                className="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1 rounded text-xs font-bold transition-all disabled:opacity-50"
+              >
+                Follow
+              </button>
+              <button
+                onClick={onVerify}
+                disabled={isCompleting}
+                className="bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded text-xs font-bold transition-all disabled:opacity-50"
+              >
+                {isCompleting ? '...' : 'Verify'}
+              </button>
+            </div>
           ) : null}
         </div>
       </div>

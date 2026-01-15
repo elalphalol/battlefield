@@ -20,6 +20,7 @@
   "author": "elalphalol",
   "license": "MIT",
   "dependencies": {
+    "@neynar/nodejs-sdk": "^3.120.0",
     "@sentry/node": "^10.33.0",
     "@types/node-cron": "^3.0.11",
     "cors": "^2.8.5",

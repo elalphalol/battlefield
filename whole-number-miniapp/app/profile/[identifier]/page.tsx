@@ -6,6 +6,7 @@ import { getApiUrl } from '../../config/api';
 import { Achievements } from '../../components/Achievements';
 import { VolumeTracker } from '../../components/VolumeTracker';
 import { Missions } from '../../components/Missions';
+import { Avatar } from '../../components/Avatar';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
 
@@ -326,18 +327,18 @@ export default function UserProfilePage() {
           <div className="flex flex-col gap-4">
             {/* Top Row: Avatar and User Info */}
             <div className="flex items-center gap-4">
-              {/* Avatar */}
-              {profile.user.pfp_url ? (
-                <img 
-                  src={profile.user.pfp_url} 
-                  alt={profile.user.username}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-slate-600 flex-shrink-0"
+              {/* Avatar with Border */}
+              <div className="flex flex-col items-center gap-1">
+                <Avatar
+                  pfpUrl={profile.user.pfp_url}
+                  username={profile.user.username}
+                  army={profile.user.army}
+                  totalTrades={profile.stats.total_trades}
+                  winRate={profile.stats.win_rate}
+                  size="xl"
+                  showDecorations={true}
                 />
-              ) : (
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-slate-600 bg-slate-700 flex items-center justify-center text-3xl sm:text-4xl flex-shrink-0">
-                  {getArmyEmoji(profile.user.army)}
-                </div>
-              )}
+              </div>
 
               {/* User Info */}
               <div className="flex-1 min-w-0">
@@ -849,13 +850,14 @@ export default function UserProfilePage() {
             <button
               className="flex flex-col items-center gap-1 px-2 py-1 -mt-4"
             >
-              <div className="w-12 h-12 rounded-full border-2 border-yellow-400 bg-slate-800 overflow-hidden flex items-center justify-center">
-                {profile.user.pfp_url ? (
-                  <img src={profile.user.pfp_url} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <img src="/battlefield-logo.jpg" alt="Profile" className="w-full h-full object-cover" />
-                )}
-              </div>
+              <Avatar
+                pfpUrl={profile.user.pfp_url}
+                username={profile.user.username}
+                army={profile.user.army}
+                totalTrades={profile.stats.total_trades}
+                winRate={profile.stats.win_rate}
+                size="lg"
+              />
               <span className="text-[10px] font-bold text-yellow-400">Profile</span>
             </button>
 

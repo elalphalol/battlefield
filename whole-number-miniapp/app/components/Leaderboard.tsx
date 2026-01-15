@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { getApiUrl } from '../config/api';
+import { Avatar } from './Avatar';
 
 interface LeaderboardEntry {
   id: number;
@@ -195,21 +196,15 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                 className={`p-4 m-2 rounded-lg hover:bg-slate-700/50 transition-all cursor-pointer ${borderClass} ${bgClass}`}
               >
                 <div className="flex items-center gap-4">
-                  {/* Profile Picture */}
-                  {entry.pfp_url ? (
-                    <img 
-                      src={entry.pfp_url} 
-                      alt={entry.username || `Trader ${entry.fid}`}
-                      className="w-14 h-14 rounded-full border-2 border-slate-600 flex-shrink-0"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className={`w-14 h-14 rounded-full border-2 ${entry.army === 'bears' ? 'border-red-500 bg-red-900/30' : 'border-green-500 bg-green-900/30'} flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-3xl">{getArmyEmoji(entry.army)}</span>
-                    </div>
-                  )}
+                  {/* Profile Picture with Border */}
+                  <Avatar
+                    pfpUrl={entry.pfp_url}
+                    username={entry.username || `Trader ${entry.fid}`}
+                    army={entry.army}
+                    totalTrades={entry.total_trades}
+                    winRate={entry.win_rate}
+                    size="md"
+                  />
 
                   {/* User Info - Clean and simple */}
                   <div className="flex-1 min-w-0">
