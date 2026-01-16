@@ -369,20 +369,22 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     setShowStopLossModal(true);
   };
 
-  const handleUpdateStopLoss = async () => {
+  const handleUpdateStopLoss = async (forceRemove: boolean = false) => {
     if (!address || !editingStopLossTrade) return;
 
-    const newStopLoss = editStopLossPrice ? Number(editStopLossPrice) : null;
+    const newStopLoss = forceRemove ? null : (editStopLossPrice ? Number(editStopLossPrice) : null);
+    const tradeId = editingStopLossTrade.id; // Capture before any state changes
 
-    setUpdatingStopLossTradeId(editingStopLossTrade.id);
+    setUpdatingStopLossTradeId(tradeId);
     setShowStopLossModal(false);
+    setEditingStopLossTrade(null); // Clear early so modal closes
 
     try {
       const response = await fetch(getApiUrl('api/trades/update-stop-loss'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tradeId: editingStopLossTrade.id,
+          tradeId: tradeId,
           stopLoss: newStopLoss,
           walletAddress: address
         })
@@ -392,7 +394,16 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
       if (data.success) {
         toast.success(newStopLoss ? `🛑 Stop loss set at $${newStopLoss.toLocaleString()}` : '✓ Stop loss removed');
-        fetchOpenTrades();
+        // Update local state immediately using the server response
+        const updatedTrade = data.trade;
+        setOpenTrades(prevTrades => {
+          const newTrades = prevTrades.map(trade =>
+            trade.id === tradeId
+              ? { ...trade, stop_loss: updatedTrade.stop_loss }
+              : trade
+          );
+          return [...newTrades]; // Force new array reference
+        });
       } else {
         toast.error(`❌ ${data.message || 'Failed to update stop loss'}`);
       }
@@ -401,7 +412,6 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       toast.error('❌ Failed to update stop loss');
     } finally {
       setUpdatingStopLossTradeId(null);
-      setEditingStopLossTrade(null);
     }
   };
 
@@ -731,10 +741,10 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
             {openTrades.map((trade) => {
               const { pnl, percentage } = calculatePnL(trade);
               const isLiquidationWarning = isNearLiquidation(trade);
-              
+
               return (
                 <div
-                  key={trade.id}
+                  key={`${trade.id}-${trade.stop_loss ?? 'none'}`}
                   className={`border-2 rounded-lg p-3 ${
                     isLiquidationWarning
                       ? 'border-red-500 bg-red-900/20 animate-pulse'
@@ -852,13 +862,10 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
       {/* Stop Loss Modal */}
       {showStopLossModal && editingStopLossTrade && (() => {
-        // Calculate current PnL for this trade
+        // Calculate current PnL for this trade using the same function as position display
         const entryPrice = Number(editingStopLossTrade.entry_price);
         const tradeLeverage = Number(editingStopLossTrade.leverage);
-        const priceChange = editingStopLossTrade.position_type === 'long'
-          ? (btcPrice - entryPrice) / entryPrice
-          : (entryPrice - btcPrice) / entryPrice;
-        const currentPnlPercent = priceChange * tradeLeverage * 100;
+        const { percentage: currentPnlPercent } = calculatePnL(editingStopLossTrade);
         const isInProfit = currentPnlPercent > 0;
 
         // Check if entry price SL would trigger instantly (only valid when in profit)
@@ -890,7 +897,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                 }`}
                 title={!canSetEntryAsSL ? 'Position must be in profit to set break-even SL' : 'Set stop loss at entry price (break even)'}
               >
-                🎯 Entry / Break Even (${Math.round(entryPrice).toLocaleString('en-US')})
+                Entry (${Math.round(entryPrice).toLocaleString('en-US')})
               </button>
 
               {/* Quick Stop Loss Buttons - Based on PnL % loss */}
@@ -943,7 +950,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid gap-3 ${editingStopLossTrade.stop_loss ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <button
                 onClick={() => {
                   setShowStopLossModal(false);
@@ -953,11 +960,19 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
               >
                 Cancel
               </button>
+              {editingStopLossTrade.stop_loss && (
+                <button
+                  onClick={() => handleUpdateStopLoss(true)}
+                  className="bg-red-600 hover:bg-red-500 text-white py-3 rounded font-semibold transition-all"
+                >
+                  Remove
+                </button>
+              )}
               <button
-                onClick={handleUpdateStopLoss}
+                onClick={() => handleUpdateStopLoss(false)}
                 className="bg-orange-600 hover:bg-orange-500 text-white py-3 rounded font-semibold transition-all"
               >
-                {editStopLossPrice ? 'Set' : 'Remove'}
+                {editStopLossPrice ? 'Save' : 'Remove'}
               </button>
             </div>
           </div>
