@@ -139,7 +139,8 @@ export async function GET(request: Request) {
     // PnL dollar value
     ctx.fillStyle = isProfit ? '#22c55e' : '#ef4444';
     ctx.font = 'bold 36px Roboto, sans-serif';
-    const dollarText = `${isProfit ? '+' : ''}$${pnl}`;
+    const pnlFormatted = Math.abs(parseInt(pnl)).toLocaleString('en-US');
+    const dollarText = `${isProfit ? '+' : '-'}$${pnlFormatted}`;
     ctx.fillText(dollarText, 280, 375);
 
     // Rank section (if provided) - between P&L and username

@@ -683,20 +683,6 @@ app.post('/api/claims', claimLimiter, async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Check if user has any open positions
-    const openPositions = await pool.query(
-      'SELECT COUNT(*) as count FROM trades WHERE user_id = $1 AND status = $2',
-      [user.rows[0].id, 'open']
-    );
-
-    if (openPositions.rows[0].count > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot claim while you have open positions. Close all positions first.',
-        hasOpenPositions: true
-      });
-    }
-
     const lastClaim = user.rows[0].last_claim_time;
     const paperBalance = Number(user.rows[0].paper_balance);
     const now = new Date();
@@ -709,6 +695,22 @@ app.post('/api/claims', claimLimiter, async (req: Request, res: Response) => {
     const claimedToday = lastClaim && lastClaim >= todayUTC;
     // Emergency claim allowed if balance < $100
     const emergencyClaim = paperBalance < 100;
+
+    // Only check for open positions if this is an EMERGENCY claim (not daily claim)
+    if (emergencyClaim) {
+      const openPositions = await pool.query(
+        'SELECT COUNT(*) as count FROM trades WHERE user_id = $1 AND status = $2',
+        [user.rows[0].id, 'open']
+      );
+
+      if (openPositions.rows[0].count > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot use emergency claim while you have open positions. Close all positions first.',
+          hasOpenPositions: true
+        });
+      }
+    }
 
     // Block if already claimed today AND balance >= $100
     if (claimedToday && !emergencyClaim) {

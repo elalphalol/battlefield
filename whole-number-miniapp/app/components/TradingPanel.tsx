@@ -411,6 +411,21 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     const websiteUrl = window.location.origin;
     const username = userData?.username || address?.slice(0, 8);
 
+    // Check if we're in Farcaster miniapp context
+    let isInMiniApp = false;
+    try {
+      const context = await sdk.context;
+      isInMiniApp = !!context?.user?.fid;
+    } catch {
+      isInMiniApp = false;
+    }
+
+    // If not in miniapp, open Farcaster referral link in new tab
+    if (!isInMiniApp) {
+      window.open('https://farcaster.xyz/~/code/C46NY7', '_blank');
+      return;
+    }
+
     // Create params for share card image
     const params = new URLSearchParams({
       army,
@@ -445,13 +460,8 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       toast.success('🎯 Mission done! Claim $500 in Missions tab');
     } catch (error) {
       console.error('Error casting to Farcaster:', error);
-      // Fallback: try copying to clipboard
-      try {
-        await navigator.clipboard.writeText(shareText);
-        toast.success('Copied! 🎯 Claim $500 in Missions tab');
-      } catch (clipError) {
-        toast.error('❌ Unable to create cast. Please try again.');
-      }
+      // Fallback: open Farcaster referral link
+      window.open('https://farcaster.xyz/~/code/C46NY7', '_blank');
     }
   };
 
@@ -758,10 +768,10 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                     <div>Liq: ${Math.round(Number(trade.liquidation_price)).toLocaleString('en-US')}</div>
                     <div
                       onClick={() => openStopLossModal(trade)}
-                      className={`cursor-pointer hover:text-orange-400 transition-colors ${trade.stop_loss ? 'text-green-400' : ''}`}
+                      className={`cursor-pointer hover:text-orange-400 transition-colors underline decoration-dashed underline-offset-2 ${trade.stop_loss ? 'text-green-400 decoration-green-400/50' : 'text-orange-400 decoration-orange-400/50'}`}
                       title="Click to set/edit stop loss"
                     >
-                      {trade.stop_loss ? '🟢' : '🛑'} SL: {trade.stop_loss ? `$${Math.round(Number(trade.stop_loss)).toLocaleString('en-US')}` : <span className="text-gray-500">Not set</span>}
+                      {trade.stop_loss ? '🟢' : '🔴'} SL: {trade.stop_loss ? `$${Math.round(Number(trade.stop_loss)).toLocaleString('en-US')}` : <span className="text-orange-400 font-semibold">Click to set</span>}
                     </div>
                   </div>
 
@@ -841,27 +851,64 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       )}
 
       {/* Stop Loss Modal */}
-      {showStopLossModal && editingStopLossTrade && (
+      {showStopLossModal && editingStopLossTrade && (() => {
+        // Calculate current PnL for this trade
+        const entryPrice = Number(editingStopLossTrade.entry_price);
+        const tradeLeverage = Number(editingStopLossTrade.leverage);
+        const priceChange = editingStopLossTrade.position_type === 'long'
+          ? (btcPrice - entryPrice) / entryPrice
+          : (entryPrice - btcPrice) / entryPrice;
+        const currentPnlPercent = priceChange * tradeLeverage * 100;
+        const isInProfit = currentPnlPercent > 0;
+
+        // Check if entry price SL would trigger instantly (only valid when in profit)
+        const canSetEntryAsSL = isInProfit;
+
+        return (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 border-2 border-orange-500 rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-bold text-white mb-4">🛑 Set Stop Loss</h3>
+            <h3 className="text-lg font-bold text-white mb-2">🛑 Set Stop Loss</h3>
+
+            {/* Current position status */}
+            <div className={`text-xs mb-3 px-2 py-1 rounded ${isInProfit ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
+              Current P&L: {currentPnlPercent >= 0 ? '+' : ''}{currentPnlPercent.toFixed(1)}%
+            </div>
 
             <div className="mb-4">
               <label className="block text-sm text-gray-400 mb-2">Stop Loss Price ($)</label>
+
+              {/* Entry Price / Break Even Button - Always show but disable when not in profit */}
+              <button
+                onClick={() => canSetEntryAsSL && setEditStopLossPrice(Math.round(entryPrice).toString())}
+                disabled={!canSetEntryAsSL}
+                className={`w-full mb-2 py-2 rounded border text-sm font-semibold transition-all ${
+                  !canSetEntryAsSL
+                    ? 'border-slate-700 bg-slate-800/50 text-slate-600 cursor-not-allowed'
+                    : editStopLossPrice === Math.round(entryPrice).toString()
+                    ? 'border-green-500 bg-green-900/30 text-green-400'
+                    : 'border-green-600/50 bg-green-900/20 text-green-400 hover:border-green-500'
+                }`}
+                title={!canSetEntryAsSL ? 'Position must be in profit to set break-even SL' : 'Set stop loss at entry price (break even)'}
+              >
+                🎯 Entry / Break Even (${Math.round(entryPrice).toLocaleString('en-US')})
+              </button>
+
               {/* Quick Stop Loss Buttons - Based on PnL % loss */}
               <div className="grid grid-cols-4 gap-2 mb-2">
                 {[5, 10, 15, 20].map((pnlLossPercent) => {
-                  const entryPrice = Number(editingStopLossTrade.entry_price);
-                  const tradeLeverage = Number(editingStopLossTrade.leverage);
-                  // Calculate price that would cause this PnL loss
+                  // Calculate price that would cause this PnL loss from entry
                   const priceChangePercent = pnlLossPercent / tradeLeverage;
                   const slPrice = editingStopLossTrade.position_type === 'long'
                     ? Math.round(entryPrice * (1 - priceChangePercent / 100))
                     : Math.round(entryPrice * (1 + priceChangePercent / 100));
 
-                  // Disable if this stop loss would trigger instantly due to fee
-                  const tradeFeePercent = tradeLeverage * 0.05;
-                  const isDisabled = pnlLossPercent <= tradeFeePercent;
+                  // Disable if current loss already exceeds this % (SL would trigger instantly)
+                  // currentPnlPercent is negative when at loss, so -13% means we're at -13% loss
+                  // If current loss is worse than button's loss %, disable it
+                  const currentLossPercent = Math.abs(Math.min(0, currentPnlPercent)); // 0 if in profit, positive if in loss
+                  const wouldTriggerInstantly = currentLossPercent >= pnlLossPercent;
+
+                  const isDisabled = wouldTriggerInstantly;
 
                   return (
                     <button
@@ -875,7 +922,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                           ? 'border-orange-500 bg-orange-900/30 text-orange-400'
                           : 'border-slate-600 bg-slate-700/30 text-gray-400 hover:border-slate-500'
                       }`}
-                      title={isDisabled ? `Fee is ${tradeFeePercent.toFixed(0)}% - stop loss would trigger instantly` : ''}
+                      title={isDisabled ? `Current loss (${currentLossPercent.toFixed(0)}%) exceeds this - SL would trigger instantly` : `Set SL at $${slPrice.toLocaleString('en-US')}`}
                     >
                       -{pnlLossPercent}%
                     </button>
@@ -915,7 +962,8 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
