@@ -250,6 +250,73 @@ const claimLimiter = rateLimit({
 // Apply general rate limit to all API routes
 app.use('/api/', generalLimiter);
 
+// ============================================
+// MAINTENANCE MODE
+// ============================================
+// In-memory maintenance state (persisted in database for restarts)
+let maintenanceMode = {
+  enabled: false,
+  message: 'Trading is temporarily disabled for scheduled maintenance.',
+  enabledAt: null as Date | null,
+  enabledBy: null as string | null,
+  estimatedEndTime: null as Date | null
+};
+
+// Load maintenance mode from database on startup
+(async () => {
+  try {
+    // Create maintenance_settings table if not exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS maintenance_settings (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        enabled BOOLEAN DEFAULT false,
+        message TEXT DEFAULT 'Trading is temporarily disabled for scheduled maintenance.',
+        enabled_at TIMESTAMP,
+        enabled_by TEXT,
+        estimated_end_time TIMESTAMP,
+        CONSTRAINT single_row CHECK (id = 1)
+      )
+    `);
+
+    // Insert default row if not exists
+    await pool.query(`
+      INSERT INTO maintenance_settings (id, enabled) VALUES (1, false)
+      ON CONFLICT (id) DO NOTHING
+    `);
+
+    // Load current state
+    const result = await pool.query('SELECT * FROM maintenance_settings WHERE id = 1');
+    if (result.rows.length > 0) {
+      const row = result.rows[0];
+      maintenanceMode = {
+        enabled: row.enabled,
+        message: row.message,
+        enabledAt: row.enabled_at,
+        enabledBy: row.enabled_by,
+        estimatedEndTime: row.estimated_end_time
+      };
+      if (maintenanceMode.enabled) {
+        console.log('⚠️ MAINTENANCE MODE IS ACTIVE');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load maintenance settings:', err);
+  }
+})();
+
+// Middleware to check maintenance mode for trading endpoints
+const checkMaintenance = (req: Request, res: Response, next: NextFunction) => {
+  if (maintenanceMode.enabled) {
+    return res.status(503).json({
+      success: false,
+      error: 'MAINTENANCE_MODE',
+      message: maintenanceMode.message,
+      estimatedEndTime: maintenanceMode.estimatedEndTime
+    });
+  }
+  next();
+};
+
 // Admin audit logging
 const auditLog = (action: string, details: Record<string, unknown>, ip: string, success: boolean) => {
   const entry = {
@@ -369,17 +436,28 @@ app.post('/api/users', async (req: Request, res: Response) => {
     }
 
     // Check for valid referrer (if referral code provided)
+    // ANTI-EXPLOIT: Both referrer and new user must have Farcaster FID
     let referrerId: number | null = null;
     if (referralCode) {
-      const referrerResult = await pool.query(
-        'SELECT id, username FROM users WHERE LOWER(referral_code) = LOWER($1)',
-        [referralCode]
-      );
-      if (referrerResult.rows.length > 0) {
-        referrerId = referrerResult.rows[0].id;
-        console.log(`🔗 New user referred by: ${referrerResult.rows[0].username}`);
+      // Only process referral if new user has a Farcaster FID
+      if (!fid) {
+        console.log(`⚠️ Referral code ignored - new user has no Farcaster FID`);
       } else {
-        console.log(`⚠️ Invalid referral code: ${referralCode}`);
+        const referrerResult = await pool.query(
+          'SELECT id, username, fid FROM users WHERE LOWER(referral_code) = LOWER($1)',
+          [referralCode]
+        );
+        if (referrerResult.rows.length > 0) {
+          // Only allow if referrer also has a Farcaster FID
+          if (referrerResult.rows[0].fid) {
+            referrerId = referrerResult.rows[0].id;
+            console.log(`🔗 New user referred by: ${referrerResult.rows[0].username}`);
+          } else {
+            console.log(`⚠️ Referral code ignored - referrer has no Farcaster FID`);
+          }
+        } else {
+          console.log(`⚠️ Invalid referral code: ${referralCode}`);
+        }
       }
     }
 
@@ -485,10 +563,13 @@ app.get('/api/referrals/:walletAddress', async (req: Request, res: Response) => 
   const { walletAddress } = req.params;
 
   try {
-    // Get user and their referral info
+    // Get user and their referral info, including who referred them
     const userResult = await pool.query(
-      `SELECT id, username, referral_code, referral_count, referral_earnings FROM users
-       WHERE LOWER(wallet_address) = LOWER($1)`,
+      `SELECT u.id, u.username, u.referral_code, u.referral_count, u.referral_earnings, u.referred_by,
+              referrer.username as referred_by_username, referrer.pfp_url as referred_by_pfp
+       FROM users u
+       LEFT JOIN users referrer ON referrer.id = u.referred_by
+       WHERE LOWER(u.wallet_address) = LOWER($1)`,
       [walletAddress]
     );
 
@@ -498,9 +579,9 @@ app.get('/api/referrals/:walletAddress', async (req: Request, res: Response) => 
 
     const user = userResult.rows[0];
 
-    // Get list of referred users
+    // Get list of referred users (as referrer)
     const referralsResult = await pool.query(
-      `SELECT u.username, u.pfp_url, r.status, r.created_at, r.completed_at
+      `SELECT u.username, u.pfp_url, r.status, r.created_at, r.completed_at, r.referrer_claimed
        FROM referrals r
        JOIN users u ON u.id = r.referred_user_id
        WHERE r.referrer_id = $1
@@ -509,16 +590,352 @@ app.get('/api/referrals/:walletAddress', async (req: Request, res: Response) => 
       [user.id]
     );
 
+    // Check for claimable rewards as referrer (users this person referred who traded)
+    const claimableAsReferrerResult = await pool.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM(r.referrer_reward), 0) as total_reward
+       FROM referrals r
+       WHERE r.referrer_id = $1 AND r.status = 'claimable' AND r.referrer_claimed = false`,
+      [user.id]
+    );
+
+    // Check for claimable rewards as referred user (this person was referred and traded)
+    const claimableAsReferredResult = await pool.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM(r.referred_reward), 0) as total_reward
+       FROM referrals r
+       WHERE r.referred_user_id = $1 AND r.status = 'claimable' AND r.referred_claimed = false`,
+      [user.id]
+    );
+
+    // Check for pending referral (user was referred but hasn't traded yet)
+    const pendingReferralResult = await pool.query(
+      `SELECT r.id, r.referred_reward, u.username as referrer_username
+       FROM referrals r
+       JOIN users u ON u.id = r.referrer_id
+       WHERE r.referred_user_id = $1 AND r.status = 'pending'`,
+      [user.id]
+    );
+
+    const claimableAsReferrer = {
+      count: Number(claimableAsReferrerResult.rows[0].count),
+      amount: Number(claimableAsReferrerResult.rows[0].total_reward) / 100 // cents to dollars
+    };
+
+    const claimableAsReferred = {
+      count: Number(claimableAsReferredResult.rows[0].count),
+      amount: Number(claimableAsReferredResult.rows[0].total_reward) / 100 // cents to dollars
+    };
+
+    const totalClaimable = claimableAsReferrer.amount + claimableAsReferred.amount;
+
+    // Pending referral info (user needs to make first trade)
+    const pendingReferral = pendingReferralResult.rows.length > 0 ? {
+      amount: Number(pendingReferralResult.rows[0].referred_reward) / 100,
+      referrerUsername: pendingReferralResult.rows[0].referrer_username
+    } : null;
+
     res.json({
       success: true,
       referralCode: user.referral_code,
       referralCount: user.referral_count || 0,
       referralEarnings: Number(user.referral_earnings || 0) / 100, // Convert cents to dollars
-      referrals: referralsResult.rows
+      referrals: referralsResult.rows,
+      // Info about who referred this user (if anyone)
+      referredBy: user.referred_by ? {
+        username: user.referred_by_username,
+        pfpUrl: user.referred_by_pfp
+      } : null,
+      // Claimable rewards info
+      claimable: {
+        asReferrer: claimableAsReferrer,
+        asReferred: claimableAsReferred,
+        total: totalClaimable
+      },
+      // Pending referral (awaiting first trade)
+      pendingReferral
     });
   } catch (error) {
     console.error('Error fetching referral stats:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch referral stats' });
+  }
+});
+
+// Apply referral code to existing user (manual entry)
+app.post('/api/referrals/apply', checkMaintenance, async (req: Request, res: Response) => {
+  const { walletAddress, referralCode } = req.body;
+
+  if (!walletAddress || !referralCode) {
+    return res.status(400).json({ success: false, message: 'Wallet address and referral code required' });
+  }
+
+  try {
+    // Get the user
+    const userResult = await pool.query(
+      'SELECT id, username, referred_by, total_trades, fid FROM users WHERE LOWER(wallet_address) = LOWER($1)',
+      [walletAddress]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    // ANTI-EXPLOIT: Require the referred user to have a valid Farcaster FID
+    if (!user.fid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Referrals are only available for Farcaster users. Please connect your Farcaster account first.'
+      });
+    }
+
+    // Check if already referred
+    if (user.referred_by) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already been referred by someone'
+      });
+    }
+
+    // Look up the referrer by their referral code
+    const referrerResult = await pool.query(
+      'SELECT id, username, pfp_url, fid FROM users WHERE LOWER(referral_code) = LOWER($1)',
+      [referralCode.trim()]
+    );
+
+    if (referrerResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid referral code. Please check and try again.'
+      });
+    }
+
+    const referrer = referrerResult.rows[0];
+
+    // ANTI-EXPLOIT: Require the referrer to also have a valid Farcaster FID
+    if (!referrer.fid) {
+      return res.status(400).json({
+        success: false,
+        message: 'This referral code is invalid. The referrer must have a Farcaster account.'
+      });
+    }
+
+    // Prevent self-referral
+    if (referrer.id === user.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot use your own referral code'
+      });
+    }
+
+    // Check if referral already exists (shouldn't happen but safety check)
+    const existingReferral = await pool.query(
+      'SELECT id FROM referrals WHERE referred_user_id = $1',
+      [user.id]
+    );
+
+    if (existingReferral.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'A referral record already exists for your account'
+      });
+    }
+
+    // Create the referral relationship
+    await pool.query(
+      'UPDATE users SET referred_by = $1 WHERE id = $2',
+      [referrer.id, user.id]
+    );
+
+    // Create referral record with pending status
+    // Reward amounts stored in cents (500000 cents = $5,000)
+    const REFERRAL_REWARD_CENTS = 500000;
+    const REFERRAL_REWARD_DOLLARS = REFERRAL_REWARD_CENTS / 100; // $5,000
+
+    await pool.query(
+      `INSERT INTO referrals (referrer_id, referred_user_id, status, referrer_reward, referred_reward)
+       VALUES ($1, $2, 'pending', $3, $3)`,
+      [referrer.id, user.id, REFERRAL_REWARD_CENTS]
+    );
+
+    console.log(`🔗 Referral code applied: ${user.username} used code from ${referrer.username}`);
+
+    // If user has already made trades, mark as claimable immediately
+    if (user.total_trades > 0) {
+      await pool.query(
+        `UPDATE referrals SET status = 'claimable'
+         WHERE referrer_id = $1 AND referred_user_id = $2`,
+        [referrer.id, user.id]
+      );
+
+      console.log(`🎁 Referral now claimable (user already traded): ${referrer.username} & ${user.username}`);
+
+      return res.json({
+        success: true,
+        message: 'Referral applied! Go to the Referrals section to claim your $5,000 bonus!',
+        referredBy: {
+          username: referrer.username,
+          pfpUrl: referrer.pfp_url
+        },
+        claimable: true,
+        bonusAmount: 5000
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Referral code applied! Open your first trade to unlock $5,000 for both of you!',
+      referredBy: {
+        username: referrer.username,
+        pfpUrl: referrer.pfp_url
+      },
+      claimable: false
+    });
+  } catch (error) {
+    console.error('Error applying referral code:', error);
+    res.status(500).json({ success: false, message: 'Failed to apply referral code' });
+  }
+});
+
+// Claim referral reward
+app.post('/api/referrals/claim', checkMaintenance, async (req: Request, res: Response) => {
+  try {
+    const { walletAddress } = req.body;
+
+    if (!walletAddress) {
+      return res.status(400).json({ success: false, message: 'Wallet address is required' });
+    }
+
+    // Get user
+    const userResult = await pool.query(
+      'SELECT id, username, fid FROM users WHERE LOWER(wallet_address) = LOWER($1)',
+      [walletAddress]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    // ANTI-EXPLOIT: Require Farcaster FID to claim referral rewards
+    if (!user.fid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Referral rewards are only available for Farcaster users.'
+      });
+    }
+
+    // Check if user has a claimable referral (either as referrer or referred)
+    // First check as referred user
+    const asReferredResult = await pool.query(
+      `SELECT r.id, r.referrer_id, r.referred_reward, r.referrer_claimed, r.referred_claimed,
+              u.username as referrer_username
+       FROM referrals r
+       JOIN users u ON u.id = r.referrer_id
+       WHERE r.referred_user_id = $1 AND r.status = 'claimable' AND r.referred_claimed = false`,
+      [user.id]
+    );
+
+    // Then check as referrer
+    const asReferrerResult = await pool.query(
+      `SELECT r.id, r.referred_user_id, r.referrer_reward, r.referrer_claimed, r.referred_claimed,
+              u.username as referred_username
+       FROM referrals r
+       JOIN users u ON u.id = r.referred_user_id
+       WHERE r.referrer_id = $1 AND r.status = 'claimable' AND r.referrer_claimed = false`,
+      [user.id]
+    );
+
+    let totalClaimed = 0;
+    const claimedReferrals: any[] = [];
+
+    // Process claims as referred user
+    for (const referral of asReferredResult.rows) {
+      const rewardDollars = Number(referral.referred_reward) / 100;
+
+      await pool.query(
+        'UPDATE users SET paper_balance = paper_balance + $1 WHERE id = $2',
+        [rewardDollars, user.id]
+      );
+
+      await pool.query(
+        'UPDATE referrals SET referred_claimed = true WHERE id = $1',
+        [referral.id]
+      );
+
+      // Check if both have claimed, then mark as completed
+      if (referral.referrer_claimed) {
+        await pool.query(
+          `UPDATE referrals SET status = 'completed', completed_at = NOW() WHERE id = $1`,
+          [referral.id]
+        );
+      }
+
+      totalClaimed += rewardDollars;
+      claimedReferrals.push({
+        type: 'referred',
+        referrerUsername: referral.referrer_username,
+        amount: rewardDollars
+      });
+
+      console.log(`🎉 User ${user.username} claimed $${rewardDollars} referral bonus (referred by ${referral.referrer_username})`);
+    }
+
+    // Process claims as referrer
+    for (const referral of asReferrerResult.rows) {
+      const rewardDollars = Number(referral.referrer_reward) / 100;
+
+      await pool.query(
+        'UPDATE users SET paper_balance = paper_balance + $1, referral_count = referral_count + 1, referral_earnings = referral_earnings + $2 WHERE id = $3',
+        [rewardDollars, referral.referrer_reward, user.id]
+      );
+
+      await pool.query(
+        'UPDATE referrals SET referrer_claimed = true WHERE id = $1',
+        [referral.id]
+      );
+
+      // Check if both have claimed, then mark as completed
+      if (referral.referred_claimed) {
+        await pool.query(
+          `UPDATE referrals SET status = 'completed', completed_at = NOW() WHERE id = $1`,
+          [referral.id]
+        );
+      }
+
+      totalClaimed += rewardDollars;
+      claimedReferrals.push({
+        type: 'referrer',
+        referredUsername: referral.referred_username,
+        amount: rewardDollars
+      });
+
+      console.log(`🎉 User ${user.username} claimed $${rewardDollars} referral bonus (for referring ${referral.referred_username})`);
+    }
+
+    if (totalClaimed === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No claimable referral rewards found'
+      });
+    }
+
+    // Get updated balance
+    const updatedUser = await pool.query(
+      'SELECT paper_balance FROM users WHERE id = $1',
+      [user.id]
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully claimed $${totalClaimed.toLocaleString()} in referral rewards!`,
+      totalClaimed,
+      claimedReferrals,
+      newBalance: Number(updatedUser.rows[0].paper_balance)
+    });
+  } catch (error) {
+    console.error('Error claiming referral reward:', error);
+    res.status(500).json({ success: false, message: 'Failed to claim referral reward' });
   }
 });
 
@@ -544,12 +961,15 @@ app.get('/api/admin/referrals', async (req: Request, res: Response) => {
       LIMIT 10
     `);
 
-    // Recent activity
+    // Recent activity (include ID for admin actions)
     const recentActivityResult = await pool.query(`
       SELECT
+        r.id,
         referrer.username as referrer_username,
         referred.username as referred_username,
         r.status,
+        r.referrer_reward / 100 as referrer_reward_dollars,
+        r.referred_reward / 100 as referred_reward_dollars,
         r.created_at,
         r.completed_at
       FROM referrals r
@@ -575,6 +995,80 @@ app.get('/api/admin/referrals', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching admin referral stats:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch referral stats' });
+  }
+});
+
+// Admin: Revert a referral (undo rewards and delete relationship)
+app.post('/api/admin/referrals/revert', async (req: Request, res: Response) => {
+  const { referralId } = req.body;
+
+  if (!referralId) {
+    return res.status(400).json({ success: false, message: 'Referral ID required' });
+  }
+
+  try {
+    // Get the referral details
+    const referralResult = await pool.query(
+      `SELECT r.*, referrer.username as referrer_username, referred.username as referred_username
+       FROM referrals r
+       JOIN users referrer ON referrer.id = r.referrer_id
+       JOIN users referred ON referred.id = r.referred_user_id
+       WHERE r.id = $1`,
+      [referralId]
+    );
+
+    if (referralResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Referral not found' });
+    }
+
+    const referral = referralResult.rows[0];
+
+    // If the referral was completed, we need to reverse the rewards
+    if (referral.status === 'completed') {
+      // Convert cents to dollars for paper_balance deduction
+      const referrerRewardDollars = referral.referrer_reward / 100;
+      const referredRewardDollars = referral.referred_reward / 100;
+
+      // Deduct rewards from referrer (paper_balance is in dollars, referral_earnings stays in cents)
+      await pool.query(
+        `UPDATE users SET
+          paper_balance = paper_balance - $1,
+          referral_count = GREATEST(referral_count - 1, 0),
+          referral_earnings = GREATEST(referral_earnings - $2, 0)
+         WHERE id = $3`,
+        [referrerRewardDollars, referral.referrer_reward, referral.referrer_id]
+      );
+
+      // Deduct rewards from referred user
+      await pool.query(
+        'UPDATE users SET paper_balance = GREATEST(paper_balance - $1, 0) WHERE id = $2',
+        [referredRewardDollars, referral.referred_user_id]
+      );
+
+      console.log(`💰 Reverted rewards: -$${referrerRewardDollars} from ${referral.referrer_username}, -$${referredRewardDollars} from ${referral.referred_username}`);
+    }
+
+    // Clear the referred_by on the user
+    await pool.query(
+      'UPDATE users SET referred_by = NULL WHERE id = $1',
+      [referral.referred_user_id]
+    );
+
+    // Delete the referral record
+    await pool.query('DELETE FROM referrals WHERE id = $1', [referralId]);
+
+    console.log(`🔄 Admin reverted referral #${referralId}: ${referral.referrer_username} → ${referral.referred_username} (was ${referral.status})`);
+
+    res.json({
+      success: true,
+      message: `Referral reverted. ${referral.status === 'completed' ? 'Rewards have been deducted from both users.' : 'Pending referral removed.'}`,
+      revertedRewards: referral.status === 'completed',
+      referrerRewardDeducted: referral.status === 'completed' ? referral.referrer_reward / 100 : 0,
+      referredRewardDeducted: referral.status === 'completed' ? referral.referred_reward / 100 : 0
+    });
+  } catch (error) {
+    console.error('Error reverting referral:', error);
+    res.status(500).json({ success: false, message: 'Failed to revert referral' });
   }
 });
 
@@ -665,7 +1159,7 @@ app.post('/api/claims/status', async (req: Request, res: Response) => {
 });
 
 // Claim paper money - Daily claim + emergency claim if balance < $100
-app.post('/api/claims', claimLimiter, async (req: Request, res: Response) => {
+app.post('/api/claims', claimLimiter, checkMaintenance, async (req: Request, res: Response) => {
   const { walletAddress } = req.body;
 
   if (!walletAddress) {
@@ -763,7 +1257,7 @@ app.post('/api/claims', claimLimiter, async (req: Request, res: Response) => {
 // ============================================
 
 // Open trade
-app.post('/api/trades/open', tradingLimiter, async (req: Request, res: Response) => {
+app.post('/api/trades/open', tradingLimiter, checkMaintenance, async (req: Request, res: Response) => {
   const { walletAddress, type, leverage, size, entryPrice, stopLoss } = req.body;
 
   if (!walletAddress || !type || !leverage || !size || !entryPrice) {
@@ -788,13 +1282,25 @@ app.post('/api/trades/open', tradingLimiter, async (req: Request, res: Response)
   }
 
   try {
-    // Get or create user
+    // Calculate trading fee (will be deducted from P&L when closing, not upfront)
+    const feePercentage = leverage > 1 ? leverage * 0.05 : 0; // 2x = 0.1%, 10x = 0.5%, 50x = 2.5%, 100x = 5%, 200x = 10%
+    const tradingFee = (feePercentage / 100) * size;
+
+    // Calculate liquidation price
+    const liquidationPrice = type === 'long'
+      ? entryPrice * (1 - 1 / leverage)
+      : entryPrice * (1 + 1 / leverage);
+
+    // Start transaction BEFORE checking balance to prevent race conditions
+    await pool.query('BEGIN');
+
+    // Get or create user WITH ROW LOCK to prevent race conditions
     let user = await pool.query(
-      'SELECT id, paper_balance FROM users WHERE LOWER(wallet_address) = LOWER($1)',
+      'SELECT id, paper_balance FROM users WHERE LOWER(wallet_address) = LOWER($1) FOR UPDATE',
       [walletAddress]
     );
 
-    // Auto-create user if they don't exist
+    // Auto-create user if they don't exist (inside transaction)
     if (user.rows.length === 0) {
       console.log(`🆕 Auto-creating new user for wallet: ${walletAddress}`);
       const newUser = await pool.query(
@@ -807,36 +1313,22 @@ app.post('/api/trades/open', tradingLimiter, async (req: Request, res: Response)
       console.log(`✅ New user created with $10,000 balance`);
     }
 
-    if (user.rows[0].paper_balance < size) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Insufficient balance. Available: $${user.rows[0].paper_balance}` 
+    // Calculate collateral (position_size / leverage)
+    const collateral = size / leverage;
+
+    // Check balance INSIDE transaction with row locked
+    if (user.rows[0].paper_balance < collateral) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient balance. Available: $${user.rows[0].paper_balance.toFixed(2)}, Required: $${collateral.toFixed(2)}`
       });
     }
 
-    // Calculate trading fee (will be deducted from P&L when closing, not upfront)
-    const feePercentage = leverage > 1 ? leverage * 0.05 : 0; // 2x = 0.1%, 10x = 0.5%, 50x = 2.5%, 100x = 5%, 200x = 10%
-    const tradingFee = (feePercentage / 100) * size;
-    
-    // Check if user has enough for position size only (fee comes from P&L later)
-    if (user.rows[0].paper_balance < size) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Insufficient balance. Available: $${user.rows[0].paper_balance}, Required: $${size.toFixed(2)}` 
-      });
-    }
-
-    // Calculate liquidation price
-    const liquidationPrice = type === 'long' 
-      ? entryPrice * (1 - 1 / leverage)
-      : entryPrice * (1 + 1 / leverage);
-
-    await pool.query('BEGIN');
-
-    // Deduct ONLY position size from balance (fee will be deducted from P&L when closing)
+    // Deduct collateral from balance (fee will be deducted from P&L when closing)
     await pool.query(
-      'UPDATE users SET paper_balance = paper_balance - $1, last_active = NOW() WHERE LOWER(wallet_address) = LOWER($2)',
-      [size, walletAddress]
+      'UPDATE users SET paper_balance = paper_balance - $1, last_active = NOW() WHERE id = $2',
+      [collateral, user.rows[0].id]
     );
 
     // Validate stop loss if provided
@@ -868,10 +1360,11 @@ app.post('/api/trades/open', tradingLimiter, async (req: Request, res: Response)
     console.log(`
 🚀 Trade Opened:
 - Position: ${type.toUpperCase()} ${leverage}x
-- Collateral: $${size}
+- Position Size: $${size}
+- Collateral: $${collateral.toFixed(2)}
 - Entry: $${entryPrice}
 - Fee (deducted from P&L when closing): $${tradingFee.toFixed(2)} (${feePercentage.toFixed(2)}%)
-- Balance Deducted: $${size.toFixed(2)} (collateral only)
+- Balance Deducted: $${collateral.toFixed(2)}
     `);
 
     await pool.query('COMMIT');
@@ -949,7 +1442,7 @@ async function updateUserArmy(userId: number) {
 }
 
 // Close trade
-app.post('/api/trades/close', tradingLimiter, async (req: Request, res: Response) => {
+app.post('/api/trades/close', tradingLimiter, checkMaintenance, async (req: Request, res: Response) => {
   const { tradeId, exitPrice } = req.body;
 
   if (!tradeId || !exitPrice) {
@@ -962,17 +1455,17 @@ app.post('/api/trades/close', tradingLimiter, async (req: Request, res: Response
   try {
     await pool.query('BEGIN');
 
-    // Get trade details
+    // Get trade details WITH ROW LOCK to prevent race conditions (multiple close requests)
     const trade = await pool.query(
-      'SELECT * FROM trades WHERE id = $1 AND status = $2',
+      'SELECT * FROM trades WHERE id = $1 AND status = $2 FOR UPDATE',
       [tradeId, 'open']
     );
 
     if (trade.rows.length === 0) {
       await pool.query('ROLLBACK');
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Trade not found or already closed' 
+      return res.status(404).json({
+        success: false,
+        message: 'Trade not found or already closed'
       });
     }
 
@@ -980,11 +1473,14 @@ app.post('/api/trades/close', tradingLimiter, async (req: Request, res: Response
 
     // Convert all numeric values from database to proper numbers
     const entryPrice = Number(t.entry_price);
-    const collateral = Number(t.position_size); // This is the collateral/margin
+    const positionSize = Number(t.position_size); // This is the full leveraged position size
     const leverage = Number(t.leverage);
 
-    // Calculate leveraged position size
-    const leveragedPositionSize = collateral * leverage;
+    // Calculate actual collateral (position_size / leverage)
+    const collateral = positionSize / leverage;
+
+    // The leveraged position size is already stored in position_size
+    const leveragedPositionSize = positionSize;
 
     // Calculate P&L based on leveraged position
     const priceChange = t.position_type === 'long' 
@@ -1023,8 +1519,8 @@ app.post('/api/trades/close', tradingLimiter, async (req: Request, res: Response
 - Exit Price: $${exitPrice}
 - Price Change: $${priceChange.toFixed(2)} (${(priceChangePercentage * 100).toFixed(2)}%)
 - Leverage: ${t.leverage}x
-- Collateral: $${t.position_size}
-- Leveraged Position: $${leveragedPositionSize.toLocaleString()}
+- Position Size: $${positionSize.toLocaleString()}
+- Collateral: $${collateral.toFixed(2)}
 - Raw P&L: $${pnl.toFixed(2)} (${((pnl / collateral) * 100).toFixed(2)}% of collateral)
 - Capped P&L: $${cappedPnl.toFixed(2)} (max loss = -100% collateral)
 - Trading Fee: $${tradingFee.toFixed(2)} (${feePercentage.toFixed(2)}%)
@@ -1111,8 +1607,9 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
       const entryPrice = Number(trade.entry_price);
       const liquidationPrice = Number(trade.liquidation_price);
       const stopLoss = trade.stop_loss ? Number(trade.stop_loss) : null;
-      const collateral = Number(trade.position_size);
+      const positionSize = Number(trade.position_size);
       const leverage = Number(trade.leverage);
+      const collateral = positionSize / leverage; // Actual collateral = position_size / leverage
 
       // Check if stop loss was hit
       let shouldStopLoss = false;
@@ -1143,7 +1640,7 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
 
         try {
           // Calculate P&L at stop loss price
-          const leveragedPositionSize = collateral * leverage;
+          const leveragedPositionSize = positionSize; // position_size IS the leveraged position
           const priceChange = trade.position_type === 'long'
             ? currentPrice - entryPrice
             : entryPrice - currentPrice;
@@ -1205,7 +1702,7 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
 
         try {
           // Calculate final P&L at liquidation
-          const leveragedPositionSize = collateral * leverage;
+          const leveragedPositionSize = positionSize; // position_size IS the leveraged position
           const priceChange = trade.position_type === 'long' 
             ? currentPrice - entryPrice 
             : entryPrice - currentPrice;
@@ -1286,7 +1783,7 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
 });
 
 // Add collateral to open position (averaging into position)
-app.post('/api/trades/add-collateral', async (req: Request, res: Response) => {
+app.post('/api/trades/add-collateral', checkMaintenance, async (req: Request, res: Response) => {
   const { tradeId, additionalCollateral, walletAddress, currentPrice } = req.body;
 
   if (!tradeId || !additionalCollateral || !walletAddress || !currentPrice) {
@@ -1306,17 +1803,17 @@ app.post('/api/trades/add-collateral', async (req: Request, res: Response) => {
   try {
     await pool.query('BEGIN');
 
-    // Get trade details
+    // Get trade details WITH ROW LOCK to prevent race conditions
     const trade = await pool.query(
-      'SELECT t.*, u.paper_balance FROM trades t JOIN users u ON t.user_id = u.id WHERE t.id = $1 AND t.status = $2 AND LOWER(u.wallet_address) = LOWER($3)',
+      'SELECT t.*, u.paper_balance FROM trades t JOIN users u ON t.user_id = u.id WHERE t.id = $1 AND t.status = $2 AND LOWER(u.wallet_address) = LOWER($3) FOR UPDATE OF t',
       [tradeId, 'open', walletAddress]
     );
 
     if (trade.rows.length === 0) {
       await pool.query('ROLLBACK');
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Trade not found or already closed' 
+      return res.status(404).json({
+        success: false,
+        message: 'Trade not found or already closed'
       });
     }
 
@@ -1395,7 +1892,7 @@ app.post('/api/trades/add-collateral', async (req: Request, res: Response) => {
 });
 
 // Update stop loss for open position
-app.post('/api/trades/update-stop-loss', async (req: Request, res: Response) => {
+app.post('/api/trades/update-stop-loss', checkMaintenance, async (req: Request, res: Response) => {
   const { tradeId, stopLoss, walletAddress } = req.body;
 
   if (!tradeId || !walletAddress) {
@@ -1588,31 +2085,33 @@ app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
       },
       openPositions: openPositions.rows.map(trade => {
         const entryPrice = Number(trade.entry_price);
-        const collateral = Number(trade.position_size);
+        const positionSize = Number(trade.position_size);
         const leverage = Number(trade.leverage);
-        
+        const collateral = positionSize / leverage; // Actual collateral
+
         // Calculate current P&L if currentPrice is provided
         let current_pnl = null;
         if (currentPrice) {
-          const leveragedPositionSize = collateral * leverage;
+          const leveragedPositionSize = positionSize; // position_size IS the leveraged position
           const priceChange = trade.position_type === 'long'
             ? currentPrice - entryPrice
             : entryPrice - currentPrice;
           const priceChangePercentage = priceChange / entryPrice;
           const pnl = priceChangePercentage * leveragedPositionSize;
-          
+
           // Deduct trading fee from P&L
           const feePercentage = leverage > 1 ? leverage * 0.05 : 0;
           const tradingFee = (feePercentage / 100) * collateral;
           current_pnl = pnl - tradingFee;
         }
-        
+
         return {
           id: trade.id,
           position_type: trade.position_type,
           leverage: trade.leverage,
           entry_price: entryPrice,
-          position_size: collateral,
+          position_size: positionSize,
+          collateral: collateral, // Add actual collateral to response
           liquidation_price: Number(trade.liquidation_price),
           opened_at: trade.opened_at,
           current_pnl: current_pnl
@@ -2621,7 +3120,7 @@ app.get('/api/missions/:walletAddress', async (req: Request, res: Response) => {
 });
 
 // POST /api/missions/:missionId/claim - Claim mission reward
-app.post('/api/missions/:missionId/claim', async (req: Request, res: Response) => {
+app.post('/api/missions/:missionId/claim', checkMaintenance, async (req: Request, res: Response) => {
   const { missionId } = req.params;
   const { walletAddress } = req.body;
 
@@ -2684,12 +3183,13 @@ app.post('/api/missions/:missionId/claim', async (req: Request, res: Response) =
     }
 
     // Mark as claimed and add reward to user balance
-    const rewardAmount = Number(mission.reward_amount) / 100; // Convert cents to dollars
+    // reward_amount is stored in dollars directly (not cents)
+    const rewardAmount = Number(mission.reward_amount);
 
     await pool.query(
-      `UPDATE user_missions SET is_claimed = true, claimed_at = NOW()
-       WHERE id = $1`,
-      [progress.id]
+      `UPDATE user_missions SET is_claimed = true, claimed_at = NOW(), reward_paid = $1
+       WHERE id = $2`,
+      [rewardAmount, progress.id]
     );
 
     const balanceResult = await pool.query(
@@ -2946,27 +3446,13 @@ async function checkReferralReward(userId: number): Promise<void> {
       return; // Not first trade, already processed
     }
 
-    // Award referrer $5,000
-    const referrerReward = Number(referral.referrer_reward) / 100; // Convert cents to dollars
+    // Mark referral as claimable (both users need to claim their reward)
     await pool.query(
-      'UPDATE users SET paper_balance = paper_balance + $1, referral_count = referral_count + 1, referral_earnings = referral_earnings + $2 WHERE id = $3',
-      [referrerReward, referral.referrer_reward, referral.referrer_id]
-    );
-
-    // Award referred user $5,000
-    const referredReward = Number(referral.referred_reward) / 100; // Convert cents to dollars
-    await pool.query(
-      'UPDATE users SET paper_balance = paper_balance + $1 WHERE id = $2',
-      [referredReward, userId]
-    );
-
-    // Update referral status to completed
-    await pool.query(
-      `UPDATE referrals SET status = 'completed', completed_at = NOW() WHERE id = $1`,
+      `UPDATE referrals SET status = 'claimable' WHERE id = $1`,
       [referral.id]
     );
 
-    console.log(`🎉 Referral bonus awarded! Referrer ${referral.referrer_username} (+$${referrerReward}) and user ${userId} (+$${referredReward})`);
+    console.log(`🎁 Referral now claimable! Referrer ${referral.referrer_username} and user ${userId} can now claim their rewards`);
   } catch (error) {
     console.error('Error checking referral reward:', error);
   }
@@ -3232,7 +3718,7 @@ app.get('/api/admin/analytics', async (req: Request, res: Response) => {
       SELECT
         COUNT(DISTINCT user_id) as users_with_open,
         COUNT(*) as total_open,
-        ROUND(SUM(position_size)::numeric, 0) as collateral_at_risk
+        ROUND(SUM(position_size / leverage)::numeric, 0) as collateral_at_risk
       FROM trades
       WHERE status = 'open'
     `);
@@ -3263,6 +3749,45 @@ app.get('/api/admin/analytics', async (req: Request, res: Response) => {
       WHERE claimed_at >= NOW() - INTERVAL '14 days'
       GROUP BY DATE(claimed_at)
       ORDER BY day DESC
+    `);
+
+    // === PAPER MONEY ECONOMY STATS ===
+    // Total trading fees collected (calculated from closed/liquidated trades)
+    // Fee formula: leverage > 1 ? leverage * 0.05% of position_size : 0
+    const feesCollected = await pool.query(`
+      SELECT
+        ROUND(SUM(
+          CASE WHEN leverage > 1 THEN (leverage * 0.05 / 100) * position_size ELSE 0 END
+        )::numeric, 2) as total_fees
+      FROM trades
+      WHERE status IN ('closed', 'liquidated')
+    `);
+
+    // Total claims distributed (all time)
+    const totalClaimsDistributed = await pool.query(`
+      SELECT
+        COUNT(*) as claim_count,
+        ROUND(SUM(amount)::numeric, 2) as total_amount
+      FROM claims
+    `);
+
+    // Total mission rewards distributed (all time)
+    const totalMissionRewards = await pool.query(`
+      SELECT
+        COUNT(um.id) as missions_claimed,
+        ROUND(SUM(m.reward_amount) / 100.0, 2) as total_rewards
+      FROM user_missions um
+      JOIN missions m ON m.id = um.mission_id
+      WHERE um.is_claimed = true
+    `);
+
+    // Total referral rewards distributed (all time)
+    const totalReferralRewards = await pool.query(`
+      SELECT
+        COUNT(*) as completed_referrals,
+        ROUND(SUM(referrer_reward + referred_reward) / 100.0, 2) as total_rewards
+      FROM referrals
+      WHERE status = 'completed'
     `);
 
     // Build legacy format for backward compatibility
@@ -3321,12 +3846,179 @@ app.get('/api/admin/analytics', async (req: Request, res: Response) => {
         retentionFunnel: retentionFunnel.rows,
         currentState: currentState.rows[0],
         missionsEngagement: missionsEngagement.rows,
-        claimsActivity: claimsActivity.rows
+        claimsActivity: claimsActivity.rows,
+
+        // Paper money economy
+        paperMoneyEconomy: {
+          feesCollected: parseFloat(feesCollected.rows[0]?.total_fees || '0'),
+          claims: {
+            count: parseInt(totalClaimsDistributed.rows[0]?.claim_count || '0'),
+            totalAmount: parseFloat(totalClaimsDistributed.rows[0]?.total_amount || '0')
+          },
+          missionRewards: {
+            claimedCount: parseInt(totalMissionRewards.rows[0]?.missions_claimed || '0'),
+            totalAmount: parseFloat(totalMissionRewards.rows[0]?.total_rewards || '0')
+          },
+          referralRewards: {
+            completedCount: parseInt(totalReferralRewards.rows[0]?.completed_referrals || '0'),
+            totalAmount: parseFloat(totalReferralRewards.rows[0]?.total_rewards || '0')
+          },
+          totalAwarded: parseFloat(totalClaimsDistributed.rows[0]?.total_amount || '0') +
+                        parseFloat(totalMissionRewards.rows[0]?.total_rewards || '0') +
+                        parseFloat(totalReferralRewards.rows[0]?.total_rewards || '0')
+        }
       }
     });
   } catch (error) {
     console.error('Error fetching admin analytics:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch analytics' });
+  }
+});
+
+// Admin: Balance Audit - Check all user balances and optionally fix discrepancies
+app.get('/api/admin/audit', async (req: Request, res: Response) => {
+  try {
+    const autoFix = req.query.autoFix === 'true';
+
+    // Calculate expected balance for all users
+    // Uses CALCULATED PnL from trades (not stored total_pnl) + balance_adjustment for manual corrections
+    const auditResult = await pool.query(`
+      WITH user_claims AS (
+        SELECT user_id, COALESCE(SUM(amount), 0) / 100.0 as total_claims
+        FROM claims GROUP BY user_id
+      ),
+      user_missions AS (
+        -- reward_paid is stored in dollars directly (not cents)
+        SELECT user_id, COALESCE(SUM(reward_paid), 0) as total_mission_rewards
+        FROM user_missions
+        WHERE is_claimed = true GROUP BY user_id
+      ),
+      user_referrer_rewards AS (
+        -- Only count CLAIMED referrer rewards (referrer_claimed = true)
+        SELECT referrer_id as user_id, COALESCE(SUM(referrer_reward), 0) / 100.0 as referrer_rewards
+        FROM referrals WHERE referrer_claimed = true GROUP BY referrer_id
+      ),
+      user_referred_rewards AS (
+        -- Only count CLAIMED referred rewards (referred_claimed = true)
+        SELECT referred_user_id as user_id, COALESCE(SUM(referred_reward), 0) / 100.0 as referred_rewards
+        FROM referrals WHERE referred_claimed = true GROUP BY referred_user_id
+      ),
+      user_pnl AS (
+        -- Calculate CORRECT PnL from price changes, not stored (buggy) values
+        SELECT user_id, COALESCE(SUM(
+          CASE
+            WHEN position_type = 'long' THEN ((exit_price - entry_price) / NULLIF(entry_price, 0)) * position_size
+            WHEN position_type = 'short' THEN ((entry_price - exit_price) / NULLIF(entry_price, 0)) * position_size
+          END
+        ), 0) as calculated_pnl
+        FROM trades
+        WHERE status IN ('closed', 'liquidated')
+          AND exit_price IS NOT NULL
+          AND entry_price > 0
+        GROUP BY user_id
+      ),
+      open_positions AS (
+        SELECT user_id, COALESCE(SUM(position_size / leverage), 0) as collateral_locked
+        FROM trades WHERE status = 'open' GROUP BY user_id
+      )
+      SELECT
+        u.id,
+        u.username,
+        u.paper_balance as current_balance,
+        COALESCE(op.collateral_locked, 0) as open_collateral,
+        u.paper_balance + COALESCE(op.collateral_locked, 0) as total_assets,
+        COALESCE(pnl.calculated_pnl, 0) as total_pnl,
+        COALESCE(u.balance_adjustment, 0) as balance_adjustment,
+        COALESCE(c.total_claims, 0) as claims,
+        COALESCE(m.total_mission_rewards, 0) as missions,
+        COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) as referrals,
+        COALESCE(u.balance_adjustment, 0) as balance_adjustment,
+        -- Max assets = starting + claims + missions + referrals + pnl (NO balance_adjustment - that's for correction)
+        ROUND((10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+               COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
+               COALESCE(pnl.calculated_pnl, 0))::numeric, 2) as max_assets,
+        -- Expected available = max_assets - open_collateral
+        ROUND((10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+               COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
+               COALESCE(pnl.calculated_pnl, 0) - COALESCE(op.collateral_locked, 0))::numeric, 2) as expected_balance,
+        -- Discrepancy: (paper_balance + adjustment) vs expected (positive = user has more than expected)
+        ROUND(((u.paper_balance + COALESCE(u.balance_adjustment, 0)) - (10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+               COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
+               COALESCE(pnl.calculated_pnl, 0) - COALESCE(op.collateral_locked, 0)))::numeric, 2) as discrepancy,
+        CASE WHEN COALESCE(op.collateral_locked, 0) > 0 THEN true ELSE false END as has_open_positions
+      FROM users u
+      LEFT JOIN user_claims c ON c.user_id = u.id
+      LEFT JOIN user_missions m ON m.user_id = u.id
+      LEFT JOIN user_referrer_rewards rr ON rr.user_id = u.id
+      LEFT JOIN user_referred_rewards rd ON rd.user_id = u.id
+      LEFT JOIN user_pnl pnl ON pnl.user_id = u.id
+      LEFT JOIN open_positions op ON op.user_id = u.id
+      ORDER BY ABS((u.paper_balance + COALESCE(u.balance_adjustment, 0)) - (10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+               COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
+               COALESCE(pnl.calculated_pnl, 0) - COALESCE(op.collateral_locked, 0))) DESC
+    `);
+
+    const allUsers = auditResult.rows;
+    const discrepancies = allUsers.filter((u: any) => Math.abs(u.discrepancy) > 1);
+    const fixable = discrepancies.filter((u: any) => !u.has_open_positions);
+    const needsManualReview = discrepancies.filter((u: any) => u.has_open_positions);
+
+    let fixedUsers: any[] = [];
+
+    // Auto-fix users without open positions if requested
+    // For users without open positions, set paper_balance directly and reset adjustment
+    if (autoFix && fixable.length > 0) {
+      for (const user of fixable) {
+        await pool.query(
+          'UPDATE users SET paper_balance = $1, balance_adjustment = 0 WHERE id = $2',
+          [user.expected_balance, user.id]
+        );
+        fixedUsers.push({
+          id: user.id,
+          username: user.username,
+          previousBalance: user.current_balance,
+          newBalance: user.expected_balance,
+          adjustment: Number(user.expected_balance) - Number(user.current_balance)
+        });
+        console.log(`🔧 Auto-fixed balance for ${user.username}: $${user.current_balance} -> $${user.expected_balance}`);
+      }
+    }
+
+    // Summary stats
+    const summary = {
+      totalUsers: allUsers.length,
+      usersWithDiscrepancy: discrepancies.length,
+      usersFixable: fixable.length,
+      usersNeedingManualReview: needsManualReview.length,
+      totalExcess: discrepancies.filter((u: any) => u.discrepancy > 0).reduce((sum: number, u: any) => sum + Number(u.discrepancy), 0),
+      totalDeficit: discrepancies.filter((u: any) => u.discrepancy < 0).reduce((sum: number, u: any) => sum + Math.abs(Number(u.discrepancy)), 0),
+      usersFixed: fixedUsers.length
+    };
+
+    res.json({
+      success: true,
+      summary,
+      discrepancies: discrepancies.map((u: any) => ({
+        id: u.id,
+        username: u.username,
+        currentBalance: Number(u.current_balance),
+        openCollateral: Number(u.open_collateral),
+        totalAssets: Number(u.total_assets),
+        maxAssets: Number(u.max_assets),
+        expectedBalance: Number(u.expected_balance),
+        discrepancy: Number(u.discrepancy),
+        hasOpenPositions: u.has_open_positions,
+        claims: Number(u.claims),
+        missions: Number(u.missions),
+        referrals: Number(u.referrals),
+        pnl: Number(u.total_pnl)
+      })),
+      fixedUsers,
+      auditTimestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error running balance audit:', error);
+    res.status(500).json({ success: false, message: 'Failed to run audit' });
   }
 });
 
@@ -3633,6 +4325,94 @@ app.get('/api/admin/activity', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching admin activity:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch activity' });
+  }
+});
+
+// ============================================
+// MAINTENANCE MODE ADMIN ENDPOINTS
+// ============================================
+
+// Get maintenance status (public)
+app.get('/api/maintenance/status', async (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    maintenance: {
+      enabled: maintenanceMode.enabled,
+      message: maintenanceMode.message,
+      estimatedEndTime: maintenanceMode.estimatedEndTime
+    }
+  });
+});
+
+// Get maintenance status (admin only - full details)
+app.get('/api/admin/maintenance', adminAuth, async (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    enabled: maintenanceMode.enabled,
+    message: maintenanceMode.message,
+    enabledAt: maintenanceMode.enabledAt,
+    enabledBy: maintenanceMode.enabledBy,
+    estimatedEndTime: maintenanceMode.estimatedEndTime
+  });
+});
+
+// Toggle maintenance mode (admin only)
+app.post('/api/admin/maintenance', adminAuth, async (req: Request, res: Response) => {
+  const { enabled, message, durationMinutes } = req.body;
+  const ip = (req as any).adminIp || 'unknown';
+
+  try {
+    const newEnabled = enabled === true;
+    const newMessage = message || 'Trading is temporarily disabled for scheduled maintenance.';
+    const estimatedEnd = durationMinutes
+      ? new Date(Date.now() + durationMinutes * 60 * 1000)
+      : null;
+
+    // Update database
+    await pool.query(`
+      UPDATE maintenance_settings
+      SET enabled = $1,
+          message = $2,
+          enabled_at = $3,
+          enabled_by = $4,
+          estimated_end_time = $5
+      WHERE id = 1
+    `, [
+      newEnabled,
+      newMessage,
+      newEnabled ? new Date() : null,
+      newEnabled ? ip : null,
+      estimatedEnd
+    ]);
+
+    // Update in-memory state
+    maintenanceMode = {
+      enabled: newEnabled,
+      message: newMessage,
+      enabledAt: newEnabled ? new Date() : null,
+      enabledBy: newEnabled ? ip : null,
+      estimatedEndTime: estimatedEnd
+    };
+
+    auditLog(
+      newEnabled ? 'MAINTENANCE_ENABLED' : 'MAINTENANCE_DISABLED',
+      { message: newMessage, durationMinutes, estimatedEnd },
+      ip,
+      true
+    );
+
+    console.log(newEnabled
+      ? `⚠️ MAINTENANCE MODE ENABLED by ${ip}`
+      : `✅ MAINTENANCE MODE DISABLED by ${ip}`
+    );
+
+    res.json({
+      success: true,
+      maintenance: maintenanceMode
+    });
+  } catch (error) {
+    console.error('Error toggling maintenance mode:', error);
+    res.status(500).json({ success: false, message: 'Failed to toggle maintenance mode' });
   }
 });
 

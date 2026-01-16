@@ -272,6 +272,69 @@
             "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'weekly.*reward|reward.*distribut|army.*winner'; then echo '\\n[Hook] Rewards operation - use /rewards for distribution details'; fi"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'referral.*claim|claim.*referral|referrer.*claimed|referred.*claimed'; then echo '\\n[Hook] Referral claim activity - use /referrals for status'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'fid is null|no fid|farcaster.*required|referrals are only available'; then echo '\\n[Hook] FID requirement triggered - referrals require Farcaster account'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'discrepancy|balance.*incorrect|audit.*fail'; then echo '\\n[Hook] Balance discrepancy detected - use /audit for details'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'maintenance.*enabled|trading.*disabled|maintenance mode'; then echo '\\n[Hook] Maintenance mode active - use /maintenance to check status'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'auto.*fix|fixed.*balance|balance.*corrected'; then echo '\\n[Hook] Balance fix applied - verify with /audit'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'open.*position.*cannot|has.*open.*position|close.*position.*first'; then echo '\\n[Hook] User has open positions - cannot auto-fix until closed'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'referral_code|referral code'; then echo '\\n[Hook] Referral link format: https://farcaster.xyz/miniapps/5kLec5hSq3bP/battlefield?ref=CODE'; fi"
+          }
+        ]
       }
     ]
   },

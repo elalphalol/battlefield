@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useAccount } from 'wagmi';
 import { getApiUrl } from '../../config/api';
 import { Achievements } from '../../components/Achievements';
 import { VolumeTracker } from '../../components/VolumeTracker';
@@ -9,6 +10,7 @@ import { Missions } from '../../components/Missions';
 import { Avatar } from '../../components/Avatar';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
+import { getReferralLink } from '../../lib/farcaster';
 
 // Farcaster icon component
 const FarcasterIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -72,11 +74,13 @@ interface UserProfile {
   };
 }
 
-export default function UserProfilePage() {
+function UserProfilePageContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const identifier = params.identifier as string;
-  
+  const { address: connectedWalletAddress } = useAccount();
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,8 +94,41 @@ export default function UserProfilePage() {
     referralCode: string;
     referralCount: number;
     referralEarnings: number;
-    referrals: Array<{ username: string; pfp_url: string; status: string; created_at: string; completed_at: string | null }>;
+    referrals: Array<{ username: string; pfp_url: string; status: string; created_at: string; completed_at: string | null; referrer_claimed?: boolean }>;
+    referredBy: { username: string; pfpUrl: string } | null;
+    claimable: {
+      asReferrer: { count: number; amount: number };
+      asReferred: { count: number; amount: number };
+      total: number;
+    };
+    pendingReferral: { amount: number; referrerUsername: string } | null;
   } | null>(null);
+  const [referralCodeInput, setReferralCodeInput] = useState('');
+  const [applyingReferral, setApplyingReferral] = useState(false);
+  const [claimingReferral, setClaimingReferral] = useState(false);
+
+  // Handle URL params for tab selection and referral code pre-fill
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const applyCode = searchParams.get('applyCode');
+
+    // Set tab if specified
+    if (tab === 'referrals') {
+      setAchievementTab('referrals');
+    } else if (tab === 'achievements') {
+      setAchievementTab('achievements');
+    } else if (tab === 'missions') {
+      setAchievementTab('missions');
+    }
+
+    // Pre-fill referral code if provided
+    if (applyCode) {
+      setReferralCodeInput(applyCode);
+      // Clear the URL param to prevent re-filling on refresh
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [searchParams]);
 
   // Fetch BTC price
   useEffect(() => {
@@ -135,14 +172,22 @@ export default function UserProfilePage() {
     getCurrentUserFid();
   }, []);
 
-  // Check if viewing own profile
+  // Check if viewing own profile (via FID or wallet address)
   useEffect(() => {
-    if (profile && currentUserFid) {
-      setIsOwnProfile(profile.user.fid === currentUserFid);
+    if (profile) {
+      // Check by Farcaster FID first
+      if (currentUserFid && profile.user.fid === currentUserFid) {
+        setIsOwnProfile(true);
+      // Then check by wallet address (for non-Farcaster users)
+      } else if (connectedWalletAddress && profile.user.wallet_address?.toLowerCase() === connectedWalletAddress.toLowerCase()) {
+        setIsOwnProfile(true);
+      } else {
+        setIsOwnProfile(false);
+      }
     } else {
       setIsOwnProfile(false);
     }
-  }, [profile, currentUserFid]);
+  }, [profile, currentUserFid, connectedWalletAddress]);
 
   // Load profile once when price is loaded or when page/identifier changes
   useEffect(() => {
@@ -185,11 +230,78 @@ export default function UserProfilePage() {
           referralCode: data.referralCode,
           referralCount: data.referralCount,
           referralEarnings: data.referralEarnings,
-          referrals: data.referrals
+          referrals: data.referrals,
+          referredBy: data.referredBy || null,
+          claimable: data.claimable || { asReferrer: { count: 0, amount: 0 }, asReferred: { count: 0, amount: 0 }, total: 0 },
+          pendingReferral: data.pendingReferral || null
         });
       }
     } catch (err) {
       console.error('Error fetching referral data:', err);
+    }
+  };
+
+  const handleApplyReferral = async () => {
+    if (!referralCodeInput.trim() || !profile?.user?.wallet_address) return;
+
+    setApplyingReferral(true);
+    try {
+      const response = await fetch(getApiUrl('api/referrals/apply'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: profile.user.wallet_address,
+          referralCode: referralCodeInput.trim()
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message);
+        setReferralCodeInput('');
+        // Refresh referral data
+        fetchReferralData(profile.user.wallet_address);
+      } else {
+        toast.error(data.message || 'Failed to apply referral code');
+      }
+    } catch (err) {
+      console.error('Error applying referral code:', err);
+      toast.error('Failed to apply referral code');
+    } finally {
+      setApplyingReferral(false);
+    }
+  };
+
+  const handleClaimReferral = async () => {
+    if (!profile?.user?.wallet_address) return;
+
+    setClaimingReferral(true);
+    try {
+      const response = await fetch(getApiUrl('api/referrals/claim'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: profile.user.wallet_address
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message);
+        // Refresh referral data
+        fetchReferralData(profile.user.wallet_address);
+        // Also refresh user data to update balance
+        fetchProfile();
+      } else {
+        toast.error(data.message || 'Failed to claim referral rewards');
+      }
+    } catch (err) {
+      console.error('Error claiming referral rewards:', err);
+      toast.error('Failed to claim referral rewards');
+    } finally {
+      setClaimingReferral(false);
     }
   };
 
@@ -791,18 +903,18 @@ export default function UserProfilePage() {
                       </div>
                     </div>
 
-                    {/* Share Link */}
+                    {/* Share Link - Opens in Farcaster app */}
                     <div className="bg-slate-900/50 rounded-lg p-4">
-                      <p className="text-gray-400 text-sm mb-2">Share Link</p>
+                      <p className="text-gray-400 text-sm mb-2">Share Link <span className="text-purple-400">(opens in Farcaster)</span></p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <input
-                          value={`btcbattlefield.com?ref=${referralData.referralCode}`}
+                          value={getReferralLink(referralData.referralCode)}
                           readOnly
-                          className="flex-1 min-w-0 bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-mono"
+                          className="flex-1 min-w-0 bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-mono"
                         />
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(`https://btcbattlefield.com?ref=${referralData.referralCode}`);
+                            navigator.clipboard.writeText(getReferralLink(referralData.referralCode));
                             toast.success('Link copied!');
                           }}
                           className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
@@ -812,8 +924,10 @@ export default function UserProfilePage() {
                         <button
                           onClick={async () => {
                             try {
+                              const referralLink = getReferralLink(referralData.referralCode);
                               await sdk.actions.composeCast({
-                                text: `Join me in BATTLEFIELD and we both get $5,000 paper money! 🎁\n\nUse my code: ${referralData.referralCode}\n\nhttps://btcbattlefield.com?ref=${referralData.referralCode}`,
+                                text: `Join me in BATTLEFIELD and we both get $5,000 paper money! 🎁\n\nUse my code: ${referralData.referralCode}`,
+                                embeds: [referralLink],
                               });
                             } catch {
                               toast.error('Failed to open cast composer');
@@ -824,6 +938,7 @@ export default function UserProfilePage() {
                           <FarcasterIcon className="w-4 h-4" /> Cast
                         </button>
                       </div>
+                      <p className="text-gray-500 text-xs mt-2">Friends who click this link will open BATTLEFIELD in Farcaster and automatically connect their account</p>
                     </div>
 
                     {/* Stats */}
@@ -838,11 +953,103 @@ export default function UserProfilePage() {
                       </div>
                     </div>
 
+                    {/* Claimable Rewards */}
+                    {isOwnProfile && referralData.claimable && referralData.claimable.total > 0 && (
+                      <div className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border-2 border-yellow-500 rounded-lg p-4 animate-pulse">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-yellow-400 font-bold text-lg mb-1">🎁 Claimable Rewards!</p>
+                            <p className="text-gray-300 text-sm">
+                              You have <span className="text-yellow-400 font-bold">${referralData.claimable.total.toLocaleString()}</span> in unclaimed referral bonuses
+                            </p>
+                            {referralData.claimable.asReferrer.count > 0 && (
+                              <p className="text-gray-400 text-xs mt-1">
+                                {referralData.claimable.asReferrer.count} friend{referralData.claimable.asReferrer.count > 1 ? 's' : ''} made their first trade!
+                              </p>
+                            )}
+                            {referralData.claimable.asReferred.count > 0 && (
+                              <p className="text-gray-400 text-xs mt-1">
+                                You made your first trade with a referral code!
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={handleClaimReferral}
+                            disabled={claimingReferral}
+                            className="bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-600 text-black font-bold px-6 py-3 rounded-lg transition-all text-lg shadow-lg hover:shadow-yellow-500/50"
+                          >
+                            {claimingReferral ? 'Claiming...' : `Claim $${referralData.claimable.total.toLocaleString()}`}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pending Referral - Awaiting First Trade */}
+                    {isOwnProfile && referralData.pendingReferral && (
+                      <div className="bg-slate-800/50 border-2 border-slate-600 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-gray-400 font-bold text-lg mb-1">⏳ Pending Reward</p>
+                            <p className="text-gray-300 text-sm">
+                              <span className="text-yellow-400 font-bold">${referralData.pendingReferral.amount.toLocaleString()}</span> bonus waiting!
+                            </p>
+                            <p className="text-gray-500 text-xs mt-1">
+                              Open your first trade to unlock (referred by {referralData.pendingReferral.referrerUsername})
+                            </p>
+                          </div>
+                          <button
+                            disabled={true}
+                            className="bg-gray-600 text-gray-400 font-bold px-6 py-3 rounded-lg cursor-not-allowed"
+                          >
+                            Trade First
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Reward Info */}
                     <div className="bg-green-900/30 border border-green-600 rounded-lg p-4">
                       <p className="text-green-400 font-bold mb-1">🎁 Referral Rewards</p>
                       <p className="text-gray-300 text-sm">You and your friend each get <span className="text-yellow-400 font-bold">$5,000</span> paper money when they open their first trade!</p>
                     </div>
+
+                    {/* Enter Friend's Code OR Show Who Referred You */}
+                    {isOwnProfile && (
+                      referralData.referredBy ? (
+                        <div className="bg-purple-900/30 border border-purple-500 rounded-lg p-4">
+                          <p className="text-purple-400 font-bold mb-2">👥 Referred By</p>
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={referralData.referredBy.pfpUrl || '/battlefield-logo.jpg'}
+                              alt=""
+                              className="w-10 h-10 rounded-full border-2 border-purple-500"
+                            />
+                            <span className="text-white font-bold">{referralData.referredBy.username}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-blue-900/30 border border-blue-500 rounded-lg p-4">
+                          <p className="text-blue-400 font-bold mb-2">🎟️ Have a Friend&apos;s Code?</p>
+                          <p className="text-gray-300 text-sm mb-3">Enter their referral code to get $5,000 bonus when you open your first trade!</p>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={referralCodeInput}
+                              onChange={(e) => setReferralCodeInput(e.target.value)}
+                              placeholder="e.g. elalpha.battle"
+                              className="flex-1 bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-mono border border-slate-600 focus:border-blue-500 focus:outline-none"
+                            />
+                            <button
+                              onClick={handleApplyReferral}
+                              disabled={applyingReferral || !referralCodeInput.trim()}
+                              className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                            >
+                              {applyingReferral ? '...' : 'Apply'}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    )}
 
                     {/* Referral List */}
                     {referralData.referrals.length > 0 && (
@@ -855,8 +1062,14 @@ export default function UserProfilePage() {
                                 <img src={ref.pfp_url || '/battlefield-logo.jpg'} alt="" className="w-8 h-8 rounded-full" />
                                 <span className="text-white font-medium text-sm">{ref.username}</span>
                               </div>
-                              <span className={`text-xs font-bold px-2 py-1 rounded ${ref.status === 'completed' ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'}`}>
-                                {ref.status === 'completed' ? '✓ Completed' : '⏳ Pending'}
+                              <span className={`text-xs font-bold px-2 py-1 rounded ${
+                                ref.status === 'completed' ? 'bg-green-600 text-white' :
+                                ref.status === 'claimable' ? (ref.referrer_claimed ? 'bg-green-600 text-white' : 'bg-yellow-500 text-black animate-pulse') :
+                                'bg-gray-600 text-white'
+                              }`}>
+                                {ref.status === 'completed' ? '✓ Completed' :
+                                 ref.status === 'claimable' ? (ref.referrer_claimed ? '✓ Claimed' : '💰 Claimable') :
+                                 '⏳ Pending'}
                               </span>
                             </div>
                           ))}
@@ -1074,5 +1287,17 @@ export default function UserProfilePage() {
         </div>
       </nav>
     </div>
+  );
+}
+
+export default function UserProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center">
+        <div className="text-2xl">Loading profile...</div>
+      </div>
+    }>
+      <UserProfilePageContent />
+    </Suspense>
   );
 }

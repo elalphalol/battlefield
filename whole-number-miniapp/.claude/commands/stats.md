@@ -9,15 +9,16 @@ Run this comprehensive stats query:
 ```bash
 echo "=== BATTLEFIELD STATS ===" && echo "" && PGPASSWORD=battlefield psql -U battlefield -h localhost -d battlefield -t -c "
 SELECT '👥 Total Users: ' || COUNT(*) FROM users;
+SELECT '🎭 Farcaster Users: ' || COUNT(*) FILTER (WHERE fid IS NOT NULL) || ' (' || ROUND(100.0 * COUNT(*) FILTER (WHERE fid IS NOT NULL) / COUNT(*), 0) || '%)' FROM users;
 SELECT '📊 Active Today: ' || COUNT(DISTINCT user_id) FROM trades WHERE opened_at > NOW() - INTERVAL '24 hours';
 SELECT '💰 Total Trades: ' || COUNT(*) FROM trades;
 SELECT '📈 Open Positions: ' || COUNT(*) FROM trades WHERE status = 'open';
 SELECT '🐂 Bulls Army: ' || COUNT(*) FROM users WHERE army = 'bulls';
 SELECT '🐻 Bears Army: ' || COUNT(*) FROM users WHERE army = 'bears';
-SELECT '💵 Total Paper Money: $' || TO_CHAR(SUM(paper_balance)/100, 'FM999,999,999') FROM users;
+SELECT '💵 Total Paper Money: $' || TO_CHAR(SUM(paper_balance), 'FM999,999,999') FROM users;
 SELECT '🔥 Liquidations Today: ' || COUNT(*) FROM trades WHERE status = 'liquidated' AND closed_at > NOW() - INTERVAL '24 hours';
 SELECT '🎯 Missions Completed: ' || COUNT(*) FROM user_missions WHERE is_completed = true;
-SELECT '🔗 Referrals: ' || COUNT(*) FROM referrals WHERE status = 'completed';
+SELECT '🔗 Referrals (Claimable): ' || COUNT(*) FILTER (WHERE status = 'claimable') || ' | Completed: ' || COUNT(*) FILTER (WHERE status = 'completed') FROM referrals;
 " 2>/dev/null | grep -v "^$"
 ```
 

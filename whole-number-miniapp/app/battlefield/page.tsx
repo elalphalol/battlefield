@@ -61,7 +61,10 @@ export default function BattlefieldHome() {
     isStopLoss: boolean;
   } | null>(null);
 
-  // Check URL params on mount to set initial tab and capture referral code
+  // Use Farcaster wallet if available, otherwise use wagmi wallet
+  const address = farcasterWallet || wagmiAddress;
+
+  // Check URL params on mount to set initial tab
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
@@ -76,17 +79,81 @@ export default function BattlefieldHome() {
     } else if (tab === 'missions') {
       setActiveTab('missions');
     }
-
-    // Capture referral code from URL
-    const refCode = params.get('ref') || params.get('referral');
-    if (refCode) {
-      localStorage.setItem('pendingReferral', refCode);
-      console.log('📝 Referral code captured:', refCode);
-    }
   }, []);
-  
-  // Use Farcaster wallet if available, otherwise use wagmi wallet
-  const address = farcasterWallet || wagmiAddress;
+
+  // Track if we've already tried to apply the referral code this session
+  const [referralApplied, setReferralApplied] = useState(false);
+
+  // Handle referral code from URL or localStorage - auto-apply when wallet connected (ONCE)
+  useEffect(() => {
+    // Only run once per session
+    if (referralApplied) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const refCode = params.get('ref') || params.get('referral') || localStorage.getItem('pendingReferral');
+
+    if (!refCode) return;
+
+    // Store the referral code for later use (in case user disconnects)
+    localStorage.setItem('pendingReferral', refCode);
+    console.log('📝 Referral code captured:', refCode);
+
+    // Check if user has a connected wallet
+    if (address && userData) {
+      // Mark as applied to prevent duplicate calls
+      setReferralApplied(true);
+
+      // User is connected - auto-apply the referral code
+      const applyReferral = async () => {
+        try {
+          const response = await fetch(getApiUrl('api/referrals/apply'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              walletAddress: userData.wallet_address,
+              referralCode: refCode
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            toast.success(data.message, { duration: 5000 });
+            // Clear the pending referral
+            localStorage.removeItem('pendingReferral');
+            // Clear the URL param
+            if (params.get('ref') || params.get('referral')) {
+              window.history.replaceState({}, '', '/battlefield');
+            }
+          } else {
+            // Only show error if it's not "already referred" (silent fail for that)
+            if (!data.message?.includes('already been referred')) {
+              toast.error(data.message || 'Failed to apply referral code');
+            }
+            // Clear pending referral if already referred or invalid
+            if (data.message?.includes('already been referred') || data.message?.includes('Invalid referral code')) {
+              localStorage.removeItem('pendingReferral');
+            }
+          }
+        } catch (error) {
+          console.error('Error applying referral:', error);
+          // Reset so user can try again
+          setReferralApplied(false);
+        }
+      };
+
+      applyReferral();
+    } else if (!address) {
+      // No wallet connected - show toast notification (only once)
+      if (!sessionStorage.getItem('referralToastShown')) {
+        toast('🔗 Connect your wallet first to use the referral code!', {
+          duration: 5000,
+          icon: '👛',
+        });
+        sessionStorage.setItem('referralToastShown', 'true');
+      }
+    }
+  }, [address, userData, referralApplied]);
 
   // Achievement detection - convert userData to UserStats format
   useAchievementDetector(

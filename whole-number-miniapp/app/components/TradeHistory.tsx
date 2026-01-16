@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi';
 import { getApiUrl } from '../config/api';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
+import { getReferralLink } from '../lib/farcaster';
 
 // Farcaster icon component
 const FarcasterIcon = ({ className = "w-3 h-3" }: { className?: string }) => (
@@ -212,19 +213,35 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
               console.error('Failed to track cast mission:', err);
             }
 
-            // Use Farcaster Frame SDK to open composer
+            // Use Farcaster Frame SDK composeCast for better integration
             try {
-              const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
-              await sdk.actions.openUrl(castUrl);
+              const referralCode = userData?.referral_code;
+
+              // Build embeds array - Farcaster SDK accepts up to 2 embeds
+              const embeds: [string] | [string, string] = referralCode
+                ? [imageUrl, getReferralLink(referralCode)]
+                : [imageUrl];
+
+              await sdk.actions.composeCast({
+                text: shareText,
+                embeds: embeds,
+              });
               toast.success('🎯 Mission done! Claim $500 in Missions tab');
             } catch (error) {
               console.error('Error casting to Farcaster:', error);
-              // Fallback: try copying to clipboard
+              // Fallback: try warpcast URL
               try {
-                await navigator.clipboard.writeText(shareText);
-                toast.success('Copied! 🎯 Claim $500 in Missions tab');
-              } catch (clipError) {
-                toast.error('❌ Unable to create cast. Please try again.');
+                const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
+                await sdk.actions.openUrl(castUrl);
+                toast.success('🎯 Mission done! Claim $500 in Missions tab');
+              } catch (urlError) {
+                // Last resort: copy to clipboard
+                try {
+                  await navigator.clipboard.writeText(shareText);
+                  toast.success('Copied! 🎯 Claim $500 in Missions tab');
+                } catch (clipError) {
+                  toast.error('❌ Unable to create cast. Please try again.');
+                }
               }
             }
           };

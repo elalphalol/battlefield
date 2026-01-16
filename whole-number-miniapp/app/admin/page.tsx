@@ -133,6 +133,14 @@ interface Activity {
   timestamp: string;
 }
 
+interface PaperMoneyEconomy {
+  feesCollected: number;
+  claims: { count: number; totalAmount: number };
+  missionRewards: { claimedCount: number; totalAmount: number };
+  referralRewards: { completedCount: number; totalAmount: number };
+  totalAwarded: number;
+}
+
 interface Analytics {
   totalUsers: number;
   activeUsers24h: number;
@@ -156,6 +164,7 @@ interface Analytics {
   currentState: CurrentState;
   missionsEngagement: MissionEngagement[];
   claimsActivity: ClaimsDay[];
+  paperMoneyEconomy?: PaperMoneyEconomy;
 }
 
 interface Mission {
@@ -188,19 +197,69 @@ interface TopReferrer {
 }
 
 interface ReferralActivity {
+  id: number;
   referrer_username: string;
   referred_username: string;
   status: string;
+  referrer_reward_dollars: number;
+  referred_reward_dollars: number;
   created_at: string;
   completed_at: string | null;
+}
+
+interface AuditDiscrepancy {
+  id: number;
+  username: string;
+  currentBalance: number;
+  openCollateral: number;
+  totalAssets: number;
+  maxAssets: number;
+  expectedBalance: number;
+  discrepancy: number;
+  hasOpenPositions: boolean;
+  claims: number;
+  missions: number;
+  referrals: number;
+  pnl: number;
+}
+
+interface AuditSummary {
+  totalUsers: number;
+  usersWithDiscrepancy: number;
+  usersFixable: number;
+  usersNeedingManualReview: number;
+  totalExcess: number;
+  totalDeficit: number;
+  usersFixed: number;
+}
+
+interface AuditResult {
+  summary: AuditSummary;
+  discrepancies: AuditDiscrepancy[];
+  fixedUsers: { id: number; username: string; previousBalance: number; newBalance: number; adjustment: number }[];
+  auditTimestamp: string;
 }
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'missions' | 'referrals'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'missions' | 'referrals' | 'audit'>('analytics');
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Audit state
+  const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditFixing, setAuditFixing] = useState(false);
+
+  // Maintenance mode state
+  const [maintenanceMode, setMaintenanceMode] = useState<{
+    enabled: boolean;
+    message: string;
+    enabledAt: string | null;
+    estimatedEndTime: string | null;
+  } | null>(null);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
 
   // Analytics state
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
@@ -229,6 +288,36 @@ export default function AdminPage() {
   const [topReferrers, setTopReferrers] = useState<TopReferrer[]>([]);
   const [referralActivity, setReferralActivity] = useState<ReferralActivity[]>([]);
   const [referralsLoading, setReferralsLoading] = useState(false);
+  const [revertingReferralId, setRevertingReferralId] = useState<number | null>(null);
+
+  const handleRevertReferral = async (referralId: number, referrerUsername: string, referredUsername: string) => {
+    if (!confirm(`Are you sure you want to revert the referral from ${referrerUsername} → ${referredUsername}? This will deduct rewards if already completed.`)) {
+      return;
+    }
+
+    setRevertingReferralId(referralId);
+    try {
+      const response = await fetch(getApiUrl('api/admin/referrals/revert'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referralId })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message);
+        fetchReferrals(); // Refresh the list
+      } else {
+        toast.error(data.message || 'Failed to revert referral');
+      }
+    } catch (error) {
+      console.error('Error reverting referral:', error);
+      toast.error('Failed to revert referral');
+    } finally {
+      setRevertingReferralId(null);
+    }
+  };
 
   const handleLogin = () => {
     if (password === ADMIN_PASSWORD) {
@@ -307,6 +396,76 @@ export default function AdminPage() {
       fetchReferrals();
     }
   }, [isAuthenticated, activeTab]);
+
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'audit') {
+      fetchAudit();
+      fetchMaintenanceStatus();
+    }
+  }, [isAuthenticated, activeTab]);
+
+  const fetchMaintenanceStatus = async () => {
+    try {
+      const response = await fetch(getApiUrl('api/admin/maintenance'));
+      const data = await response.json();
+      if (data.success) {
+        setMaintenanceMode(data);
+      }
+    } catch (error) {
+      console.error('Error fetching maintenance status:', error);
+    }
+  };
+
+  const toggleMaintenanceMode = async (enable: boolean, duration?: number) => {
+    setMaintenanceLoading(true);
+    try {
+      const response = await fetch(getApiUrl('api/admin/maintenance'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: enable,
+          durationMinutes: duration,
+          message: enable ? 'Trading is temporarily disabled for scheduled maintenance.' : undefined
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMaintenanceMode(data);
+        toast.success(enable ? 'Maintenance mode enabled' : 'Maintenance mode disabled');
+      } else {
+        toast.error(data.message || 'Failed to toggle maintenance mode');
+      }
+    } catch (error) {
+      console.error('Error toggling maintenance mode:', error);
+      toast.error('Failed to toggle maintenance mode');
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const fetchAudit = async (autoFix = false) => {
+    if (autoFix) {
+      setAuditFixing(true);
+    } else {
+      setAuditLoading(true);
+    }
+    try {
+      const response = await fetch(getApiUrl(`api/admin/audit${autoFix ? '?autoFix=true' : ''}`));
+      const data = await response.json();
+      if (data.success) {
+        setAuditResult(data);
+        if (autoFix && data.fixedUsers.length > 0) {
+          toast.success(`Fixed ${data.fixedUsers.length} user balance(s)`);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching audit:', error);
+      toast.error('Failed to run audit');
+    } finally {
+      setAuditLoading(false);
+      setAuditFixing(false);
+    }
+  };
 
   const fetchReferrals = async () => {
     setReferralsLoading(true);
@@ -515,7 +674,7 @@ export default function AdminPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-5 gap-4 mb-6">
           <button
             onClick={() => setActiveTab('analytics')}
             className={`py-4 rounded-lg font-bold text-lg transition-all ${
@@ -555,6 +714,16 @@ export default function AdminPage() {
             }`}
           >
             Referrals
+          </button>
+          <button
+            onClick={() => setActiveTab('audit')}
+            className={`py-4 rounded-lg font-bold text-lg transition-all ${
+              activeTab === 'audit'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
+            }`}
+          >
+            Audit
           </button>
         </div>
 
@@ -601,6 +770,40 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Paper Money Economy */}
+                {analytics.paperMoneyEconomy && (
+                  <div className="bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border-2 border-emerald-500 rounded-lg p-6">
+                    <h2 className="text-xl font-bold text-emerald-400 mb-4">Paper Money Economy</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                      <div className="bg-slate-800/50 rounded-lg p-4 text-center">
+                        <p className="text-gray-400 text-xs mb-1">Trading Fees</p>
+                        <p className="text-2xl font-bold text-red-400">-${Number(analytics.paperMoneyEconomy.feesCollected || 0).toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-1">Deducted</p>
+                      </div>
+                      <div className="bg-slate-800/50 rounded-lg p-4 text-center">
+                        <p className="text-gray-400 text-xs mb-1">Claims</p>
+                        <p className="text-2xl font-bold text-cyan-400">+${Number(analytics.paperMoneyEconomy.claims?.totalAmount || 0).toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-1">{analytics.paperMoneyEconomy.claims?.count || 0} claims</p>
+                      </div>
+                      <div className="bg-slate-800/50 rounded-lg p-4 text-center">
+                        <p className="text-gray-400 text-xs mb-1">Missions</p>
+                        <p className="text-2xl font-bold text-yellow-400">+${Number(analytics.paperMoneyEconomy.missionRewards?.totalAmount || 0).toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-1">{analytics.paperMoneyEconomy.missionRewards?.claimedCount || 0} claimed</p>
+                      </div>
+                      <div className="bg-slate-800/50 rounded-lg p-4 text-center">
+                        <p className="text-gray-400 text-xs mb-1">Referrals</p>
+                        <p className="text-2xl font-bold text-purple-400">+${Number(analytics.paperMoneyEconomy.referralRewards?.totalAmount || 0).toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-1">{analytics.paperMoneyEconomy.referralRewards?.completedCount || 0} completed</p>
+                      </div>
+                      <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-emerald-500/50">
+                        <p className="text-gray-400 text-xs mb-1">Total Awarded</p>
+                        <p className="text-2xl font-bold text-emerald-400">+${Number(analytics.paperMoneyEconomy.totalAwarded || 0).toLocaleString()}</p>
+                        <p className="text-gray-500 text-xs mt-1">Non-PnL</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Current State - Live Positions */}
                 {analytics.currentState && (
@@ -1270,9 +1473,10 @@ export default function AdminPage() {
                   <div className="p-4">
                     {referralActivity.length > 0 ? (
                       <div className="space-y-2 max-h-96 overflow-y-auto">
-                        {referralActivity.map((activity, idx) => (
-                          <div key={idx} className="flex items-center justify-between bg-slate-700/50 rounded-lg p-3">
+                        {referralActivity.map((activity) => (
+                          <div key={activity.id} className="flex items-center justify-between bg-slate-700/50 rounded-lg p-3">
                             <div className="flex items-center gap-2">
+                              <span className="text-gray-500 text-xs">#{activity.id}</span>
                               <span className="text-white font-medium">{activity.referrer_username}</span>
                               <span className="text-gray-400">→</span>
                               <span className="text-white font-medium">{activity.referred_username}</span>
@@ -1281,11 +1485,19 @@ export default function AdminPage() {
                               <span className={`text-xs font-bold px-2 py-1 rounded ${
                                 activity.status === 'completed' ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'
                               }`}>
-                                {activity.status === 'completed' ? '✓ Completed' : '⏳ Pending'}
+                                {activity.status === 'completed' ? `✓ $${(Number(activity.referrer_reward_dollars) + Number(activity.referred_reward_dollars)).toLocaleString()}` : '⏳ Pending'}
                               </span>
                               <span className="text-gray-500 text-xs">
                                 {new Date(activity.created_at).toLocaleDateString()}
                               </span>
+                              <button
+                                onClick={() => handleRevertReferral(activity.id, activity.referrer_username, activity.referred_username)}
+                                disabled={revertingReferralId === activity.id}
+                                className="bg-red-600 hover:bg-red-500 disabled:bg-red-800 text-white px-2 py-1 rounded text-xs font-bold transition-all"
+                                title={activity.status === 'completed' ? 'Revert and deduct rewards' : 'Remove pending referral'}
+                              >
+                                {revertingReferralId === activity.id ? '...' : '✕'}
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -1296,6 +1508,255 @@ export default function AdminPage() {
                   </div>
                 </div>
               </>
+            )}
+          </div>
+        )}
+
+        {/* Audit Tab */}
+        {activeTab === 'audit' && (
+          <div className="space-y-6">
+            {/* Maintenance Mode Control */}
+            <div className={`rounded-lg p-4 border-2 ${maintenanceMode?.enabled ? 'bg-red-900/30 border-red-500' : 'bg-slate-800 border-slate-600'}`}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    {maintenanceMode?.enabled ? '🚧' : '✅'} Maintenance Mode
+                  </h3>
+                  {maintenanceMode?.enabled ? (
+                    <div className="text-sm mt-1">
+                      <p className="text-red-400">Trading is currently DISABLED</p>
+                      {maintenanceMode.enabledAt && (
+                        <p className="text-gray-400">Started: {new Date(maintenanceMode.enabledAt).toLocaleString()}</p>
+                      )}
+                      {maintenanceMode.estimatedEndTime && (
+                        <p className="text-yellow-400">Est. End: {new Date(maintenanceMode.estimatedEndTime).toLocaleString()}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">Trading is active. Enable maintenance to block all trading.</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {maintenanceMode?.enabled ? (
+                    <button
+                      onClick={() => {
+                        if (confirm('Disable maintenance mode and re-enable trading?')) {
+                          toggleMaintenanceMode(false);
+                        }
+                      }}
+                      disabled={maintenanceLoading}
+                      className="bg-green-600 hover:bg-green-500 disabled:bg-green-800 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                    >
+                      {maintenanceLoading ? '...' : 'Disable Maintenance'}
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          if (confirm('Enable maintenance mode for 1 hour? This will block all trading.')) {
+                            toggleMaintenanceMode(true, 60);
+                          }
+                        }}
+                        disabled={maintenanceLoading}
+                        className="bg-yellow-600 hover:bg-yellow-500 disabled:bg-yellow-800 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                      >
+                        {maintenanceLoading ? '...' : '1 Hour'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Enable maintenance mode indefinitely? This will block all trading until manually disabled.')) {
+                            toggleMaintenanceMode(true);
+                          }
+                        }}
+                        disabled={maintenanceLoading}
+                        className="bg-red-600 hover:bg-red-500 disabled:bg-red-800 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                      >
+                        {maintenanceLoading ? '...' : 'Enable Indefinitely'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Header with actions */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-yellow-400">Balance Audit</h2>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => fetchAudit(false)}
+                  disabled={auditLoading}
+                  className="bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                >
+                  {auditLoading ? 'Running...' : 'Run Audit'}
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm('This will automatically fix balances for users WITHOUT open positions. Continue?')) {
+                      fetchAudit(true);
+                    }
+                  }}
+                  disabled={auditFixing || auditLoading}
+                  className="bg-green-600 hover:bg-green-500 disabled:bg-green-800 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
+                >
+                  {auditFixing ? 'Fixing...' : 'Auto-Fix Balances'}
+                </button>
+              </div>
+            </div>
+
+            {auditLoading ? (
+              <div className="text-center py-12 text-gray-400">Running audit...</div>
+            ) : auditResult ? (
+              <>
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className={`bg-slate-800 border-2 rounded-lg p-4 text-center ${
+                    auditResult.summary.usersWithDiscrepancy === 0 ? 'border-green-500' : 'border-red-500'
+                  }`}>
+                    <p className="text-3xl font-bold text-white">{auditResult.summary.usersWithDiscrepancy}</p>
+                    <p className="text-gray-400 text-sm">Discrepancies</p>
+                  </div>
+                  <div className="bg-slate-800 border border-yellow-600 rounded-lg p-4 text-center">
+                    <p className="text-3xl font-bold text-yellow-400">{auditResult.summary.usersNeedingManualReview}</p>
+                    <p className="text-gray-400 text-sm">Need Manual Review</p>
+                  </div>
+                  <div className="bg-slate-800 border border-blue-600 rounded-lg p-4 text-center">
+                    <p className="text-3xl font-bold text-blue-400">{auditResult.summary.usersFixable}</p>
+                    <p className="text-gray-400 text-sm">Auto-Fixable</p>
+                  </div>
+                  <div className="bg-slate-800 border border-green-600 rounded-lg p-4 text-center">
+                    <p className="text-3xl font-bold text-green-400">{auditResult.summary.usersFixed}</p>
+                    <p className="text-gray-400 text-sm">Fixed This Run</p>
+                  </div>
+                </div>
+
+                {/* Status Banner */}
+                {auditResult.summary.usersWithDiscrepancy === 0 ? (
+                  <div className="bg-green-900/30 border-2 border-green-500 rounded-lg p-6 text-center">
+                    <p className="text-2xl font-bold text-green-400">All Balances Correct</p>
+                    <p className="text-gray-400 mt-2">Last checked: {new Date(auditResult.auditTimestamp).toLocaleString()}</p>
+                  </div>
+                ) : (
+                  <div className="bg-red-900/30 border-2 border-red-500 rounded-lg p-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-lg font-bold text-red-400">Discrepancies Found</p>
+                        <p className="text-gray-400 text-sm">
+                          Total Excess: ${auditResult.summary.totalExcess.toLocaleString()} |
+                          Total Deficit: ${auditResult.summary.totalDeficit.toLocaleString()}
+                        </p>
+                      </div>
+                      <p className="text-gray-500 text-xs">{new Date(auditResult.auditTimestamp).toLocaleString()}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Fixed Users (if any) */}
+                {auditResult.fixedUsers.length > 0 && (
+                  <div className="bg-green-900/20 border-2 border-green-600 rounded-lg p-4">
+                    <h3 className="text-lg font-bold text-green-400 mb-3">Recently Fixed</h3>
+                    <div className="space-y-2">
+                      {auditResult.fixedUsers.map((user) => (
+                        <div key={user.id} className="flex items-center justify-between bg-slate-700/50 rounded-lg p-3">
+                          <span className="text-white font-medium">{user.username}</span>
+                          <div className="text-right">
+                            <span className="text-gray-400">${user.previousBalance.toLocaleString()}</span>
+                            <span className="text-gray-500 mx-2">→</span>
+                            <span className="text-green-400">${user.newBalance.toLocaleString()}</span>
+                            <span className={`ml-2 text-sm ${user.adjustment >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              ({user.adjustment >= 0 ? '+' : ''}{user.adjustment.toLocaleString()})
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Discrepancies Table */}
+                {auditResult.discrepancies.length > 0 && (
+                  <div className="bg-slate-800 border-2 border-slate-700 rounded-lg overflow-hidden">
+                    <div className="p-4 border-b border-slate-700">
+                      <h3 className="text-lg font-bold text-yellow-400">Discrepancy Details</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-700">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-gray-400">User</th>
+                            <th className="px-4 py-3 text-right text-gray-400">Current</th>
+                            <th className="px-4 py-3 text-right text-gray-400">Open Pos</th>
+                            <th className="px-4 py-3 text-right text-gray-400">Total Assets</th>
+                            <th className="px-4 py-3 text-right text-gray-400">Max Expected</th>
+                            <th className="px-4 py-3 text-right text-gray-400">Discrepancy</th>
+                            <th className="px-4 py-3 text-center text-gray-400">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {auditResult.discrepancies.map((user) => (
+                            <tr key={user.id} className="border-b border-slate-700 hover:bg-slate-700/50">
+                              <td className="px-4 py-3">
+                                <p className="text-white font-bold">{user.username}</p>
+                                <p className="text-gray-500 text-xs">ID: {user.id}</p>
+                              </td>
+                              <td className="px-4 py-3 text-right text-white">
+                                ${user.currentBalance.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-right text-yellow-400">
+                                ${user.openCollateral.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-right text-cyan-400">
+                                ${user.totalAssets.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-right text-gray-400">
+                                ${user.maxAssets.toLocaleString()}
+                              </td>
+                              <td className={`px-4 py-3 text-right font-bold ${
+                                user.discrepancy > 0 ? 'text-red-400' : 'text-green-400'
+                              }`}>
+                                {user.discrepancy > 0 ? '+' : ''}{user.discrepancy.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                {user.hasOpenPositions ? (
+                                  <span className="bg-yellow-600 text-white text-xs px-2 py-1 rounded">
+                                    Has Open Positions
+                                  </span>
+                                ) : (
+                                  <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                                    Auto-Fixable
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Breakdown Info */}
+                {auditResult.discrepancies.length > 0 && (
+                  <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
+                    <h3 className="text-lg font-bold text-yellow-400 mb-3">Balance Calculation Formula</h3>
+                    <div className="bg-slate-700/50 rounded-lg p-4 font-mono text-sm text-gray-300">
+                      <p>Expected Balance = Starting ($10,000)</p>
+                      <p className="ml-8">+ Claims (daily claims)</p>
+                      <p className="ml-8">+ Missions (claimed rewards)</p>
+                      <p className="ml-8">+ Referrals (completed bonuses)</p>
+                      <p className="ml-8">+ Net P&L (includes fees)</p>
+                      <p className="ml-8">- Open Position Collateral</p>
+                    </div>
+                    <p className="text-gray-500 text-xs mt-3">
+                      Users with open positions cannot be auto-fixed. They must close positions first.
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12 text-gray-400">
+                Click &quot;Run Audit&quot; to check all user balances
+              </div>
             )}
           </div>
         )}

@@ -1,11 +1,25 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import sdk from '@farcaster/miniapp-sdk';
+import { Suspense } from 'react';
 
-export default function LandingPage() {
+function LandingPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Capture referral code from URL
+  const refCode = searchParams.get('ref') || searchParams.get('referral');
+
+  const handleStartTrading = () => {
+    // Preserve referral code when navigating to battlefield
+    if (refCode) {
+      router.push(`/battlefield?ref=${refCode}`);
+    } else {
+      router.push('/battlefield');
+    }
+  };
 
   const handleExternalLink = async (url: string) => {
     // Always try SDK first - it will only work in Farcaster miniapp
@@ -65,7 +79,7 @@ export default function LandingPage() {
 
         {/* CTA Button */}
         <button
-          onClick={() => router.push('/battlefield')}
+          onClick={handleStartTrading}
           className="group relative inline-flex items-center justify-center px-6 sm:px-12 py-4 sm:py-6 text-xl sm:text-3xl md:text-4xl font-black text-slate-900 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-2xl shadow-2xl hover:shadow-yellow-500/50 transition-all duration-300 transform hover:scale-105"
         >
           <span className="relative z-10 text-center leading-tight">⚔️ ARE YOU READY? ⚔️</span>
@@ -115,5 +129,17 @@ export default function LandingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center">
+        <div className="text-2xl">Loading...</div>
+      </div>
+    }>
+      <LandingPageContent />
+    </Suspense>
   );
 }

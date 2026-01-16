@@ -41,15 +41,23 @@ CREATE INDEX IF NOT EXISTS idx_user_missions_status ON user_missions(is_complete
 CREATE INDEX IF NOT EXISTS idx_missions_active ON missions(is_active);
 CREATE INDEX IF NOT EXISTS idx_missions_type ON missions(mission_type);
 
--- Insert default missions (reward_amount in cents: $5,000 = 500000)
+-- Insert default missions (reward_amount in cents)
+-- CORRECT VALUES as of 2026-01-16:
+-- Daily: Open Trade $200, Win Trade $500, Cast Trade $500, Two Faces $350
+-- Onetime: Follow Us $5,000
+-- Weekly: Trading Streak $2,500, Win 5 Trades $2,000, Claim Streak $1,500, Army Loyalty $10,000, The Betrayer $1,500
 INSERT INTO missions (mission_key, mission_type, title, description, objective_type, objective_value, reward_amount, icon, display_order) VALUES
+-- Onetime mission
+('follow_btcbattle', 'onetime', 'Follow Us!', 'Follow our official Farcaster account', 'follow', 1, 500000, '👋', 1),
 -- Daily missions
-('follow_btcbattle', 'daily', 'Follow @btcbattle', 'Follow our official Farcaster account', 'follow', 1, 500000, '👋', 1),
-('open_trade', 'daily', 'Open a Trade', 'Open at least 1 trade today', 'trade', 1, 200000, '📈', 2),
-('win_trade', 'daily', 'Win a Trade', 'Close 1 profitable trade', 'win', 1, 300000, '💰', 3),
+('open_trade', 'daily', 'Open a Trade', 'Open at least 1 trade today', 'trade', 1, 20000, '📈', 1),
+('win_trade', 'daily', 'Win a Trade', 'Close 1 profitable trade', 'win', 1, 50000, '💰', 2),
+('cast_result', 'daily', 'Cast a Trade', 'Cast your trade result on Farcaster', 'cast', 1, 50000, '📢', 3),
+('two_faces', 'daily', 'Two Faces', 'Open both a long and short position in the same day', 'two_faces', 1, 35000, '🎭', 4),
 -- Weekly missions
-('weekly_streak', 'weekly', 'Trading Streak', 'Trade on 5 different days', 'daily_streak', 5, 2500000, '🔥', 1),
-('win_5_trades', 'weekly', 'Win 5 Trades', 'Close 5 profitable trades', 'win', 5, 2000000, '🏆', 2),
-('claim_collector', 'weekly', 'Paper Collector', 'Claim paper money 10 times', 'claim', 10, 1500000, '💵', 3),
-('army_loyalty', 'weekly', 'Army Loyalty', 'Keep same army for the entire week', 'army_loyalty', 1, 1000000, '⚔️', 4)
+('weekly_streak', 'weekly', 'Trading Streak', 'Trade on 5 different days', 'daily_streak', 5, 250000, '🔥', 1),
+('win_5_trades', 'weekly', 'Win 5 Trades', 'Close 5 profitable trades', 'win', 5, 200000, '🏆', 2),
+('claim_collector', 'weekly', 'Claim Streak', 'Claim paper money 10 times', 'claim', 10, 150000, '💵', 3),
+('army_loyalty', 'weekly', 'Army Loyalty', 'Keep same army for the entire week', 'army_loyalty', 1, 1000000, '⚔️', 4),
+('the_betrayer', 'weekly', 'The Betrayer', 'Switch armies and win a trade', 'betrayer', 1, 150000, '🗡️', 5)
 ON CONFLICT (mission_key) DO NOTHING;

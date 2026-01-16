@@ -9,27 +9,39 @@ Provide an argument to specify the operation:
 - `top` - Show top 10 users by PnL
 - `recent` - Show recently joined users
 - `stats <wallet>` - Get detailed user stats
+- `fid` - Show FID distribution (Farcaster vs wallet-only users)
 
 ## Search User
 
 ```bash
-# Replace USERNAME with the actual username to search
-PGPASSWORD=battlefield psql -U battlefield -h localhost -d battlefield -c "
-SELECT
-  id,
-  username,
-  army,
-  TO_CHAR(paper_balance/100, 'FM$999,999,999') as balance,
-  total_trades,
-  ROUND(win_rate::numeric, 1) as win_rate,
-  TO_CHAR(total_pnl/100, 'FM$999,999,999') as total_pnl,
-  referral_code,
-  created_at::date as joined
-FROM users
-WHERE LOWER(username) LIKE LOWER('%$ARGS%')
-ORDER BY total_pnl DESC
-LIMIT 10;
-"
+cd /var/www/battlefield/whole-number-miniapp/backend && node -e "
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: 'postgresql://postgres:ucRr8g9AEEuZ9q0OsD3VfspcmxKrjd45I6q4Qmsm+0c=@localhost:5432/battlefield' });
+
+(async () => {
+  const search = process.argv[2] || '';
+  const result = await pool.query(\`
+    SELECT
+      id, username, fid, army,
+      paper_balance as balance,
+      total_trades, total_pnl,
+      referral_code, created_at
+    FROM users
+    WHERE LOWER(username) LIKE LOWER('%' || \\\$1 || '%')
+    ORDER BY total_pnl DESC
+    LIMIT 10
+  \`, [search]);
+
+  console.log('=== USER SEARCH: ' + search + ' ===');
+  result.rows.forEach(u => {
+    const fidStatus = u.fid ? '✓ FID:' + u.fid : '✗ No FID';
+    console.log(u.username + ' (ID:' + u.id + ') | ' + fidStatus);
+    console.log('  Army: ' + u.army + ' | Balance: \\\$' + Number(u.balance).toLocaleString() + ' | Trades: ' + u.total_trades);
+    console.log('  PnL: \\\$' + Number(u.total_pnl).toLocaleString() + ' | Code: ' + u.referral_code);
+  });
+  pool.end();
+})();
+" "\$ARGS"
 ```
 
 ## Top Users by PnL
@@ -107,5 +119,58 @@ FROM users
 WHERE army IS NOT NULL
 GROUP BY army
 ORDER BY count DESC;
+"
+```
+
+## FID Distribution (Farcaster Users)
+
+```bash
+cd /var/www/battlefield/whole-number-miniapp/backend && node -e "
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: 'postgresql://postgres:ucRr8g9AEEuZ9q0OsD3VfspcmxKrjd45I6q4Qmsm+0c=@localhost:5432/battlefield' });
+
+(async () => {
+  const stats = await pool.query(\`
+    SELECT
+      COUNT(*) as total_users,
+      COUNT(*) FILTER (WHERE fid IS NOT NULL) as farcaster_users,
+      COUNT(*) FILTER (WHERE fid IS NULL) as wallet_only_users,
+      COUNT(*) FILTER (WHERE fid IS NOT NULL AND total_trades > 0) as active_farcaster,
+      COUNT(*) FILTER (WHERE fid IS NULL AND total_trades > 0) as active_wallet_only
+    FROM users
+  \`);
+  const s = stats.rows[0];
+  const farcasterPct = ((Number(s.farcaster_users) / Number(s.total_users)) * 100).toFixed(1);
+
+  console.log('=== FID DISTRIBUTION ===');
+  console.log('Total Users: ' + s.total_users);
+  console.log('');
+  console.log('Farcaster Users (have FID): ' + s.farcaster_users + ' (' + farcasterPct + '%)');
+  console.log('  - Active (traded): ' + s.active_farcaster);
+  console.log('  - Eligible for referrals: ✅ Yes');
+  console.log('');
+  console.log('Wallet-Only Users (no FID): ' + s.wallet_only_users);
+  console.log('  - Active (traded): ' + s.active_wallet_only);
+  console.log('  - Eligible for referrals: ❌ No');
+
+  // Recent non-FID users
+  const recentNoFid = await pool.query(\`
+    SELECT username, created_at
+    FROM users
+    WHERE fid IS NULL
+    ORDER BY created_at DESC
+    LIMIT 5
+  \`);
+
+  if (recentNoFid.rows.length > 0) {
+    console.log('');
+    console.log('Recent Wallet-Only Users:');
+    recentNoFid.rows.forEach(u => {
+      console.log('  ' + u.username + ' - ' + new Date(u.created_at).toLocaleDateString());
+    });
+  }
+
+  pool.end();
+})();
 "
 ```

@@ -172,6 +172,23 @@ export function Missions({ walletAddress, readOnly = false }: MissionsProps) {
     setCompletingKey('follow_btcbattle');
 
     try {
+      // Check if user is in Farcaster context first
+      let isInFarcaster = false;
+      try {
+        const context = await sdk.context;
+        isInFarcaster = !!(context && context.user && context.user.fid);
+      } catch {
+        isInFarcaster = false;
+      }
+
+      // If not a Farcaster user, redirect to sign up
+      if (!isInFarcaster) {
+        const signupUrl = 'https://farcaster.xyz/~/code/C46NY7';
+        toast('📱 Join Farcaster to verify follows!', { duration: 4000 });
+        window.open(signupUrl, '_blank');
+        return;
+      }
+
       // First verify the follow
       const verifyResponse = await fetch(getApiUrl(`api/missions/verify-follow/${walletAddress}`));
       const verifyData = await verifyResponse.json();

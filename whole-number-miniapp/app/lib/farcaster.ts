@@ -1,6 +1,20 @@
 // Farcaster Authentication Integration
 import sdk from '@farcaster/miniapp-sdk';
 
+// Farcaster Mini App URL - used for referral links
+// This opens the app within Farcaster client, ensuring users are authenticated
+export const FARCASTER_MINIAPP_URL = 'https://farcaster.xyz/miniapps/5kLec5hSq3bP/battlefield';
+
+// Helper to generate referral link that opens in Farcaster
+export function getReferralLink(referralCode: string): string {
+  return `${FARCASTER_MINIAPP_URL}?ref=${referralCode}`;
+}
+
+// Helper to get display-friendly short link (for UI display)
+export function getShortReferralLink(referralCode: string): string {
+  return `farcaster.xyz/miniapps/.../battlefield?ref=${referralCode}`;
+}
+
 export interface FarcasterUser {
   fid: number;
   username?: string;
