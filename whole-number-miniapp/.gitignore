@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Private planning documents (not for public)
+BATTLE-TOKEN-LAUNCH-PLAN.md
+BATTLE-AMM-PLAN.md

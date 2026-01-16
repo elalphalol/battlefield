@@ -218,6 +218,60 @@
             "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE 'npm run build' && echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qE 'Compiled successfully'; then echo '\\n[Hook] ✅ Build successful!'; fi"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'airdrop.*snapshot|snapshot.*airdrop'; then ELIGIBLE=$(PGPASSWORD=battlefield psql -U battlefield -h localhost -d battlefield -t -c \"SELECT COUNT(*) FROM users WHERE total_trades >= 5;\" 2>/dev/null | tr -d ' '); echo \"\\n[Hook] Airdrop check: $ELIGIBLE users eligible (5+ trades)\"; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'token.*deploy|clanker.*deploy|battle.*token'; then echo '\\n[Hook] Token deployment mentioned - run /token for launch checklist'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'merkle|merkle tree|merkle root'; then echo '\\n[Hook] Merkle tree operation - ensure snapshot is taken first with /snapshot'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'vault.*withdraw|withdraw.*vault|vesting.*release'; then echo '\\n[Hook] Vault operation detected - verify with /vault status'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'gnosis|multisig|safe.*wallet'; then echo '\\n[Hook] Multisig operation - use /wallets for wallet management'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_OUTPUT\" | grep -qiE 'weekly.*reward|reward.*distribut|army.*winner'; then echo '\\n[Hook] Rewards operation - use /rewards for distribution details'; fi"
+          }
+        ]
       }
     ]
   },
