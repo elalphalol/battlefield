@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 BATTLEFIELD (Whole Number War) is a Bitcoin paper trading battle game built as a Farcaster Mini App. Users join either Bears or Bulls armies and compete in leveraged paper trading.
 
 **Live URL:** https://btcbattlefield.com
+**Farcaster Mini App:** https://farcaster.xyz/miniapps/5kLec5hSq3bP/battlefield (always use this link for Farcaster posts)
 
 ## Common Commands
 
