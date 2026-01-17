@@ -60,8 +60,11 @@ export function ArmyBattleStatus() {
     return null;
   }
 
-  const bullsTotal = armyStats.bulls.totalPnl || 0;
-  const bearsTotal = armyStats.bears.totalPnl || 0;
+  // totalPnl is in CENTS, convert to dollars for display
+  const bullsTotalCents = armyStats.bulls.totalPnl || 0;
+  const bearsTotalCents = armyStats.bears.totalPnl || 0;
+  const bullsTotal = bullsTotalCents / 100;
+  const bearsTotal = bearsTotalCents / 100;
   const difference = Math.abs(bullsTotal - bearsTotal);
   const winningArmy = bullsTotal > bearsTotal ? 'bulls' : 'bears';
 

@@ -79,7 +79,8 @@ const MODAL_ACHIEVEMENTS: AchievementCheck[] = [
     rarity: 'uncommon',
     points: 10,
     priority: 'high',
-    checkUnlock: (stats) => stats.total_pnl >= 1000,
+    // total_pnl is in CENTS: $1,000 = 100,000 cents
+    checkUnlock: (stats) => stats.total_pnl >= 100000,
   },
   {
     id: 'profit_10000',
@@ -89,7 +90,7 @@ const MODAL_ACHIEVEMENTS: AchievementCheck[] = [
     rarity: 'rare',
     points: 25,
     priority: 'high',
-    checkUnlock: (stats) => stats.total_pnl >= 10000,
+    checkUnlock: (stats) => stats.total_pnl >= 1000000,
   },
   {
     id: 'profit_50000',
@@ -99,7 +100,7 @@ const MODAL_ACHIEVEMENTS: AchievementCheck[] = [
     rarity: 'epic',
     points: 50,
     priority: 'high',
-    checkUnlock: (stats) => stats.total_pnl >= 50000,
+    checkUnlock: (stats) => stats.total_pnl >= 5000000,
   },
   {
     id: 'profit_100000',
@@ -109,7 +110,7 @@ const MODAL_ACHIEVEMENTS: AchievementCheck[] = [
     rarity: 'legendary',
     points: 100,
     priority: 'high',
-    checkUnlock: (stats) => stats.total_pnl >= 100000,
+    checkUnlock: (stats) => stats.total_pnl >= 10000000,
   },
   // Win rate achievements
   {

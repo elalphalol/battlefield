@@ -466,9 +466,10 @@ app.post('/api/users', async (req: Request, res: Response) => {
     const newUserReferralCode = generateReferralCode(finalUsername, fid);
 
     // Create new user (FID can be null for regular wallet users)
+    // paper_balance stored in CENTS: 1000000 = $10,000
     const newUser = await pool.query(
       `INSERT INTO users (fid, wallet_address, username, pfp_url, army, paper_balance, referral_code, referred_by)
-       VALUES ($1, LOWER($2), $3, $4, $5, 10000.00, $6, $7)
+       VALUES ($1, LOWER($2), $3, $4, $5, 1000000, $6, $7)
        RETURNING *`,
       [fid, walletAddress, finalUsername, pfpUrl || '/battlefield-logo.jpg', army || 'bulls', newUserReferralCode, referrerId]
     );
@@ -4172,36 +4173,32 @@ app.get('/api/admin/audit', async (req: Request, res: Response) => {
     const autoFix = req.query.autoFix === 'true';
 
     // Calculate expected balance for all users
-    // Formula: Expected = $10,000 (starting) + Claims + Missions + Referrals (claimed) + Corrected_PnL - Open Collateral
-    // IMPORTANT: Due to historical collateral bug (see COLLATERAL_BUG_POSTMORTEM.md), we use corrected P&L:
-    // Corrected_PnL = SUM(CASE WHEN leverage > 1 THEN pnl / leverage ELSE pnl END) from closed trades
+    // ALL VALUES IN CENTS: paper_balance, position_size, pnl, claims, missions, referrals
+    // Starting balance = 1000000 cents ($10,000)
     const auditResult = await pool.query(`
       WITH user_claims AS (
-        SELECT user_id, COALESCE(SUM(amount), 0) / 100.0 as total_claims
+        SELECT user_id, COALESCE(SUM(amount), 0) as total_claims
         FROM claims GROUP BY user_id
       ),
       user_missions AS (
-        -- reward_paid is stored in cents, convert to dollars
-        SELECT user_id, COALESCE(SUM(reward_paid), 0) / 100.0 as total_mission_rewards
+        SELECT user_id, COALESCE(SUM(reward_paid), 0) as total_mission_rewards
         FROM user_missions
         WHERE is_claimed = true GROUP BY user_id
       ),
       user_referrer_rewards AS (
-        SELECT referrer_id as user_id, COALESCE(SUM(referrer_reward), 0) / 100.0 as referrer_rewards
+        SELECT referrer_id as user_id, COALESCE(SUM(referrer_reward), 0) as referrer_rewards
         FROM referrals WHERE referrer_claimed = true GROUP BY referrer_id
       ),
       user_referred_rewards AS (
-        SELECT referred_user_id as user_id, COALESCE(SUM(referred_reward), 0) / 100.0 as referred_rewards
+        SELECT referred_user_id as user_id, COALESCE(SUM(referred_reward), 0) as referred_rewards
         FROM referrals WHERE referred_claimed = true GROUP BY referred_user_id
       ),
-      corrected_pnl AS (
-        -- Corrected P&L: divide by leverage for leveraged trades due to historical bug
-        SELECT user_id,
-          COALESCE(SUM(CASE WHEN leverage > 1 THEN pnl / leverage ELSE pnl END), 0) as total_pnl
+      user_pnl AS (
+        -- Use corrected P&L: pnl / leverage for leverage > 1 (historical bug fix)
+        SELECT user_id, COALESCE(SUM(CASE WHEN leverage > 1 THEN pnl / leverage ELSE pnl END), 0) as total_pnl
         FROM trades WHERE status = 'closed' GROUP BY user_id
       ),
       open_positions AS (
-        -- Open collateral is stored as position_size (after bug fix)
         SELECT user_id, COALESCE(SUM(position_size), 0) as collateral_locked
         FROM trades WHERE status = 'open' GROUP BY user_id
       )
@@ -4211,35 +4208,34 @@ app.get('/api/admin/audit', async (req: Request, res: Response) => {
         u.paper_balance as current_balance,
         COALESCE(op.collateral_locked, 0) as open_collateral,
         u.paper_balance + COALESCE(op.collateral_locked, 0) as total_assets,
-        COALESCE(cp.total_pnl, 0) as corrected_pnl,
+        COALESCE(p.total_pnl, 0) as corrected_pnl,
         u.total_pnl as raw_pnl,
         COALESCE(c.total_claims, 0) as claims,
         COALESCE(m.total_mission_rewards, 0) as missions,
-        -- Calculate referrals from both referrer and referred rewards
         COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) as referrals,
-        -- Max assets = starting + claims + missions + referrals + corrected_pnl
-        ROUND((10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+        -- Max assets = starting (1000000 cents) + claims + missions + referrals + pnl
+        (1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
                COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               COALESCE(cp.total_pnl, 0))::numeric, 2) as max_assets,
+               COALESCE(p.total_pnl, 0)) as max_assets,
         -- Expected available = max_assets - open_collateral (capped at 0)
-        GREATEST(0, ROUND((10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+        GREATEST(0, 1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
                COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               COALESCE(cp.total_pnl, 0) - COALESCE(op.collateral_locked, 0))::numeric, 2)) as expected_balance,
-        -- Discrepancy: paper_balance vs expected (positive = user has more than expected)
-        ROUND((u.paper_balance - GREATEST(0, 10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+               COALESCE(p.total_pnl, 0) - COALESCE(op.collateral_locked, 0)) as expected_balance,
+        -- Discrepancy in cents (positive = user has more than expected)
+        (u.paper_balance - GREATEST(0, 1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
                COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               COALESCE(cp.total_pnl, 0) - COALESCE(op.collateral_locked, 0)))::numeric, 2) as discrepancy,
+               COALESCE(p.total_pnl, 0) - COALESCE(op.collateral_locked, 0))) as discrepancy,
         CASE WHEN COALESCE(op.collateral_locked, 0) > 0 THEN true ELSE false END as has_open_positions
       FROM users u
       LEFT JOIN user_claims c ON c.user_id = u.id
       LEFT JOIN user_missions m ON m.user_id = u.id
       LEFT JOIN user_referrer_rewards rr ON rr.user_id = u.id
       LEFT JOIN user_referred_rewards rd ON rd.user_id = u.id
-      LEFT JOIN corrected_pnl cp ON cp.user_id = u.id
+      LEFT JOIN user_pnl p ON p.user_id = u.id
       LEFT JOIN open_positions op ON op.user_id = u.id
-      ORDER BY ABS(u.paper_balance - GREATEST(0, 10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+      ORDER BY ABS(u.paper_balance - GREATEST(0, 1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
                COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               COALESCE(cp.total_pnl, 0) - COALESCE(op.collateral_locked, 0))) DESC
+               COALESCE(p.total_pnl, 0) - COALESCE(op.collateral_locked, 0))) DESC
     `);
 
     const allUsers = auditResult.rows;
@@ -4305,6 +4301,90 @@ app.get('/api/admin/audit', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error running balance audit:', error);
     res.status(500).json({ success: false, message: 'Failed to run audit' });
+  }
+});
+
+// Admin: Audit single user (detailed breakdown)
+app.get('/api/admin/audit/user/:identifier', async (req: Request, res: Response) => {
+  try {
+    const { identifier } = req.params;
+
+    // Find user by username, ID, or wallet
+    const userResult = await pool.query(`
+      SELECT id, username, paper_balance, total_pnl as stored_total_pnl
+      FROM users
+      WHERE LOWER(username) LIKE LOWER($1) OR id::text = $2 OR LOWER(wallet_address) LIKE LOWER($1)
+      LIMIT 1
+    `, [`%${identifier}%`, identifier]);
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+    const userId = user.id;
+
+    // Get all components (ALL IN CENTS)
+    const [claims, missions, refGiven, refReceived, pnl, openTrades] = await Promise.all([
+      pool.query('SELECT COALESCE(SUM(amount), 0) as total FROM claims WHERE user_id = $1', [userId]),
+      pool.query('SELECT COALESCE(SUM(reward_paid), 0) as total FROM user_missions WHERE user_id = $1 AND is_claimed = true', [userId]),
+      pool.query('SELECT COALESCE(SUM(referrer_reward), 0) as total FROM referrals WHERE referrer_id = $1 AND referrer_claimed = true', [userId]),
+      pool.query('SELECT COALESCE(SUM(referred_reward), 0) as total FROM referrals WHERE referred_user_id = $1 AND referred_claimed = true', [userId]),
+      pool.query(`
+        SELECT
+          COALESCE(SUM(CASE WHEN leverage > 1 THEN pnl / leverage ELSE pnl END), 0) as corrected,
+          COALESCE(SUM(pnl), 0) as raw
+        FROM trades WHERE user_id = $1 AND status = 'closed'
+      `, [userId]),
+      pool.query(`
+        SELECT COALESCE(SUM(position_size), 0) as collateral, COUNT(*) as count
+        FROM trades WHERE user_id = $1 AND status = 'open'
+      `, [userId])
+    ]);
+
+    const claimsCents = Number(claims.rows[0].total);
+    const missionsCents = Number(missions.rows[0].total);
+    const refGivenCents = Number(refGiven.rows[0].total);
+    const refReceivedCents = Number(refReceived.rows[0].total);
+    const pnlCorrectedCents = Number(pnl.rows[0].corrected);
+    const pnlRawCents = Number(pnl.rows[0].raw);
+    const collateralCents = Number(openTrades.rows[0].collateral);
+    const openCount = Number(openTrades.rows[0].count);
+    const currentBalanceCents = Number(user.paper_balance);
+
+    // Calculate expected (ALL IN CENTS)
+    const startingCents = 1000000; // $10,000
+    const expectedCents = Math.max(0,
+      startingCents + claimsCents + missionsCents + refGivenCents + refReceivedCents + pnlCorrectedCents - collateralCents
+    );
+    const discrepancyCents = currentBalanceCents - expectedCents;
+
+    res.json({
+      success: true,
+      user: {
+        id: userId,
+        username: user.username,
+        currentBalanceCents,
+        expectedCents,
+        discrepancyCents,
+        isCorrect: Math.abs(discrepancyCents) <= 100,
+        hasOpenPositions: openCount > 0
+      },
+      breakdown: {
+        startingCents,
+        claimsCents,
+        missionsCents,
+        refGivenCents,
+        refReceivedCents,
+        pnlCorrectedCents,
+        pnlRawCents,
+        collateralCents,
+        openTradesCount: openCount
+      }
+    });
+  } catch (error) {
+    console.error('Error auditing user:', error);
+    res.status(500).json({ success: false, message: 'Failed to audit user' });
   }
 });
 

@@ -528,15 +528,15 @@ export default function BattlefieldHome() {
                   <div className="text-center">
                     <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Balance</div>
                     <div className="text-2xl font-bold text-green-400">
-                      ${Number(userData.paper_balance).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                      ${Number(userData.paper_balance / 100).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
                     </div>
                   </div>
-                  
+
                   {/* P&L */}
                   <div className="text-center">
                     <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total P&L</div>
                     <div className={`text-2xl font-bold ${Number(userData.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {Number(userData.total_pnl) >= 0 ? '+' : ''}${Number(userData.total_pnl).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                      {Number(userData.total_pnl) >= 0 ? '+' : ''}${Math.round(Number(userData.total_pnl) / 100).toLocaleString('en-US')}
                     </div>
                   </div>
                 </div>

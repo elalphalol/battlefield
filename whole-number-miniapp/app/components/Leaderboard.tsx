@@ -223,7 +223,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
                   {/* P&L - Clean */}
                   <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                     <div className={`text-2xl md:text-3xl font-bold ${Number(entry.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      ${Math.abs(Number(entry.total_pnl)).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                      ${Math.round(Math.abs(Number(entry.total_pnl)) / 100).toLocaleString('en-US')}
                     </div>
                     {entry.battle_tokens_earned > 0 && (
                       <div className="text-xs text-purple-400 flex items-center gap-1">

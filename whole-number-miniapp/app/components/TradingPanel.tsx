@@ -79,9 +79,13 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
   // So we just use the percentage of balance directly
   // Only show decimals if user manually input them, otherwise round to whole numbers
-  const positionSize = isManualInput 
-    ? Number(((positionSizePercent / 100) * Number(paperBalance)).toFixed(2))
+  // Note: paperBalance is in CENTS, positionSize is calculated in CENTS for API
+  // But displayed in DOLLARS (divide by 100) for user-facing elements
+  const paperBalanceDollars = Number(paperBalance) / 100; // Convert cents to dollars for display
+  const positionSizeCents = isManualInput
+    ? Number(((positionSizePercent / 100) * Number(paperBalance)).toFixed(0))
     : Math.floor((positionSizePercent / 100) * Number(paperBalance));
+  const positionSize = positionSizeCents / 100; // Display in dollars
   
   // Update input value when position size changes from slider (but not when typing)
   useEffect(() => {
@@ -151,14 +155,14 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       return;
     }
 
-    // Check minimum position size
+    // Check minimum position size (positionSize is in dollars)
     if (positionSize <= 0 || positionSize < 1) {
       toast.error('❌ Please enter a position size. Minimum: $1');
       return;
     }
 
-    if (!address || positionSize > Number(paperBalance)) {
-      toast.error(`Insufficient balance. Available: $${Math.round(Number(paperBalance)).toLocaleString('en-US')}`);
+    if (!address || positionSize > paperBalanceDollars) {
+      toast.error(`Insufficient balance. Available: $${Math.round(paperBalanceDollars).toLocaleString('en-US')}`);
       return;
     }
 
@@ -171,7 +175,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         walletAddress: address,
         type: type,
         leverage,
-        size: positionSize,
+        size: positionSizeCents, // Send cents to API
         entryPrice: btcPrice,
         stopLoss
       });
@@ -183,7 +187,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
           walletAddress: address,
           type: type,
           leverage,
-          size: positionSize,
+          size: positionSizeCents, // Send cents to API
           entryPrice: btcPrice,
           stopLoss
         })
@@ -274,34 +278,37 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
   const calculatePnL = (trade: Trade) => {
     const entryPrice = Number(trade.entry_price);
-    const collateral = Number(trade.position_size); // This is the collateral/margin
+    // position_size is stored in CENTS, convert to dollars for calculation
+    const collateralCents = Number(trade.position_size);
+    const collateralDollars = collateralCents / 100;
     const tradeLeverage = Number(trade.leverage);
-    
-    // Calculate leveraged position size
-    const leveragedPositionSize = collateral * tradeLeverage;
-    
+
+    // Calculate leveraged position size (in dollars)
+    const leveragedPositionSize = collateralDollars * tradeLeverage;
+
     // Calculate price-based P&L on the leveraged position
     const priceChange = trade.position_type === 'long'
       ? btcPrice - entryPrice
       : entryPrice - btcPrice;
-    
+
     // P&L is based on leveraged position size and price change percentage
     const priceChangePercentage = priceChange / entryPrice;
     const pnlFromPriceMovement = priceChangePercentage * leveragedPositionSize;
-    
+
     // Include the trading fee in the PNL so users see the break-even needed
     // Fee was paid upfront, so we subtract it to show real net P&L
     const feePercentage = tradeLeverage > 1 ? tradeLeverage * 0.05 : 0;
-    const tradingFee = (feePercentage / 100) * collateral;
+    const tradingFee = (feePercentage / 100) * collateralDollars;
     const netPnl = pnlFromPriceMovement - tradingFee;
-    
+
     // Calculate percentage return including fee impact
-    const percentageReturn = (netPnl / collateral) * 100;
-    
-    return { 
-      pnl: netPnl, 
+    const percentageReturn = (netPnl / collateralDollars) * 100;
+
+    // Return PnL in DOLLARS (not cents) for display
+    return {
+      pnl: netPnl,
       percentage: percentageReturn,
-      leveragedPosition: leveragedPositionSize 
+      leveragedPosition: leveragedPositionSize
     };
   };
 
@@ -319,28 +326,29 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const handleAddCollateral = async () => {
     if (!address || !selectedTradeId) return;
 
-    const additionalCollateral = Number(collateralAmount);
-    
-    if (!additionalCollateral || additionalCollateral <= 0) {
+    const additionalCollateralDollars = Number(collateralAmount); // User enters dollars
+
+    if (!additionalCollateralDollars || additionalCollateralDollars <= 0) {
       toast.error('❌ Enter valid amount');
       return;
     }
-    
-    if (additionalCollateral > Number(paperBalance)) {
-      toast.error(`❌ Insufficient balance: $${Number(paperBalance).toFixed(0)}`);
+
+    if (additionalCollateralDollars > paperBalanceDollars) {
+      toast.error(`❌ Insufficient balance: $${Math.round(paperBalanceDollars)}`);
       return;
     }
 
     setAddingCollateralTradeId(selectedTradeId);
     setShowCollateralModal(false);
-    
+
+    const additionalCollateralCents = Math.round(additionalCollateralDollars * 100); // Convert to cents for API
     try {
       const response = await fetch(getApiUrl('api/trades/add-collateral'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tradeId: selectedTradeId,
-          additionalCollateral,
+          additionalCollateral: additionalCollateralCents,
           walletAddress: address,
           currentPrice: btcPrice
         })
@@ -349,7 +357,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       const data = await response.json();
 
       if (data.success) {
-        toast.success(`+$${additionalCollateral.toFixed(0)} added! New Liq: $${data.newLiquidationPrice.toFixed(0)}`);
+        toast.success(`+$${additionalCollateralDollars.toFixed(0)} added! New Liq: $${data.newLiquidationPrice.toFixed(0)}`);
         fetchOpenTrades();
         onTradeComplete();
       } else {
@@ -499,14 +507,14 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         <div className="grid grid-cols-2 gap-3 mb-4">
           <button
             onClick={() => handleOpenTrade('long')}
-            disabled={isOpening || positionSize < 1 || positionSize > Number(paperBalance)}
+            disabled={isOpening || positionSize < 1 || positionSize > paperBalanceDollars}
             className="w-full py-6 rounded-xl font-bold text-xl transition-all transform hover:scale-105 shadow-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-green-500/50 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isOpening && tradeType === 'long' ? '...' : `LONG ${leverage}x`}
           </button>
           <button
             onClick={() => handleOpenTrade('short')}
-            disabled={isOpening || positionSize < 1 || positionSize > Number(paperBalance)}
+            disabled={isOpening || positionSize < 1 || positionSize > paperBalanceDollars}
             className="w-full py-6 rounded-xl font-bold text-xl transition-all transform hover:scale-105 shadow-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 shadow-red-500/50 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isOpening && tradeType === 'short' ? '...' : `SHORT ${leverage}x`}
@@ -573,17 +581,16 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                 // Allow digits and decimal point, max 2 decimal places
                 if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
                   setInputValue(value);
-                  const numValue = parseFloat(value) || 0;
-                  const maxBalance = Number(paperBalance);
+                  const numValue = parseFloat(value) || 0; // User enters dollars
                   // Mark as manual input if user entered decimals
                   if (value.includes('.')) {
                     setIsManualInput(true);
                   } else {
                     setIsManualInput(false);
                   }
-                  if (numValue > 0 && numValue <= maxBalance) {
+                  if (numValue > 0 && numValue <= paperBalanceDollars) {
                     // Calculate exact percentage without rounding to avoid drift
-                    const exactPercent = (numValue / maxBalance) * 100;
+                    const exactPercent = (numValue / paperBalanceDollars) * 100;
                     setPositionSizePercent(exactPercent);
                   } else if (numValue === 0 || value === '') {
                     setPositionSizePercent(0);
@@ -594,14 +601,13 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                 setIsTyping(false);
                 // Ensure value is valid on blur
                 const numValue = parseFloat(inputValue) || 0;
-                const maxBalance = Number(paperBalance);
                 if (numValue < 0) {
                   setPositionSizePercent(0);
                   setInputValue('0');
                   setIsManualInput(false);
-                } else if (numValue > maxBalance) {
+                } else if (numValue > paperBalanceDollars) {
                   setPositionSizePercent(100);
-                  setInputValue(maxBalance.toFixed(2));
+                  setInputValue(paperBalanceDollars.toFixed(2));
                   setIsManualInput(true);
                 }
               }}
@@ -724,7 +730,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
           </div>
           <div className="flex justify-between">
             <span className="text-gray-400">Available Balance:</span>
-            <span className="text-green-400 font-bold">${Math.round(Number(paperBalance)).toLocaleString('en-US')}</span>
+            <span className="text-green-400 font-bold">${Math.round(paperBalanceDollars).toLocaleString('en-US')}</span>
           </div>
         </div>
 
@@ -771,8 +777,8 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 mb-3">
                     <div>Entry: ${Math.round(Number(trade.entry_price)).toLocaleString('en-US')}</div>
                     <div>Now: ${Math.round(btcPrice).toLocaleString('en-US')}</div>
-                    <div>Size: ${Math.round(Number(trade.position_size)).toLocaleString('en-US')}</div>
-                    <div>Total: ${Math.round(Number(trade.position_size) * Number(trade.leverage)).toLocaleString('en-US')}</div>
+                    <div>Size: ${Math.round(Number(trade.position_size) / 100).toLocaleString('en-US')}</div>
+                    <div>Total: ${Math.round(Number(trade.position_size) / 100 * Number(trade.leverage)).toLocaleString('en-US')}</div>
                     <div>Liq: ${Math.round(Number(trade.liquidation_price)).toLocaleString('en-US')}</div>
                     <div
                       onClick={() => openStopLossModal(trade)}
@@ -837,7 +843,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                 placeholder="100"
                 autoFocus
               />
-              <p className="text-xs text-gray-500 mt-1">Balance: ${Number(paperBalance).toFixed(0)}</p>
+              <p className="text-xs text-gray-500 mt-1">Balance: ${Math.round(paperBalanceDollars)}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

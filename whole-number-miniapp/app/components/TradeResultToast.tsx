@@ -47,7 +47,7 @@ export function TradeResultToast({ isVisible, pnl, isLiquidated, isStopLoss, onD
   const [message, setMessage] = useState('');
 
   const isWin = pnl >= 0 && !isLiquidated && !isStopLoss;
-  const formattedPnl = Math.round(Math.abs(pnl)).toLocaleString('en-US');
+  const formattedPnl = Math.round(Math.abs(pnl) / 100).toLocaleString('en-US'); // Convert cents to dollars
 
   useEffect(() => {
     if (isVisible) {

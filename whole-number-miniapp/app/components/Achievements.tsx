@@ -56,13 +56,13 @@ export function Achievements({ stats, showOnlyUnlocked, showOnlyLocked, username
     { id: 'trader_500', title: '👑 Elite Trader', description: 'Completed 500 trades', icon: '👑', category: 'trading', rarity: 'Rare', points: 25, unlocked: stats.total_trades >= 500, progress: Math.min(stats.total_trades, 500), target: 500 },
     { id: 'trader_1000', title: '🌟 Master Trader', description: 'Completed 1,000 trades', icon: '🌟', category: 'trading', rarity: 'Rare', points: 25, unlocked: stats.total_trades >= 1000, progress: Math.min(stats.total_trades, 1000), target: 1000 },
 
-    // P&L Milestones
-    { id: 'profit_100', title: '💵 First Profit', description: 'Reached $100 total P&L', icon: '💰', category: 'pnl', rarity: 'Common', points: 5, unlocked: stats.total_pnl >= 100, progress: Math.min(stats.total_pnl, 100), target: 100 },
-    { id: 'profit_1000', title: '💎 Profitable Trader', description: 'Reached $1,000 total P&L', icon: '💎', category: 'pnl', rarity: 'Uncommon', points: 10, unlocked: stats.total_pnl >= 1000, progress: Math.min(stats.total_pnl, 1000), target: 1000 },
-    { id: 'profit_5000', title: '🔥 Hot Streak', description: 'Reached $5,000 total P&L', icon: '🔥', category: 'pnl', rarity: 'Uncommon', points: 10, unlocked: stats.total_pnl >= 5000, progress: Math.min(stats.total_pnl, 5000), target: 5000 },
-    { id: 'profit_10000', title: '🚀 To The Moon', description: 'Reached $10,000 total P&L', icon: '🚀', category: 'pnl', rarity: 'Rare', points: 25, unlocked: stats.total_pnl >= 10000, progress: Math.min(stats.total_pnl, 10000), target: 10000 },
-    { id: 'profit_50000', title: '💰 Whale Status', description: 'Reached $50,000 total P&L', icon: '🐋', category: 'pnl', rarity: 'Epic', points: 50, unlocked: stats.total_pnl >= 50000, progress: Math.min(stats.total_pnl, 50000), target: 50000 },
-    { id: 'profit_100000', title: '👑 Legendary Profit', description: 'Reached $100,000 total P&L', icon: '🏆', category: 'pnl', rarity: 'Legendary', points: 100, unlocked: stats.total_pnl >= 100000, progress: Math.min(stats.total_pnl, 100000), target: 100000 },
+    // P&L Milestones (total_pnl is in CENTS, thresholds in cents: $100 = 10000 cents)
+    { id: 'profit_100', title: '💵 First Profit', description: 'Reached $100 total P&L', icon: '💰', category: 'pnl', rarity: 'Common', points: 5, unlocked: stats.total_pnl >= 10000, progress: Math.min(stats.total_pnl / 100, 100), target: 100 },
+    { id: 'profit_1000', title: '💎 Profitable Trader', description: 'Reached $1,000 total P&L', icon: '💎', category: 'pnl', rarity: 'Uncommon', points: 10, unlocked: stats.total_pnl >= 100000, progress: Math.min(stats.total_pnl / 100, 1000), target: 1000 },
+    { id: 'profit_5000', title: '🔥 Hot Streak', description: 'Reached $5,000 total P&L', icon: '🔥', category: 'pnl', rarity: 'Uncommon', points: 10, unlocked: stats.total_pnl >= 500000, progress: Math.min(stats.total_pnl / 100, 5000), target: 5000 },
+    { id: 'profit_10000', title: '🚀 To The Moon', description: 'Reached $10,000 total P&L', icon: '🚀', category: 'pnl', rarity: 'Rare', points: 25, unlocked: stats.total_pnl >= 1000000, progress: Math.min(stats.total_pnl / 100, 10000), target: 10000 },
+    { id: 'profit_50000', title: '💰 Whale Status', description: 'Reached $50,000 total P&L', icon: '🐋', category: 'pnl', rarity: 'Epic', points: 50, unlocked: stats.total_pnl >= 5000000, progress: Math.min(stats.total_pnl / 100, 50000), target: 50000 },
+    { id: 'profit_100000', title: '👑 Legendary Profit', description: 'Reached $100,000 total P&L', icon: '🏆', category: 'pnl', rarity: 'Legendary', points: 100, unlocked: stats.total_pnl >= 10000000, progress: Math.min(stats.total_pnl / 100, 100000), target: 100000 },
 
     // Win Rate
     { id: 'winrate_50', title: '⚖️ Balanced', description: 'Maintained 50%+ win rate (min 20 trades)', icon: '⚖️', category: 'winrate', rarity: 'Uncommon', points: 10, unlocked: stats.win_rate >= 50 && stats.total_trades >= 20 },
@@ -89,8 +89,8 @@ export function Achievements({ stats, showOnlyUnlocked, showOnlyLocked, username
     { id: 'no_liq_100', title: '🏰 Fortress', description: 'Completed 100 trades without liquidation', icon: '🏰', category: 'survival', rarity: 'Epic', points: 50, unlocked: stats.total_trades >= 100 && stats.times_liquidated === 0 },
     { id: 'no_liq_500', title: '💎 Diamond Hands', description: 'Completed 500 trades without liquidation', icon: '💎', category: 'survival', rarity: 'Legendary', points: 100, unlocked: stats.total_trades >= 500 && stats.times_liquidated === 0 },
 
-    // Special
-    { id: 'comeback', title: '🎭 The Comeback', description: 'Recovered from negative P&L to reach $1,000 profit', icon: '🎭', category: 'special', rarity: 'Legendary', points: 100, unlocked: stats.total_pnl >= 1000 && stats.times_liquidated > 0 },
+    // Special (total_pnl is in CENTS)
+    { id: 'comeback', title: '🎭 The Comeback', description: 'Recovered from negative P&L to reach $1,000 profit', icon: '🎭', category: 'special', rarity: 'Legendary', points: 100, unlocked: stats.total_pnl >= 100000 && stats.times_liquidated > 0 },
     { id: 'risk_taker', title: '🎲 High Roller', description: 'Survived 10+ liquidations and still profitable', icon: '🎲', category: 'special', rarity: 'Legendary', points: 100, unlocked: stats.times_liquidated >= 10 && stats.total_pnl > 0 },
     { id: 'perfect_trader', title: '💯 Perfect Score', description: 'Maintained 100% win rate with 10+ trades', icon: '💯', category: 'special', rarity: 'Legendary', points: 100, unlocked: stats.win_rate === 100 && stats.total_trades >= 10 },
   ];
@@ -105,20 +105,21 @@ export function Achievements({ stats, showOnlyUnlocked, showOnlyLocked, username
 
   const getPlayerTitle = (): { title: string; badge: string; color: string } => {
     const rank = Number(stats.rank);
+    // total_pnl is in CENTS, so $100,000 = 10,000,000 cents
     if (rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400' };
     if (rank <= 3) return { title: 'Legendary Conqueror', badge: '🏆', color: 'text-orange-400' };
     if (rank <= 10) return { title: 'Top 10 Elite', badge: '⭐', color: 'text-gray-300' };
-    if (stats.total_pnl >= 100000) return { title: 'Legendary Profit King', badge: '🏆', color: 'text-purple-400' };
-    if (stats.total_pnl >= 50000) return { title: 'Whale Trader', badge: '🐋', color: 'text-blue-400' };
+    if (stats.total_pnl >= 10000000) return { title: 'Legendary Profit King', badge: '🏆', color: 'text-purple-400' };
+    if (stats.total_pnl >= 5000000) return { title: 'Whale Trader', badge: '🐋', color: 'text-blue-400' };
     if (stats.win_rate >= 80 && stats.total_trades >= 200) return { title: 'Precision Expert', badge: '💫', color: 'text-cyan-400' };
     if (stats.best_streak >= 50) return { title: 'Streak Legend', badge: '🌪️', color: 'text-red-400' };
     if (stats.total_trades >= 1000) return { title: 'Trading Veteran', badge: '🌟', color: 'text-yellow-300' };
     if (stats.total_trades >= 500) return { title: 'Elite Trader', badge: '👑', color: 'text-purple-300' };
-    if (stats.total_pnl >= 10000) return { title: 'Moon Walker', badge: '🚀', color: 'text-green-400' };
-    if (stats.total_pnl >= 5000) return { title: 'Hot Trader', badge: '🔥', color: 'text-orange-300' };
+    if (stats.total_pnl >= 1000000) return { title: 'Moon Walker', badge: '🚀', color: 'text-green-400' };
+    if (stats.total_pnl >= 500000) return { title: 'Hot Trader', badge: '🔥', color: 'text-orange-300' };
     if (stats.win_rate >= 70 && stats.total_trades >= 100) return { title: 'Sharpshooter', badge: '🎯', color: 'text-blue-300' };
     if (stats.total_trades >= 100) return { title: 'Veteran Warrior', badge: '🏅', color: 'text-gray-400' };
-    if (stats.total_pnl >= 1000) return { title: 'Profitable Trader', badge: '💎', color: 'text-cyan-300' };
+    if (stats.total_pnl >= 100000) return { title: 'Profitable Trader', badge: '💎', color: 'text-cyan-300' };
     if (stats.best_streak >= 10) return { title: 'Unstoppable', badge: '💥', color: 'text-red-300' };
     if (stats.total_trades >= 50) return { title: 'Skilled Trader', badge: '💹', color: 'text-green-300' };
     if (stats.total_trades >= 10) return { title: 'Apprentice Trader', badge: '📈', color: 'text-blue-200' };

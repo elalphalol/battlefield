@@ -250,94 +250,6 @@ export function GenesisAirdrop() {
     });
   }, [address, users]);
 
-  const calculateUserTierStatus = (
-    user: AirdropUser,
-    allUsers: AirdropUser[]
-  ): {
-    tier: string | null;
-    rank: number | null;
-    secured: boolean;
-    nextTier: string | null;
-    tradesNeeded: number;
-  } => {
-    // Check Ambassador first (referrals)
-    if (user.referral_count >= 5) {
-      const ambassadors = allUsers
-        .filter((u) => u.referral_count >= 5)
-        .sort((a, b) => b.referral_count - a.referral_count);
-      const rank = ambassadors.findIndex(
-        (u) => u.wallet_address.toLowerCase() === user.wallet_address.toLowerCase()
-      ) + 1;
-      return {
-        tier: 'Ambassador',
-        rank,
-        secured: rank <= 20,
-        nextTier: null,
-        tradesNeeded: 0,
-      };
-    }
-
-    // Check OG (100+ trades)
-    if (user.total_trades >= 100) {
-      const ogs = allUsers
-        .filter((u) => u.total_trades >= 100)
-        .sort((a, b) => b.total_trades - a.total_trades);
-      const rank = ogs.findIndex(
-        (u) => u.wallet_address.toLowerCase() === user.wallet_address.toLowerCase()
-      ) + 1;
-      return {
-        tier: 'OG',
-        rank,
-        secured: rank <= 50,
-        nextTier: 'Ambassador',
-        tradesNeeded: 0, // Need referrals, not trades
-      };
-    }
-
-    // Check Veteran (25-99 trades)
-    if (user.total_trades >= 25) {
-      const veterans = allUsers
-        .filter((u) => u.total_trades >= 25 && u.total_trades < 100)
-        .sort((a, b) => b.total_trades - a.total_trades);
-      const rank = veterans.findIndex(
-        (u) => u.wallet_address.toLowerCase() === user.wallet_address.toLowerCase()
-      ) + 1;
-      return {
-        tier: 'Veteran',
-        rank,
-        secured: rank <= 100,
-        nextTier: 'OG',
-        tradesNeeded: 100 - user.total_trades,
-      };
-    }
-
-    // Check Recruit (5-24 trades)
-    if (user.total_trades >= 5) {
-      const recruits = allUsers
-        .filter((u) => u.total_trades >= 5 && u.total_trades < 25)
-        .sort((a, b) => b.total_trades - a.total_trades);
-      const rank = recruits.findIndex(
-        (u) => u.wallet_address.toLowerCase() === user.wallet_address.toLowerCase()
-      ) + 1;
-      return {
-        tier: 'Recruit',
-        rank,
-        secured: rank <= 330,
-        nextTier: 'Veteran',
-        tradesNeeded: 25 - user.total_trades,
-      };
-    }
-
-    // Not qualified
-    return {
-      tier: null,
-      rank: null,
-      secured: false,
-      nextTier: 'Recruit',
-      tradesNeeded: 5 - user.total_trades,
-    };
-  };
-
   const getTierUsers = (tierName: string): AirdropUser[] => {
     switch (tierName) {
       case 'Ambassador':
@@ -567,6 +479,35 @@ export function GenesisAirdrop() {
               </div>
             );
           })}
+
+          {/* Total Secured */}
+          {(() => {
+            const totalSecured = TIERS.reduce((sum, tier) => {
+              const tierUsers = getTierUsers(tier.name);
+              return sum + Math.min(tierUsers.length, tier.maxUsers);
+            }, 0);
+            const totalSpots = TIERS.reduce((sum, tier) => sum + tier.maxUsers, 0);
+            const totalPercentage = (totalSecured / totalSpots) * 100;
+
+            return (
+              <div className="pt-3 mt-3 border-t border-slate-600">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-yellow-400 font-bold">
+                    📊 Total Secured
+                  </span>
+                  <span className="text-yellow-400 font-bold">
+                    {totalSecured}/{totalSpots}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-700 rounded-full h-2 mt-1">
+                  <div
+                    className="h-2 rounded-full transition-all bg-yellow-500"
+                    style={{ width: `${Math.min(totalPercentage, 100)}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -742,7 +683,7 @@ function TierSection({
                 {/* Stats */}
                 <div className="text-right">
                   <p className={`font-bold ${tier.color}`}>
-                    {isAmbassador ? `${user.referral_count} refs` : `${user.total_trades} trades`}
+                    {isAmbassador ? `${user.confirmed_referrals} refs` : `${user.total_trades} trades`}
                   </p>
                   <p className="text-[10px] text-gray-400">
                     {isSecured ? (

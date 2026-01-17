@@ -417,13 +417,13 @@ function UserProfilePageContent() {
     if (stats.total_trades >= 500) totalPoints += 25;
     if (stats.total_trades >= 1000) totalPoints += 25;
     
-    // P&L Milestones
-    if (stats.total_pnl >= 100) totalPoints += 5;
-    if (stats.total_pnl >= 1000) totalPoints += 10;
-    if (stats.total_pnl >= 5000) totalPoints += 10;
-    if (stats.total_pnl >= 10000) totalPoints += 25;
-    if (stats.total_pnl >= 50000) totalPoints += 50;
-    if (stats.total_pnl >= 100000) totalPoints += 100;
+    // P&L Milestones (total_pnl is in CENTS: $100 = 10000 cents)
+    if (stats.total_pnl >= 10000) totalPoints += 5;
+    if (stats.total_pnl >= 100000) totalPoints += 10;
+    if (stats.total_pnl >= 500000) totalPoints += 10;
+    if (stats.total_pnl >= 1000000) totalPoints += 25;
+    if (stats.total_pnl >= 5000000) totalPoints += 50;
+    if (stats.total_pnl >= 10000000) totalPoints += 100;
     
     // Win Rate
     if (stats.win_rate >= 50 && stats.total_trades >= 20) totalPoints += 10;
@@ -450,8 +450,8 @@ function UserProfilePageContent() {
     if (stats.total_trades >= 100 && stats.times_liquidated === 0) totalPoints += 50;
     if (stats.total_trades >= 500 && stats.times_liquidated === 0) totalPoints += 100;
     
-    // Special
-    if (stats.total_pnl >= 1000 && stats.times_liquidated > 0) totalPoints += 100;
+    // Special (total_pnl is in CENTS)
+    if (stats.total_pnl >= 100000 && stats.times_liquidated > 0) totalPoints += 100;
     if (stats.times_liquidated >= 10 && stats.total_pnl > 0) totalPoints += 100;
     if (stats.win_rate === 100 && stats.total_trades >= 10) totalPoints += 100;
     
@@ -459,24 +459,25 @@ function UserProfilePageContent() {
   };
 
   // Get player title based on stats (automatically selects rarest/best)
+  // total_pnl is in CENTS: $100,000 = 10,000,000 cents
   const getPlayerTitle = (stats: UserProfile['stats']) => {
     // Fix: Convert rank to number to handle both string and number types from API
     const rank = Number(stats.rank);
-    
+
     if (rank === 1) return { title: 'Battlefield Champion', badge: '👑', color: 'text-yellow-400', rarity: 'Mythic' };
     if (rank <= 3) return { title: 'Legendary Conqueror', badge: '🏆', color: 'text-orange-400', rarity: 'Legendary' };
     if (rank <= 10) return { title: 'Top 10 Elite', badge: '⭐', color: 'text-gray-300', rarity: 'Legendary' };
-    if (stats.total_pnl >= 100000) return { title: 'Legendary Profit King', badge: '🏆', color: 'text-purple-400', rarity: 'Legendary' };
-    if (stats.total_pnl >= 50000) return { title: 'Whale Trader', badge: '🐋', color: 'text-blue-400', rarity: 'Epic' };
+    if (stats.total_pnl >= 10000000) return { title: 'Legendary Profit King', badge: '🏆', color: 'text-purple-400', rarity: 'Legendary' };
+    if (stats.total_pnl >= 5000000) return { title: 'Whale Trader', badge: '🐋', color: 'text-blue-400', rarity: 'Epic' };
     if (stats.win_rate >= 80 && stats.total_trades >= 200) return { title: 'Precision Expert', badge: '💫', color: 'text-cyan-400', rarity: 'Epic' };
     if (stats.best_streak >= 50) return { title: 'Streak Legend', badge: '🌪️', color: 'text-red-400', rarity: 'Epic' };
     if (stats.total_trades >= 1000) return { title: 'Master Trader', badge: '🌟', color: 'text-yellow-300', rarity: 'Rare' };
     if (stats.total_trades >= 500) return { title: 'Elite Trader', badge: '👑', color: 'text-purple-300', rarity: 'Rare' };
-    if (stats.total_pnl >= 10000) return { title: 'Moon Walker', badge: '🚀', color: 'text-green-400', rarity: 'Rare' };
-    if (stats.total_pnl >= 5000) return { title: 'Hot Trader', badge: '🔥', color: 'text-orange-300', rarity: 'Uncommon' };
+    if (stats.total_pnl >= 1000000) return { title: 'Moon Walker', badge: '🚀', color: 'text-green-400', rarity: 'Rare' };
+    if (stats.total_pnl >= 500000) return { title: 'Hot Trader', badge: '🔥', color: 'text-orange-300', rarity: 'Uncommon' };
     if (stats.win_rate >= 70 && stats.total_trades >= 100) return { title: 'Sharpshooter', badge: '🎯', color: 'text-blue-300', rarity: 'Uncommon' };
     if (stats.total_trades >= 100) return { title: 'Veteran Warrior', badge: '🏅', color: 'text-gray-400', rarity: 'Uncommon' };
-    if (stats.total_pnl >= 1000) return { title: 'Profitable Trader', badge: '💎', color: 'text-cyan-300', rarity: 'Uncommon' };
+    if (stats.total_pnl >= 100000) return { title: 'Profitable Trader', badge: '💎', color: 'text-cyan-300', rarity: 'Uncommon' };
     if (stats.best_streak >= 10) return { title: 'Unstoppable', badge: '💥', color: 'text-red-300', rarity: 'Common' };
     if (stats.total_trades >= 50) return { title: 'Skilled Trader', badge: '💹', color: 'text-green-300', rarity: 'Common' };
     if (stats.total_trades >= 10) return { title: 'Apprentice Trader', badge: '📈', color: 'text-blue-200', rarity: 'Common' };
@@ -587,7 +588,7 @@ function UserProfilePageContent() {
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
             <p className="text-gray-400 text-sm mb-1">Balance</p>
             <p className="text-2xl font-bold text-white">
-              ${profile.stats.paper_balance.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+              ${(profile.stats.paper_balance / 100).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
             </p>
           </div>
 
@@ -595,7 +596,7 @@ function UserProfilePageContent() {
           <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
             <p className="text-gray-400 text-sm mb-1">Total P&L</p>
             <p className={`text-2xl font-bold ${profile.stats.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {profile.stats.total_pnl >= 0 ? '+' : ''}${Math.round(profile.stats.total_pnl).toLocaleString('en-US')}
+              {profile.stats.total_pnl >= 0 ? '+' : ''}${Math.round(profile.stats.total_pnl / 100).toLocaleString('en-US')}
             </p>
           </div>
 
@@ -677,7 +678,7 @@ function UserProfilePageContent() {
                         <div className="text-right">
                           {pos.current_pnl !== undefined ? (
                             <p className={`text-xl font-bold ${pos.current_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {pos.current_pnl >= 0 ? '+' : ''}${Math.round(pos.current_pnl).toLocaleString('en-US')}
+                              {pos.current_pnl >= 0 ? '+' : ''}${Math.round(pos.current_pnl / 100).toLocaleString('en-US')}
                             </p>
                           ) : (
                             <p className="text-xs text-gray-500">P&L: N/A</p>
@@ -686,9 +687,9 @@ function UserProfilePageContent() {
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-400">
                         <div>Entry: ${pos.entry_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
-                        <div>Size: ${pos.position_size.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
+                        <div>Size: ${(pos.position_size / 100).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
                         <div>Liq: ${pos.liquidation_price.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
-                        <div>Total: ${(pos.position_size * pos.leverage).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
+                        <div>Total: ${(pos.position_size / 100 * pos.leverage).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">{formatShortDate(pos.opened_at)}</p>
                     </div>
@@ -709,8 +710,9 @@ function UserProfilePageContent() {
               ) : (
                 <div className="space-y-2">
                   {profile.recentHistory.map((trade) => {
-                    const pnl = Number(trade.pnl);
-                    const pnlPercentage = (pnl / Number(trade.position_size)) * 100;
+                    const pnlCents = Number(trade.pnl);
+                    const pnl = pnlCents / 100; // Convert cents to dollars for display
+                    const pnlPercentage = (pnlCents / Number(trade.position_size)) * 100; // Both in cents, so ratio is correct
                     const isProfit = pnl >= 0;
                     const isLiquidated = trade.status === 'liquidated';
                     const isVoided = trade.status === 'voided';
@@ -862,7 +864,7 @@ function UserProfilePageContent() {
                             <span className="text-gray-500">Exit:</span> ${Math.round(Number(trade.exit_price)).toLocaleString('en-US')}
                           </div>
                           <div>
-                            <span className="text-gray-500">Size:</span> ${Math.round(Number(trade.position_size)).toLocaleString('en-US')}
+                            <span className="text-gray-500">Size:</span> ${Math.round(Number(trade.position_size) / 100).toLocaleString('en-US')}
                           </div>
                         </div>
 

@@ -136,8 +136,9 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
       
       <div className="space-y-3">
         {history.map((trade) => {
-          const pnl = Number(trade.pnl);
-          const pnlPercentage = (pnl / Number(trade.position_size)) * 100;
+          const pnlCents = Number(trade.pnl);
+          const pnl = pnlCents / 100; // Convert cents to dollars for display
+          const pnlPercentage = (pnlCents / Number(trade.position_size)) * 100; // Both in cents, ratio is correct
           const isProfit = pnl >= 0;
           const isLiquidated = trade.status === 'liquidated';
           const isVoided = trade.status === 'voided';
@@ -318,7 +319,7 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
                   <span className="text-gray-500">Exit:</span> ${Math.round(Number(trade.exit_price)).toLocaleString('en-US')}
                 </div>
                 <div>
-                  <span className="text-gray-500">Size:</span> ${Math.round(Number(trade.position_size)).toLocaleString('en-US')}
+                  <span className="text-gray-500">Size:</span> ${Math.round(Number(trade.position_size) / 100).toLocaleString('en-US')}
                 </div>
               </div>
 

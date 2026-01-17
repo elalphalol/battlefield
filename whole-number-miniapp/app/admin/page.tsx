@@ -210,20 +210,22 @@ interface ReferralActivity {
   completed_at: string | null;
 }
 
+// ALL VALUES IN CENTS
 interface AuditDiscrepancy {
   id: number;
   username: string;
-  currentBalance: number;
-  openCollateral: number;
-  totalAssets: number;
-  maxAssets: number;
-  expectedBalance: number;
-  discrepancy: number;
+  currentBalance: number;  // cents
+  openCollateral: number;  // cents
+  totalAssets: number;     // cents
+  maxAssets: number;       // cents
+  expectedBalance: number; // cents
+  discrepancy: number;     // cents
   hasOpenPositions: boolean;
-  claims: number;
-  missions: number;
-  referrals: number;
-  pnl: number;
+  claims: number;          // cents
+  missions: number;        // cents
+  referrals: number;       // cents
+  pnl: number;             // cents (corrected)
+  rawPnl: number;          // cents (uncorrected)
 }
 
 interface AuditSummary {
@@ -231,16 +233,40 @@ interface AuditSummary {
   usersWithDiscrepancy: number;
   usersFixable: number;
   usersNeedingManualReview: number;
-  totalExcess: number;
-  totalDeficit: number;
+  totalExcess: number;   // cents
+  totalDeficit: number;  // cents
   usersFixed: number;
 }
 
 interface AuditResult {
   summary: AuditSummary;
   discrepancies: AuditDiscrepancy[];
-  fixedUsers: { id: number; username: string; previousBalance: number; newBalance: number; adjustment: number }[];
+  fixedUsers: { id: number; username: string; previousBalance: number; newBalance: number; adjustment: number; hadOpenPositions?: boolean }[];
   auditTimestamp: string;
+}
+
+// User lookup result (all in cents)
+interface UserAuditResult {
+  user: {
+    id: number;
+    username: string;
+    currentBalanceCents: number;
+    expectedCents: number;
+    discrepancyCents: number;
+    isCorrect: boolean;
+    hasOpenPositions: boolean;
+  };
+  breakdown: {
+    startingCents: number;
+    claimsCents: number;
+    missionsCents: number;
+    refGivenCents: number;
+    refReceivedCents: number;
+    pnlCorrectedCents: number;
+    pnlRawCents: number;
+    collateralCents: number;
+    openTradesCount: number;
+  };
 }
 
 export default function AdminPage() {
@@ -254,6 +280,12 @@ export default function AdminPage() {
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditFixing, setAuditFixing] = useState(false);
+
+  // User lookup state
+  const [userLookupSearch, setUserLookupSearch] = useState('');
+  const [userLookupResult, setUserLookupResult] = useState<UserAuditResult | null>(null);
+  const [userLookupLoading, setUserLookupLoading] = useState(false);
+  const [userLookupError, setUserLookupError] = useState('');
 
   // Maintenance mode state
   const [maintenanceMode, setMaintenanceMode] = useState<{
@@ -470,6 +502,36 @@ export default function AdminPage() {
     }
   };
 
+  // User lookup function
+  const fetchUserAudit = async (identifier: string) => {
+    if (!identifier.trim()) {
+      setUserLookupError('Enter a username, ID, or wallet address');
+      return;
+    }
+    setUserLookupLoading(true);
+    setUserLookupError('');
+    setUserLookupResult(null);
+    try {
+      const response = await fetch(getApiUrl(`api/admin/audit/user/${encodeURIComponent(identifier)}`));
+      const data = await response.json();
+      if (data.success) {
+        setUserLookupResult(data);
+      } else {
+        setUserLookupError(data.message || 'User not found');
+      }
+    } catch (error) {
+      console.error('Error fetching user audit:', error);
+      setUserLookupError('Failed to lookup user');
+    } finally {
+      setUserLookupLoading(false);
+    }
+  };
+
+  // Helper to format cents as display value
+  const formatCents = (cents: number): string => {
+    return cents.toLocaleString();
+  };
+
   const fetchReferrals = async () => {
     setReferralsLoading(true);
     try {
@@ -529,13 +591,16 @@ export default function AdminPage() {
   const updateUserBalance = async () => {
     if (!selectedUser || !editBalance) return;
 
+    // Convert dollars (input) to cents (stored)
+    const newBalanceCents = Math.round(Number(editBalance) * 100);
+
     try {
       const response = await fetch(getApiUrl('api/admin/users/balance'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: selectedUser.id,
-          newBalance: Number(editBalance)
+          newBalance: newBalanceCents
         })
       });
       const data = await response.json();
@@ -774,34 +839,38 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Paper Money Economy */}
+                {/* Paper Money Economy - fees/claims in cents (divide by 100), missions/referrals already in dollars from backend */}
                 {analytics.paperMoneyEconomy && (
                   <div className="bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border-2 border-emerald-500 rounded-lg p-6">
                     <h2 className="text-xl font-bold text-emerald-400 mb-4">Paper Money Economy</h2>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       <div className="bg-slate-800/50 rounded-lg p-4 text-center">
                         <p className="text-gray-400 text-xs mb-1">Trading Fees</p>
-                        <p className="text-2xl font-bold text-red-400">-${Number(analytics.paperMoneyEconomy.feesCollected || 0).toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-red-400">-${Math.round(Number(analytics.paperMoneyEconomy.feesCollected || 0) / 100).toLocaleString()}</p>
                         <p className="text-gray-500 text-xs mt-1">Deducted</p>
                       </div>
                       <div className="bg-slate-800/50 rounded-lg p-4 text-center">
                         <p className="text-gray-400 text-xs mb-1">Claims</p>
-                        <p className="text-2xl font-bold text-cyan-400">+${Number(analytics.paperMoneyEconomy.claims?.totalAmount || 0).toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-cyan-400">+${Math.round(Number(analytics.paperMoneyEconomy.claims?.totalAmount || 0) / 100).toLocaleString()}</p>
                         <p className="text-gray-500 text-xs mt-1">{analytics.paperMoneyEconomy.claims?.count || 0} claims</p>
                       </div>
                       <div className="bg-slate-800/50 rounded-lg p-4 text-center">
                         <p className="text-gray-400 text-xs mb-1">Missions</p>
-                        <p className="text-2xl font-bold text-yellow-400">+${Number(analytics.paperMoneyEconomy.missionRewards?.totalAmount || 0).toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-yellow-400">+${Math.round(Number(analytics.paperMoneyEconomy.missionRewards?.totalAmount || 0)).toLocaleString()}</p>
                         <p className="text-gray-500 text-xs mt-1">{analytics.paperMoneyEconomy.missionRewards?.claimedCount || 0} claimed</p>
                       </div>
                       <div className="bg-slate-800/50 rounded-lg p-4 text-center">
                         <p className="text-gray-400 text-xs mb-1">Referrals</p>
-                        <p className="text-2xl font-bold text-purple-400">+${Number(analytics.paperMoneyEconomy.referralRewards?.totalAmount || 0).toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-purple-400">+${Math.round(Number(analytics.paperMoneyEconomy.referralRewards?.totalAmount || 0)).toLocaleString()}</p>
                         <p className="text-gray-500 text-xs mt-1">{analytics.paperMoneyEconomy.referralRewards?.completedCount || 0} completed</p>
                       </div>
                       <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-emerald-500/50">
                         <p className="text-gray-400 text-xs mb-1">Total Awarded</p>
-                        <p className="text-2xl font-bold text-emerald-400">+${Number(analytics.paperMoneyEconomy.totalAwarded || 0).toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-emerald-400">+${Math.round(
+                          (Number(analytics.paperMoneyEconomy.claims?.totalAmount || 0) / 100) +
+                          Number(analytics.paperMoneyEconomy.missionRewards?.totalAmount || 0) +
+                          Number(analytics.paperMoneyEconomy.referralRewards?.totalAmount || 0)
+                        ).toLocaleString()}</p>
                         <p className="text-gray-500 text-xs mt-1">Non-PnL</p>
                       </div>
                     </div>
@@ -823,7 +892,7 @@ export default function AdminPage() {
                       </div>
                       <div className="text-center">
                         <p className="text-gray-400 text-sm">Collateral at Risk</p>
-                        <p className="text-3xl font-bold text-red-400">${Number(analytics.currentState.collateral_at_risk || 0).toLocaleString()}</p>
+                        <p className="text-3xl font-bold text-red-400">${Math.round(Number(analytics.currentState.collateral_at_risk || 0) / 100).toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
@@ -861,21 +930,21 @@ export default function AdminPage() {
                           case 'trade':
                             if (activity.action === 'open') {
                               icon = activity.position_type === 'long' ? '📈' : '📉';
-                              text = `opened ${activity.position_type?.toUpperCase()} ${activity.leverage}x ($${activity.amount?.toLocaleString()})`;
+                              text = `opened ${activity.position_type?.toUpperCase()} ${activity.leverage}x ($${Math.round((activity.amount ?? 0) / 100).toLocaleString()})`;
                               colorClass = 'text-blue-400';
                             } else if (activity.action === 'stopped') {
                               icon = '🛡️';
                               const pnlSign = (activity.pnl ?? 0) >= 0 ? '+' : '';
-                              text = `STOP LOSS ${pnlSign}$${Math.abs(activity.pnl ?? 0).toLocaleString()}`;
+                              text = `STOP LOSS ${pnlSign}$${Math.round(Math.abs(activity.pnl ?? 0) / 100).toLocaleString()}`;
                               colorClass = 'text-yellow-400';
                             } else if (activity.action === 'closed') {
                               icon = (activity.pnl ?? 0) >= 0 ? '💰' : '📉';
                               const pnlSign = (activity.pnl ?? 0) >= 0 ? '+' : '';
-                              text = `closed trade ${pnlSign}$${Math.abs(activity.pnl ?? 0).toLocaleString()}`;
+                              text = `closed trade ${pnlSign}$${Math.round(Math.abs(activity.pnl ?? 0) / 100).toLocaleString()}`;
                               colorClass = (activity.pnl ?? 0) >= 0 ? 'text-green-400' : 'text-red-400';
                             } else if (activity.action === 'liquidated') {
                               icon = '💥';
-                              text = `LIQUIDATED -$${Math.abs(activity.pnl ?? activity.amount ?? 0).toLocaleString()}`;
+                              text = `LIQUIDATED -$${Math.round(Math.abs(activity.pnl ?? activity.amount ?? 0) / 100).toLocaleString()}`;
                               colorClass = 'text-orange-400';
                             } else if (activity.action === 'voided') {
                               icon = '🚫';
@@ -890,13 +959,13 @@ export default function AdminPage() {
                             break;
                           case 'claim':
                             icon = '💵';
-                            text = `claimed $${activity.amount?.toLocaleString()} paper money`;
+                            text = `claimed $${Math.round((activity.amount ?? 0) / 100).toLocaleString()} paper money`;
                             colorClass = 'text-cyan-400';
                             break;
                           case 'mission':
                             icon = activity.mission_icon || '🎯';
                             if (activity.action === 'mission_claimed') {
-                              text = `claimed "${activity.mission_title}" +$${activity.amount?.toLocaleString()}`;
+                              text = `claimed "${activity.mission_title}" +$${Math.round((activity.amount ?? 0) / 100).toLocaleString()}`;
                               colorClass = 'text-yellow-400';
                             } else {
                               text = `completed "${activity.mission_title}"`;
@@ -947,7 +1016,7 @@ export default function AdminPage() {
                               <td className="py-2 text-right text-red-400">{day.liquidated}</td>
                               <td className="py-2 text-right text-purple-400">{day.unique_traders}</td>
                               <td className="py-2 text-right text-orange-400">{day.avg_leverage}x</td>
-                              <td className="py-2 text-right text-cyan-400">${Number(day.total_volume).toLocaleString()}</td>
+                              <td className="py-2 text-right text-cyan-400">${Math.round(Number(day.total_volume) / 100).toLocaleString()}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -979,8 +1048,8 @@ export default function AdminPage() {
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div><span className="text-gray-400">Users:</span> <span className="text-white font-bold">{army.users}</span></div>
                           <div><span className="text-gray-400">Avg Trades:</span> <span className="text-white font-bold">{army.avg_trades}</span></div>
-                          <div><span className="text-gray-400">Avg P&L:</span> <span className={`font-bold ${Number(army.avg_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>${army.avg_pnl}</span></div>
-                          <div><span className="text-gray-400">Total P&L:</span> <span className={`font-bold ${Number(army.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>${Number(army.total_pnl).toLocaleString()}</span></div>
+                          <div><span className="text-gray-400">Avg P&L:</span> <span className={`font-bold ${Number(army.avg_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>${Math.round(Number(army.avg_pnl) / 100).toLocaleString()}</span></div>
+                          <div><span className="text-gray-400">Total P&L:</span> <span className={`font-bold ${Number(army.total_pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>${Math.round(Number(army.total_pnl) / 100).toLocaleString()}</span></div>
                         </div>
                       </div>
                     ))}
@@ -1009,8 +1078,8 @@ export default function AdminPage() {
                           <div><span className="text-gray-400">Liquidations:</span> <span className="text-red-400 font-bold">{pt.liquidations}</span></div>
                           <div><span className="text-gray-400">Wins:</span> <span className="text-green-400 font-bold">{pt.wins}</span></div>
                           <div><span className="text-gray-400">Losses:</span> <span className="text-red-400 font-bold">{pt.losses}</span></div>
-                          <div><span className="text-gray-400">Profit:</span> <span className="text-green-400 font-bold">${Number(pt.profit).toLocaleString()}</span></div>
-                          <div><span className="text-gray-400">Loss:</span> <span className="text-red-400 font-bold">${Number(pt.loss).toLocaleString()}</span></div>
+                          <div><span className="text-gray-400">Profit:</span> <span className="text-green-400 font-bold">${Math.round(Number(pt.profit) / 100).toLocaleString()}</span></div>
+                          <div><span className="text-gray-400">Loss:</span> <span className="text-red-400 font-bold">${Math.round(Number(pt.loss) / 100).toLocaleString()}</span></div>
                         </div>
                       </div>
                     ))}
@@ -1049,7 +1118,7 @@ export default function AdminPage() {
                               </td>
                               <td className="py-2 text-right text-purple-400">{trader.win_rate}%</td>
                               <td className="py-2 text-right text-red-400">{trader.liquidations}</td>
-                              <td className="py-2 text-right text-cyan-400">${Number(trader.balance).toLocaleString()}</td>
+                              <td className="py-2 text-right text-cyan-400">${Math.round(Number(trader.balance) / 100).toLocaleString()}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1189,7 +1258,7 @@ export default function AdminPage() {
                             <div className="text-right">
                               <span className="text-cyan-400 font-bold">{day.claims} claims</span>
                               <span className="text-gray-500 mx-2">|</span>
-                              <span className="text-green-400">${Number(day.total_claimed).toLocaleString()}</span>
+                              <span className="text-green-400">${Math.round(Number(day.total_claimed) / 100).toLocaleString()}</span>
                             </div>
                           </div>
                         ))}
@@ -1266,10 +1335,10 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right text-white font-bold">
-                            ${Math.round(user.paper_balance).toLocaleString()}
+                            ${Math.round(user.paper_balance / 100).toLocaleString()}
                           </td>
                           <td className={`px-4 py-3 text-right font-bold ${user.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {user.total_pnl >= 0 ? '+' : ''}${Math.round(user.total_pnl).toLocaleString()}
+                            {user.total_pnl >= 0 ? '+' : ''}${Math.round(user.total_pnl / 100).toLocaleString()}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-400">
                             {user.total_trades} ({user.winning_trades}W)
@@ -1279,7 +1348,7 @@ export default function AdminPage() {
                               <button
                                 onClick={() => {
                                   setSelectedUser(user);
-                                  setEditBalance(user.paper_balance.toString());
+                                  setEditBalance(Math.round(user.paper_balance / 100).toString());
                                 }}
                                 className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-sm font-bold"
                               >
@@ -1538,6 +1607,11 @@ export default function AdminPage() {
         {/* Audit Tab */}
         {activeTab === 'audit' && (
           <div className="space-y-6">
+            {/* Info Banner */}
+            <div className="bg-blue-900/30 border border-blue-500 rounded-lg p-3">
+              <p className="text-blue-400 text-sm font-medium">All values displayed in CENTS (100 cents = $1)</p>
+            </div>
+
             {/* Maintenance Mode Control */}
             <div className={`rounded-lg p-4 border-2 ${maintenanceMode?.enabled ? 'bg-red-900/30 border-red-500' : 'bg-slate-800 border-slate-600'}`}>
               <div className="flex justify-between items-center">
@@ -1602,9 +1676,129 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* User Lookup */}
+            <div className="bg-slate-800 border-2 border-purple-500 rounded-lg p-4">
+              <h3 className="text-lg font-bold text-purple-400 mb-3">User Lookup</h3>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={userLookupSearch}
+                  onChange={(e) => setUserLookupSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && fetchUserAudit(userLookupSearch)}
+                  placeholder="Username, ID, or wallet..."
+                  className="flex-1 bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-purple-500 focus:outline-none"
+                />
+                <button
+                  onClick={() => fetchUserAudit(userLookupSearch)}
+                  disabled={userLookupLoading}
+                  className="bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white px-6 py-2 rounded-lg font-bold text-sm transition-all"
+                >
+                  {userLookupLoading ? '...' : 'Lookup'}
+                </button>
+              </div>
+
+              {userLookupError && (
+                <p className="text-red-400 text-sm mt-2">{userLookupError}</p>
+              )}
+
+              {userLookupResult && (
+                <div className="mt-4 bg-slate-700/50 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="text-xl font-bold text-white">{userLookupResult.user.username}</h4>
+                      <p className="text-gray-400 text-sm">ID: {userLookupResult.user.id}</p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-lg font-bold ${
+                      userLookupResult.user.isCorrect
+                        ? 'bg-green-600 text-white'
+                        : 'bg-red-600 text-white'
+                    }`}>
+                      {userLookupResult.user.isCorrect ? '✓ CORRECT' : '⚠ DISCREPANCY'}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="bg-slate-800 rounded-lg p-3">
+                      <p className="text-gray-400 text-xs">Current Balance</p>
+                      <p className="text-2xl font-bold text-white">{formatCents(userLookupResult.user.currentBalanceCents)}</p>
+                      <p className="text-gray-500 text-xs">cents</p>
+                    </div>
+                    <div className="bg-slate-800 rounded-lg p-3">
+                      <p className="text-gray-400 text-xs">Expected Balance</p>
+                      <p className="text-2xl font-bold text-cyan-400">{formatCents(userLookupResult.user.expectedCents)}</p>
+                      <p className="text-gray-500 text-xs">cents</p>
+                    </div>
+                  </div>
+
+                  {!userLookupResult.user.isCorrect && (
+                    <div className={`rounded-lg p-3 mb-4 ${
+                      userLookupResult.user.discrepancyCents > 0 ? 'bg-red-900/30' : 'bg-green-900/30'
+                    }`}>
+                      <p className="text-gray-400 text-xs">Discrepancy</p>
+                      <p className={`text-xl font-bold ${
+                        userLookupResult.user.discrepancyCents > 0 ? 'text-red-400' : 'text-green-400'
+                      }`}>
+                        {userLookupResult.user.discrepancyCents > 0 ? '+' : ''}{formatCents(userLookupResult.user.discrepancyCents)} cents
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="border-t border-slate-600 pt-4">
+                    <h5 className="text-sm font-bold text-yellow-400 mb-3">Balance Breakdown (all cents)</h5>
+                    <div className="font-mono text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Starting:</span>
+                        <span className="text-white">{formatCents(userLookupResult.breakdown.startingCents)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">+ Claims:</span>
+                        <span className="text-cyan-400">{formatCents(userLookupResult.breakdown.claimsCents)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">+ Missions:</span>
+                        <span className="text-yellow-400">{formatCents(userLookupResult.breakdown.missionsCents)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">+ Ref Given:</span>
+                        <span className="text-purple-400">{formatCents(userLookupResult.breakdown.refGivenCents)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">+ Ref Received:</span>
+                        <span className="text-purple-400">{formatCents(userLookupResult.breakdown.refReceivedCents)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">+ P&L (corrected):</span>
+                        <span className={userLookupResult.breakdown.pnlCorrectedCents >= 0 ? 'text-green-400' : 'text-red-400'}>
+                          {formatCents(userLookupResult.breakdown.pnlCorrectedCents)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-500">  (raw P&L):</span>
+                        <span className="text-gray-500">{formatCents(userLookupResult.breakdown.pnlRawCents)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">- Collateral:</span>
+                        <span className="text-orange-400">{formatCents(userLookupResult.breakdown.collateralCents)}</span>
+                      </div>
+                      {userLookupResult.breakdown.openTradesCount > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-500">  ({userLookupResult.breakdown.openTradesCount} open trades)</span>
+                          <span></span>
+                        </div>
+                      )}
+                      <div className="border-t border-slate-600 pt-2 mt-2 flex justify-between font-bold">
+                        <span className="text-white">= Expected:</span>
+                        <span className="text-white">{formatCents(userLookupResult.user.expectedCents)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Header with actions */}
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold text-yellow-400">Balance Audit</h2>
+              <h2 className="text-xl font-bold text-yellow-400">Full Audit</h2>
               <div className="flex gap-3">
                 <button
                   onClick={() => fetchAudit(false)}
@@ -1615,14 +1809,14 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={() => {
-                    if (confirm('This will automatically fix balances for users WITHOUT open positions. Continue?')) {
+                    if (confirm('This will automatically fix ALL users with discrepancies. Continue?')) {
                       fetchAudit(true);
                     }
                   }}
                   disabled={auditFixing || auditLoading}
                   className="bg-green-600 hover:bg-green-500 disabled:bg-green-800 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
                 >
-                  {auditFixing ? 'Fixing...' : 'Auto-Fix Balances'}
+                  {auditFixing ? 'Fixing...' : 'Auto-Fix All'}
                 </button>
               </div>
             </div>
@@ -1639,13 +1833,13 @@ export default function AdminPage() {
                     <p className="text-3xl font-bold text-white">{auditResult.summary.usersWithDiscrepancy}</p>
                     <p className="text-gray-400 text-sm">Discrepancies</p>
                   </div>
-                  <div className="bg-slate-800 border border-yellow-600 rounded-lg p-4 text-center">
-                    <p className="text-3xl font-bold text-yellow-400">{auditResult.summary.usersNeedingManualReview}</p>
-                    <p className="text-gray-400 text-sm">Need Manual Review</p>
-                  </div>
                   <div className="bg-slate-800 border border-blue-600 rounded-lg p-4 text-center">
-                    <p className="text-3xl font-bold text-blue-400">{auditResult.summary.usersFixable}</p>
-                    <p className="text-gray-400 text-sm">Auto-Fixable</p>
+                    <p className="text-3xl font-bold text-blue-400">{auditResult.summary.totalUsers}</p>
+                    <p className="text-gray-400 text-sm">Total Users</p>
+                  </div>
+                  <div className="bg-slate-800 border border-yellow-600 rounded-lg p-4 text-center">
+                    <p className="text-3xl font-bold text-yellow-400">{auditResult.summary.usersFixable}</p>
+                    <p className="text-gray-400 text-sm">Fixable</p>
                   </div>
                   <div className="bg-slate-800 border border-green-600 rounded-lg p-4 text-center">
                     <p className="text-3xl font-bold text-green-400">{auditResult.summary.usersFixed}</p>
@@ -1665,8 +1859,8 @@ export default function AdminPage() {
                       <div>
                         <p className="text-lg font-bold text-red-400">Discrepancies Found</p>
                         <p className="text-gray-400 text-sm">
-                          Total Excess: ${auditResult.summary.totalExcess.toLocaleString()} |
-                          Total Deficit: ${auditResult.summary.totalDeficit.toLocaleString()}
+                          Total Excess: <span className="text-red-400">+{formatCents(auditResult.summary.totalExcess)}</span> |
+                          Total Deficit: <span className="text-green-400">-{formatCents(auditResult.summary.totalDeficit)}</span> cents
                         </p>
                       </div>
                       <p className="text-gray-500 text-xs">{new Date(auditResult.auditTimestamp).toLocaleString()}</p>
@@ -1681,13 +1875,18 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       {auditResult.fixedUsers.map((user) => (
                         <div key={user.id} className="flex items-center justify-between bg-slate-700/50 rounded-lg p-3">
-                          <span className="text-white font-medium">{user.username}</span>
-                          <div className="text-right">
-                            <span className="text-gray-400">${user.previousBalance.toLocaleString()}</span>
+                          <div>
+                            <span className="text-white font-medium">{user.username}</span>
+                            {user.hadOpenPositions && (
+                              <span className="ml-2 text-yellow-400 text-xs">(had open positions)</span>
+                            )}
+                          </div>
+                          <div className="text-right font-mono text-sm">
+                            <span className="text-gray-400">{formatCents(user.previousBalance)}</span>
                             <span className="text-gray-500 mx-2">→</span>
-                            <span className="text-green-400">${user.newBalance.toLocaleString()}</span>
-                            <span className={`ml-2 text-sm ${user.adjustment >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              ({user.adjustment >= 0 ? '+' : ''}{user.adjustment.toLocaleString()})
+                            <span className="text-green-400">{formatCents(user.newBalance)}</span>
+                            <span className={`ml-2 ${user.adjustment >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              ({user.adjustment >= 0 ? '+' : ''}{formatCents(user.adjustment)})
                             </span>
                           </div>
                         </div>
@@ -1700,53 +1899,56 @@ export default function AdminPage() {
                 {auditResult.discrepancies.length > 0 && (
                   <div className="bg-slate-800 border-2 border-slate-700 rounded-lg overflow-hidden">
                     <div className="p-4 border-b border-slate-700">
-                      <h3 className="text-lg font-bold text-yellow-400">Discrepancy Details</h3>
+                      <h3 className="text-lg font-bold text-yellow-400">Discrepancy Details (all values in cents)</h3>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-slate-700">
                           <tr>
                             <th className="px-4 py-3 text-left text-gray-400">User</th>
-                            <th className="px-4 py-3 text-right text-gray-400">Current</th>
-                            <th className="px-4 py-3 text-right text-gray-400">Open Pos</th>
-                            <th className="px-4 py-3 text-right text-gray-400">Total Assets</th>
-                            <th className="px-4 py-3 text-right text-gray-400">Max Expected</th>
+                            <th className="px-4 py-3 text-right text-gray-400">Balance</th>
+                            <th className="px-4 py-3 text-right text-gray-400">Expected</th>
                             <th className="px-4 py-3 text-right text-gray-400">Discrepancy</th>
+                            <th className="px-4 py-3 text-right text-gray-400">Collateral</th>
                             <th className="px-4 py-3 text-center text-gray-400">Status</th>
                           </tr>
                         </thead>
                         <tbody>
                           {auditResult.discrepancies.map((user) => (
-                            <tr key={user.id} className="border-b border-slate-700 hover:bg-slate-700/50">
+                            <tr
+                              key={user.id}
+                              className="border-b border-slate-700 hover:bg-slate-700/50 cursor-pointer"
+                              onClick={() => {
+                                setUserLookupSearch(user.username);
+                                fetchUserAudit(user.username);
+                              }}
+                            >
                               <td className="px-4 py-3">
                                 <p className="text-white font-bold">{user.username}</p>
                                 <p className="text-gray-500 text-xs">ID: {user.id}</p>
                               </td>
-                              <td className="px-4 py-3 text-right text-white">
-                                ${user.currentBalance.toLocaleString()}
+                              <td className="px-4 py-3 text-right font-mono text-white">
+                                {formatCents(user.currentBalance)}
                               </td>
-                              <td className="px-4 py-3 text-right text-yellow-400">
-                                ${user.openCollateral.toLocaleString()}
+                              <td className="px-4 py-3 text-right font-mono text-cyan-400">
+                                {formatCents(user.expectedBalance)}
                               </td>
-                              <td className="px-4 py-3 text-right text-cyan-400">
-                                ${user.totalAssets.toLocaleString()}
-                              </td>
-                              <td className="px-4 py-3 text-right text-gray-400">
-                                ${user.maxAssets.toLocaleString()}
-                              </td>
-                              <td className={`px-4 py-3 text-right font-bold ${
+                              <td className={`px-4 py-3 text-right font-mono font-bold ${
                                 user.discrepancy > 0 ? 'text-red-400' : 'text-green-400'
                               }`}>
-                                {user.discrepancy > 0 ? '+' : ''}{user.discrepancy.toLocaleString()}
+                                {user.discrepancy > 0 ? '+' : ''}{formatCents(user.discrepancy)}
+                              </td>
+                              <td className="px-4 py-3 text-right font-mono text-orange-400">
+                                {formatCents(user.openCollateral)}
                               </td>
                               <td className="px-4 py-3 text-center">
                                 {user.hasOpenPositions ? (
                                   <span className="bg-yellow-600 text-white text-xs px-2 py-1 rounded">
-                                    Has Open Positions
+                                    Open Pos
                                   </span>
                                 ) : (
                                   <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                                    Auto-Fixable
+                                    Fixable
                                   </span>
                                 )}
                               </td>
@@ -1758,23 +1960,23 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Breakdown Info */}
-                {auditResult.discrepancies.length > 0 && (
-                  <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
-                    <h3 className="text-lg font-bold text-yellow-400 mb-3">Balance Calculation Formula</h3>
-                    <div className="bg-slate-700/50 rounded-lg p-4 font-mono text-sm text-gray-300">
-                      <p>Expected Balance = Starting ($10,000)</p>
-                      <p className="ml-8">+ Claims (daily claims)</p>
-                      <p className="ml-8">+ Missions (claimed rewards)</p>
-                      <p className="ml-8">+ Referrals (completed bonuses)</p>
-                      <p className="ml-8">+ Net P&L (includes fees)</p>
-                      <p className="ml-8">- Open Position Collateral</p>
-                    </div>
-                    <p className="text-gray-500 text-xs mt-3">
-                      Users with open positions cannot be auto-fixed. They must close positions first.
-                    </p>
+                {/* Formula Reference */}
+                <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">
+                  <h3 className="text-lg font-bold text-yellow-400 mb-3">Balance Formula (CENTS)</h3>
+                  <div className="bg-slate-700/50 rounded-lg p-4 font-mono text-sm text-gray-300">
+                    <p>Expected = 1,000,000 (starting)</p>
+                    <p className="ml-8">+ SUM(claims.amount)</p>
+                    <p className="ml-8">+ SUM(user_missions.reward_paid) WHERE claimed</p>
+                    <p className="ml-8">+ SUM(referrals.referrer_reward) WHERE claimed</p>
+                    <p className="ml-8">+ SUM(referrals.referred_reward) WHERE claimed</p>
+                    <p className="ml-8">+ SUM(corrected_pnl) WHERE closed</p>
+                    <p className="ml-8">- SUM(position_size) WHERE open</p>
+                    <p className="mt-2 text-yellow-400">corrected_pnl = pnl / leverage for leverage &gt; 1</p>
                   </div>
-                )}
+                  <div className="mt-3 text-xs text-gray-500">
+                    <p><strong>Reference values (cents):</strong> Starting: 1,000,000 | Daily Claim: 100,000 | Referral: 250,000 each</p>
+                  </div>
+                </div>
               </>
             ) : (
               <div className="text-center py-12 text-gray-400">
@@ -1802,8 +2004,8 @@ export default function AdminPage() {
                 </div>
 
                 <div className="bg-slate-700/50 rounded-lg p-3 text-sm text-gray-400">
-                  <p>Current Balance: ${Math.round(selectedUser.paper_balance).toLocaleString()}</p>
-                  <p>Total P&L: ${Math.round(selectedUser.total_pnl).toLocaleString()}</p>
+                  <p>Current Balance: ${Math.round(selectedUser.paper_balance / 100).toLocaleString()}</p>
+                  <p>Total P&L: ${Math.round(selectedUser.total_pnl / 100).toLocaleString()}</p>
                   <p>Trades: {selectedUser.total_trades} ({selectedUser.winning_trades} wins)</p>
                 </div>
               </div>
