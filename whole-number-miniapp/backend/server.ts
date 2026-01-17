@@ -579,6 +579,21 @@ app.get('/api/referrals/:walletAddress', async (req: Request, res: Response) => 
 
     const user = userResult.rows[0];
 
+    // Count total referrals created by this user (all statuses: pending, claimable, completed)
+    const totalReferralsResult = await pool.query(
+      `SELECT COUNT(*) as count FROM referrals WHERE referrer_id = $1`,
+      [user.id]
+    );
+    const totalReferralCount = parseInt(totalReferralsResult.rows[0].count) || 0;
+
+    // Count confirmed referrals (where BOTH users have claimed - permanently linked)
+    const confirmedCountResult = await pool.query(
+      `SELECT COUNT(*) as count FROM referrals
+       WHERE referrer_id = $1 AND (status = 'completed' OR (referrer_claimed = true AND referred_claimed = true))`,
+      [user.id]
+    );
+    const confirmedReferralCount = parseInt(confirmedCountResult.rows[0].count) || 0;
+
     // Get list of referred users (as referrer) with full claim status
     const referralsResult = await pool.query(
       `SELECT r.id as referral_id, u.username, u.pfp_url, r.status, r.created_at, r.completed_at,
@@ -686,7 +701,8 @@ app.get('/api/referrals/:walletAddress', async (req: Request, res: Response) => 
     res.json({
       success: true,
       referralCode: user.referral_code,
-      referralCount: user.referral_count || 0,
+      referralCount: totalReferralCount, // Total people referred (all statuses)
+      confirmedReferralCount, // Referrals where BOTH users have confirmed (permanently linked)
       referralEarnings: Number(user.referral_earnings || 0) / 100, // Convert cents to dollars
       // Users I referred with detailed status
       referrals: referralsResult.rows.map(r => ({
@@ -1533,8 +1549,9 @@ app.post('/api/trades/open', tradingLimiter, checkMaintenance, async (req: Reque
       console.log(`✅ New user created with $10,000 balance`);
     }
 
-    // Calculate collateral (position_size / leverage)
-    const collateral = size / leverage;
+    // The 'size' parameter IS the collateral (what user risks)
+    // Frontend sends collateral directly, NOT leveraged position size
+    const collateral = size;
 
     // Check balance INSIDE transaction with row locked
     if (user.rows[0].paper_balance < collateral) {
@@ -1569,19 +1586,22 @@ app.post('/api/trades/open', tradingLimiter, checkMaintenance, async (req: Reque
       }
     }
 
-    // Create trade
+    // Create trade - CRITICAL: Store collateral (not size) as position_size
+    // position_size in DB = collateral = what user actually put at risk
+    // leveragedPositionSize = position_size × leverage (calculated when closing)
     const trade = await pool.query(
       `INSERT INTO trades (user_id, position_type, leverage, entry_price, position_size, liquidation_price, stop_loss, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'open')
        RETURNING *`,
-      [user.rows[0].id, type, leverage, entryPrice, size, liquidationPrice, stopLoss || null]
+      [user.rows[0].id, type, leverage, entryPrice, collateral, liquidationPrice, stopLoss || null]
     );
 
+    const leveragedPositionSize = collateral * leverage;
     console.log(`
 🚀 Trade Opened:
 - Position: ${type.toUpperCase()} ${leverage}x
-- Position Size: $${size}
 - Collateral: $${collateral.toFixed(2)}
+- Leveraged Position Size: $${leveragedPositionSize.toFixed(2)}
 - Entry: $${entryPrice}
 - Fee (deducted from P&L when closing): $${tradingFee.toFixed(2)} (${feePercentage.toFixed(2)}%)
 - Balance Deducted: $${collateral.toFixed(2)}
@@ -1781,10 +1801,10 @@ app.post('/api/trades/close', tradingLimiter, checkMaintenance, async (req: Requ
 
     res.json({
       success: true,
-      pnl,
+      pnl: finalPnl, // Return the FINAL P&L (after fee and capping) - this is what the user actually received
       tradingFee,
       feePercentage,
-      pnlPercentage: (pnl / collateral) * 100,
+      pnlPercentage: (finalPnl / collateral) * 100,
       leveragedPositionSize,
       status,
       finalAmount: Math.max(0, finalAmount),
@@ -1810,7 +1830,7 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
   }
 
   try {
-    // Get all open trades
+    // Get all open trades - use a separate connection for each trade to avoid deadlocks
     const openTrades = await pool.query(
       'SELECT * FROM trades WHERE status = $1',
       ['open']
@@ -1856,6 +1876,18 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
         await pool.query('BEGIN');
 
         try {
+          // Try to acquire lock on this specific trade, skip if already locked (prevents deadlock with manual close)
+          const lockResult = await pool.query(
+            'SELECT id FROM trades WHERE id = $1 AND status = $2 FOR UPDATE SKIP LOCKED',
+            [trade.id, 'open']
+          );
+
+          // If trade is already locked by another transaction, skip it
+          if (lockResult.rows.length === 0) {
+            await pool.query('ROLLBACK');
+            continue;
+          }
+
           // Calculate P&L at stop loss price
           // P&L = priceChangePercentage × collateral × leverage
           const priceChange = trade.position_type === 'long'
@@ -1867,7 +1899,14 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
           // Deduct trading fee
           const feePercentage = leverage > 1 ? leverage * 0.05 : 0;
           const tradingFee = (feePercentage / 100) * collateral;
-          const finalPnl = pnl - tradingFee;
+
+          // CRITICAL: Cap PnL at -100% of collateral (player can never lose more than they put in)
+          const maxLoss = -collateral;
+          const cappedPnl = Math.max(pnl, maxLoss);
+          const pnlAfterFee = cappedPnl - tradingFee;
+
+          // Final PnL can never be worse than losing entire collateral
+          const finalPnl = Math.max(pnlAfterFee, -collateral);
 
           // Close trade at stop loss (not liquidated)
           await pool.query(
@@ -1889,10 +1928,16 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
             );
           }
 
-          // Update user's army
-          await updateUserArmy(trade.user_id);
-
+          // Commit the transaction FIRST before any non-critical operations
           await pool.query('COMMIT');
+          console.log(`🛑 STOP LOSS TRIGGERED: Trade #${trade.id} - ${trade.position_type.toUpperCase()} ${leverage}x - P&L: $${finalPnl.toFixed(2)} - Returned: $${finalAmount.toFixed(2)}`);
+
+          // Update user's army (non-critical, outside transaction)
+          try {
+            await updateUserArmy(trade.user_id);
+          } catch (armyError) {
+            console.error(`Error updating army for user ${trade.user_id}:`, armyError);
+          }
 
           stoppedTrades.push({
             tradeId: trade.id,
@@ -1905,8 +1950,6 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
             pnl: finalPnl,
             returnedAmount: finalAmount
           });
-
-          console.log(`🛑 STOP LOSS TRIGGERED: Trade #${trade.id} - ${trade.position_type.toUpperCase()} ${leverage}x - P&L: $${finalPnl.toFixed(2)} - Returned: $${finalAmount.toFixed(2)}`);
         } catch (error) {
           await pool.query('ROLLBACK');
           console.error(`Error triggering stop loss for trade #${trade.id}:`, error);
@@ -1918,6 +1961,18 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
         await pool.query('BEGIN');
 
         try {
+          // Try to acquire lock on this specific trade, skip if already locked (prevents deadlock with manual close)
+          const lockResult = await pool.query(
+            'SELECT id FROM trades WHERE id = $1 AND status = $2 FOR UPDATE SKIP LOCKED',
+            [trade.id, 'open']
+          );
+
+          // If trade is already locked by another transaction, skip it
+          if (lockResult.rows.length === 0) {
+            await pool.query('ROLLBACK');
+            continue;
+          }
+
           // Calculate final P&L at liquidation
           // P&L = priceChangePercentage × collateral × leverage
           const priceChange = trade.position_type === 'long'
@@ -1950,22 +2005,26 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
             [trade.user_id]
           );
 
-          // Update user's army
-          await updateUserArmy(trade.user_id);
-
+          // Commit the transaction FIRST before any non-critical operations
           await pool.query('COMMIT');
+          console.log(`💥 AUTO-LIQUIDATED: Trade #${trade.id} - ${trade.position_type.toUpperCase()} ${leverage}x - Loss: $${collateral.toFixed(2)}`);
+
+          // Update user's army (non-critical, outside transaction)
+          try {
+            await updateUserArmy(trade.user_id);
+          } catch (armyError) {
+            console.error(`Error updating army for user ${trade.user_id}:`, armyError);
+          }
 
           liquidatedTrades.push({
             tradeId: trade.id,
             userId: trade.user_id,
-            type: trade.position_type, 
+            type: trade.position_type,
             leverage: trade.leverage,
             entryPrice,
             liquidationPrice:currentPrice,
             loss: collateral
           });
-
-          console.log(`💥 AUTO-LIQUIDATED: Trade #${trade.id} - ${trade.position_type.toUpperCase()} ${leverage}x - Loss: $${collateral.toFixed(2)}`);
         } catch (error) {
           await pool.query('ROLLBACK');
           console.error(`Error liquidating trade #${trade.id}:`, error);
@@ -2385,7 +2444,7 @@ app.get('/api/leaderboard', async (req: Request, res: Response) => {
   try {
     // Calculate army dynamically based on closed positions only
     let query = `
-      SELECT 
+      SELECT
         u.id,
         u.fid,
         u.wallet_address,
@@ -2399,29 +2458,37 @@ app.get('/api/leaderboard', async (req: Request, res: Response) => {
         u.best_streak,
         u.times_liquidated,
         u.battle_tokens_earned,
-        CASE 
+        u.referral_count,
+        COALESCE(completed_refs.count, 0) as confirmed_referrals,
+        CASE
           WHEN u.total_trades > 0 THEN (u.winning_trades::DECIMAL / u.total_trades::DECIMAL * 100)
           ELSE 0
         END as win_rate,
         COALESCE(long_pnl.total, 0) as long_total,
         COALESCE(short_pnl.total, 0) as short_total,
-        CASE 
+        CASE
           WHEN COALESCE(long_pnl.total, 0) > COALESCE(short_pnl.total, 0) THEN 'bulls'
           ELSE 'bears'
         END as army
       FROM users u
       LEFT JOIN (
-        SELECT user_id, SUM(pnl) as total 
-        FROM trades 
+        SELECT user_id, SUM(pnl) as total
+        FROM trades
         WHERE position_type = 'long' AND status IN ('closed', 'liquidated')
         GROUP BY user_id
       ) long_pnl ON u.id = long_pnl.user_id
       LEFT JOIN (
-        SELECT user_id, SUM(pnl) as total 
-        FROM trades 
+        SELECT user_id, SUM(pnl) as total
+        FROM trades
         WHERE position_type = 'short' AND status IN ('closed', 'liquidated')
         GROUP BY user_id
       ) short_pnl ON u.id = short_pnl.user_id
+      LEFT JOIN (
+        SELECT referrer_id, COUNT(*) as count
+        FROM referrals
+        WHERE status = 'completed' OR (referrer_claimed = true AND referred_claimed = true)
+        GROUP BY referrer_id
+      ) completed_refs ON u.id = completed_refs.referrer_id
       WHERE u.total_trades > 0
     `;
     
@@ -4105,7 +4172,9 @@ app.get('/api/admin/audit', async (req: Request, res: Response) => {
     const autoFix = req.query.autoFix === 'true';
 
     // Calculate expected balance for all users
-    // Formula: Expected = $10,000 (starting) + Claims + Missions + Referrals + Net P&L - Open Collateral
+    // Formula: Expected = $10,000 (starting) + Claims + Missions + Referrals (claimed) + Corrected_PnL - Open Collateral
+    // IMPORTANT: Due to historical collateral bug (see COLLATERAL_BUG_POSTMORTEM.md), we use corrected P&L:
+    // Corrected_PnL = SUM(CASE WHEN leverage > 1 THEN pnl / leverage ELSE pnl END) from closed trades
     const auditResult = await pool.query(`
       WITH user_claims AS (
         SELECT user_id, COALESCE(SUM(amount), 0) / 100.0 as total_claims
@@ -4118,17 +4187,22 @@ app.get('/api/admin/audit', async (req: Request, res: Response) => {
         WHERE is_claimed = true GROUP BY user_id
       ),
       user_referrer_rewards AS (
-        -- Only count CLAIMED referrer rewards (referrer_claimed = true)
         SELECT referrer_id as user_id, COALESCE(SUM(referrer_reward), 0) / 100.0 as referrer_rewards
         FROM referrals WHERE referrer_claimed = true GROUP BY referrer_id
       ),
       user_referred_rewards AS (
-        -- Only count CLAIMED referred rewards (referred_claimed = true)
         SELECT referred_user_id as user_id, COALESCE(SUM(referred_reward), 0) / 100.0 as referred_rewards
         FROM referrals WHERE referred_claimed = true GROUP BY referred_user_id
       ),
+      corrected_pnl AS (
+        -- Corrected P&L: divide by leverage for leveraged trades due to historical bug
+        SELECT user_id,
+          COALESCE(SUM(CASE WHEN leverage > 1 THEN pnl / leverage ELSE pnl END), 0) as total_pnl
+        FROM trades WHERE status = 'closed' GROUP BY user_id
+      ),
       open_positions AS (
-        SELECT user_id, COALESCE(SUM(position_size / leverage), 0) as collateral_locked
+        -- Open collateral is stored as position_size (after bug fix)
+        SELECT user_id, COALESCE(SUM(position_size), 0) as collateral_locked
         FROM trades WHERE status = 'open' GROUP BY user_id
       )
       SELECT
@@ -4137,43 +4211,46 @@ app.get('/api/admin/audit', async (req: Request, res: Response) => {
         u.paper_balance as current_balance,
         COALESCE(op.collateral_locked, 0) as open_collateral,
         u.paper_balance + COALESCE(op.collateral_locked, 0) as total_assets,
-        u.total_pnl as total_pnl,
+        COALESCE(cp.total_pnl, 0) as corrected_pnl,
+        u.total_pnl as raw_pnl,
         COALESCE(c.total_claims, 0) as claims,
         COALESCE(m.total_mission_rewards, 0) as missions,
+        -- Calculate referrals from both referrer and referred rewards
         COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) as referrals,
-        -- Max assets = starting + claims + missions + referrals + total_pnl (from users table)
+        -- Max assets = starting + claims + missions + referrals + corrected_pnl
         ROUND((10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
                COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               u.total_pnl)::numeric, 2) as max_assets,
+               COALESCE(cp.total_pnl, 0))::numeric, 2) as max_assets,
         -- Expected available = max_assets - open_collateral (capped at 0)
         GREATEST(0, ROUND((10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
                COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               u.total_pnl - COALESCE(op.collateral_locked, 0))::numeric, 2)) as expected_balance,
+               COALESCE(cp.total_pnl, 0) - COALESCE(op.collateral_locked, 0))::numeric, 2)) as expected_balance,
         -- Discrepancy: paper_balance vs expected (positive = user has more than expected)
         ROUND((u.paper_balance - GREATEST(0, 10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
                COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               u.total_pnl - COALESCE(op.collateral_locked, 0)))::numeric, 2) as discrepancy,
+               COALESCE(cp.total_pnl, 0) - COALESCE(op.collateral_locked, 0)))::numeric, 2) as discrepancy,
         CASE WHEN COALESCE(op.collateral_locked, 0) > 0 THEN true ELSE false END as has_open_positions
       FROM users u
       LEFT JOIN user_claims c ON c.user_id = u.id
       LEFT JOIN user_missions m ON m.user_id = u.id
       LEFT JOIN user_referrer_rewards rr ON rr.user_id = u.id
       LEFT JOIN user_referred_rewards rd ON rd.user_id = u.id
+      LEFT JOIN corrected_pnl cp ON cp.user_id = u.id
       LEFT JOIN open_positions op ON op.user_id = u.id
       ORDER BY ABS(u.paper_balance - GREATEST(0, 10000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
                COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               u.total_pnl - COALESCE(op.collateral_locked, 0))) DESC
+               COALESCE(cp.total_pnl, 0) - COALESCE(op.collateral_locked, 0))) DESC
     `);
 
     const allUsers = auditResult.rows;
     const discrepancies = allUsers.filter((u: any) => Math.abs(u.discrepancy) > 1);
-    const fixable = discrepancies.filter((u: any) => !u.has_open_positions);
-    const needsManualReview = discrepancies.filter((u: any) => u.has_open_positions);
+    const fixable = discrepancies; // Fix ALL users with discrepancies, even with open positions
+    const needsManualReview: any[] = []; // No longer need manual review - we fix everyone
 
     let fixedUsers: any[] = [];
 
-    // Auto-fix users without open positions if requested
-    // Set paper_balance directly to expected value
+    // Auto-fix ALL users with discrepancies if requested
+    // Set paper_balance directly to expected value (DO NOT touch total_pnl - it's the truth snapshot!)
     if (autoFix && fixable.length > 0) {
       for (const user of fixable) {
         await pool.query(
@@ -4185,9 +4262,10 @@ app.get('/api/admin/audit', async (req: Request, res: Response) => {
           username: user.username,
           previousBalance: user.current_balance,
           newBalance: user.expected_balance,
-          adjustment: Number(user.expected_balance) - Number(user.current_balance)
+          adjustment: Number(user.expected_balance) - Number(user.current_balance),
+          hadOpenPositions: user.has_open_positions
         });
-        console.log(`🔧 Auto-fixed balance for ${user.username}: $${user.current_balance} -> $${user.expected_balance}`);
+        console.log(`🔧 Auto-fixed balance for ${user.username}: $${user.current_balance} -> $${user.expected_balance}${user.has_open_positions ? ' (has open positions)' : ''}`);
       }
     }
 
@@ -4218,7 +4296,8 @@ app.get('/api/admin/audit', async (req: Request, res: Response) => {
         claims: Number(u.claims),
         missions: Number(u.missions),
         referrals: Number(u.referrals),
-        pnl: Number(u.total_pnl)
+        pnl: Number(u.corrected_pnl),
+        rawPnl: Number(u.raw_pnl)
       })),
       fixedUsers,
       auditTimestamp: new Date().toISOString()
@@ -4678,8 +4757,78 @@ app.listen(PORT, () => {
   `);
 
   // ============================================
-  // CRON JOBS - Daily Notification Scheduler
+  // CRON JOBS
   // ============================================
+
+  // Helper function to fetch BTC price from multiple sources
+  async function fetchBTCPrice(): Promise<number | null> {
+    const sources = [
+      {
+        name: 'Coinbase',
+        url: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
+        parse: (data: any) => parseFloat(data.data.amount)
+      },
+      {
+        name: 'Blockchain.info',
+        url: 'https://blockchain.info/ticker',
+        parse: (data: any) => parseFloat(data.USD.last)
+      },
+      {
+        name: 'CoinGecko',
+        url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+        parse: (data: any) => parseFloat(data.bitcoin.usd)
+      }
+    ];
+
+    for (const source of sources) {
+      try {
+        const response = await fetch(source.url);
+        if (!response.ok) continue;
+        const data = await response.json();
+        const price = source.parse(data);
+        if (price && !isNaN(price) && price > 0) {
+          return price;
+        }
+      } catch (err) {
+        console.warn(`[Price] ${source.name} failed:`, err);
+      }
+    }
+    return null;
+  }
+
+  // Auto-liquidation cron job - runs every minute
+  // Checks all open positions for liquidation and stop loss triggers
+  cron.schedule('* * * * *', async () => {
+    try {
+      const price = await fetchBTCPrice();
+      if (!price) {
+        console.warn('⚠️ [Auto-Liquidation] Could not fetch BTC price, skipping check');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:${PORT}/api/trades/auto-liquidate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPrice: price })
+      });
+
+      const result = await response.json() as {
+        liquidatedCount?: number;
+        stoppedCount?: number;
+        message?: string;
+      };
+
+      // Only log if something happened
+      if ((result.liquidatedCount && result.liquidatedCount > 0) ||
+          (result.stoppedCount && result.stoppedCount > 0)) {
+        console.log(`⚡ [Auto-Liquidation] BTC: $${price.toLocaleString()} - ${result.message}`);
+      }
+    } catch (error) {
+      console.error('❌ [Auto-Liquidation] Error:', error);
+    }
+  });
+
+  console.log('⚡ Auto-liquidation cron started: checking every minute');
 
   // Send daily reminders at 12:00 PM UTC (8 AM EST / 5 AM PST)
   // This is a good time when traders check their positions
