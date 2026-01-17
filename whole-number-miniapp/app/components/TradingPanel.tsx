@@ -247,6 +247,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         const wasLiquidated = data.status === 'liquidated';
         setResultPnl(closedPnl);
         setResultIsLiquidated(wasLiquidated);
+        setResultIsStopLoss(false); // Manual close is never a stop loss
         setShowResultToast(true);
 
         fetchOpenTrades();

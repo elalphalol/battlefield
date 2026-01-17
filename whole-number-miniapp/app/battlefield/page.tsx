@@ -22,6 +22,8 @@ import { ArmySelection } from '../components/ArmySelection';
 import { NotificationManager } from '../components/NotificationManager';
 import { Missions } from '../components/Missions';
 import { Avatar } from '../components/Avatar';
+import { GenesisAirdrop } from '../components/GenesisAirdrop';
+import { Referrals } from '../components/Referrals';
 import { useBTCPrice } from '../hooks/useBTCPrice';
 import { useAchievementDetector } from '../hooks/useAchievementDetector';
 import { WholeNumberStrategy } from '../lib/strategy';
@@ -48,7 +50,7 @@ export default function BattlefieldHome() {
   const { address: wagmiAddress } = useAccount();
   const { price: btcPrice, isLoading } = useBTCPrice(5000);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'missions'>('trade');
+  const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'missions' | 'airdrop' | 'referrals'>('trade');
   const [battleSection, setBattleSection] = useState<'market' | 'status' | 'predictions' | 'strategy' | 'tips'>('market');
   const [strategy] = useState(() => new WholeNumberStrategy());
   const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
@@ -78,6 +80,10 @@ export default function BattlefieldHome() {
       }
     } else if (tab === 'missions') {
       setActiveTab('missions');
+    } else if (tab === 'airdrop') {
+      setActiveTab('airdrop');
+    } else if (tab === 'referrals') {
+      setActiveTab('referrals');
     }
   }, []);
 
@@ -425,7 +431,7 @@ export default function BattlefieldHome() {
               />
               <div className="min-w-0">
                 <h1 className="text-xl sm:text-2xl md:text-4xl font-bold text-yellow-400 truncate">
-                  BATTLEFIELD
+                  <strong>BATTLEFIELD</strong>
                 </h1>
               </div>
             </div>
@@ -1131,37 +1137,57 @@ export default function BattlefieldHome() {
           <div>
             <Missions walletAddress={address} />
           </div>
+        ) : activeTab === 'airdrop' ? (
+          <div>
+            <GenesisAirdrop />
+          </div>
+        ) : activeTab === 'referrals' ? (
+          <div>
+            <Referrals walletAddress={address} />
+          </div>
         ) : null}
       </div>
 
-      {/* Bottom Navigation Bar - Order: Leaders, Battle, Profile, Trade, Missions */}
+      {/* Bottom Navigation Bar - 7 buttons: Airdrop, Leaders, Battle, Profile (center), Trade, Missions, Referrals */}
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t-2 border-slate-700 z-50">
-        <div className="container mx-auto px-2">
-          <div className="flex justify-around items-center py-2">
+        <div className="container mx-auto px-1">
+          <div className="flex justify-between items-center py-1.5">
+            {/* Left side - 3 buttons */}
+            <button
+              onClick={() => setActiveTab('airdrop')}
+              className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] ${
+                activeTab === 'airdrop' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <span className="text-lg">🎖️</span>
+              <span className="text-[9px] font-bold">Airdrop</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('leaderboard')}
-              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${
+              className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] ${
                 activeTab === 'leaderboard' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-2xl">🏆</span>
-              <span className="text-xs font-bold">Leaders</span>
+              <span className="text-lg">🏆</span>
+              <span className="text-[9px] font-bold">Leaders</span>
             </button>
 
             <button
               onClick={() => setActiveTab('battle')}
-              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${
+              className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] ${
                 activeTab === 'battle' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-2xl">⚔️</span>
-              <span className="text-xs font-bold">Battle</span>
+              <span className="text-lg">⚔️</span>
+              <span className="text-[9px] font-bold">Battle</span>
             </button>
 
-            {address && userData && (
+            {/* Center - Profile (larger, raised) */}
+            {address && userData ? (
               <button
                 onClick={() => router.push(`/profile/${userData.fid || userData.wallet_address}`)}
-                className="flex flex-col items-center gap-1 px-2 py-1 hover:opacity-80 transition-all -mt-4"
+                className="flex flex-col items-center gap-0.5 px-1 hover:opacity-80 transition-all -mt-3"
               >
                 <Avatar
                   pfpUrl={userData.pfp_url}
@@ -1170,28 +1196,43 @@ export default function BattlefieldHome() {
                   winningTrades={userData.winning_trades}
                   size="lg"
                 />
-                <span className="text-[10px] font-bold text-yellow-400">Profile</span>
+                <span className="text-[9px] font-bold text-yellow-400">Profile</span>
               </button>
+            ) : (
+              <div className="w-14 h-14 -mt-3 rounded-full bg-slate-700 border-2 border-slate-600 flex items-center justify-center">
+                <span className="text-2xl">👤</span>
+              </div>
             )}
 
+            {/* Right side - 3 buttons */}
             <button
               onClick={() => setActiveTab('trade')}
-              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${
+              className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] ${
                 activeTab === 'trade' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-2xl">🎯</span>
-              <span className="text-xs font-bold">Trade</span>
+              <span className="text-lg">🎯</span>
+              <span className="text-[9px] font-bold">Trade</span>
             </button>
 
             <button
               onClick={() => setActiveTab('missions')}
-              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all ${
+              className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] ${
                 activeTab === 'missions' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-2xl">🏅</span>
-              <span className="text-xs font-bold">Missions</span>
+              <span className="text-lg">🏅</span>
+              <span className="text-[9px] font-bold">Missions</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('referrals')}
+              className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] ${
+                activeTab === 'referrals' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <span className="text-lg">🔗</span>
+              <span className="text-[9px] font-bold">Referrals</span>
             </button>
           </div>
         </div>

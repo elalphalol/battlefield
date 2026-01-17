@@ -2,6 +2,14 @@
 
 Run balance audits and manage user balance discrepancies.
 
+## Maintenance Status Check
+
+Always check maintenance status DIRECTLY from database (not API, which may be cached):
+
+```bash
+sudo -u postgres psql -d battlefield -t -c "SELECT CASE WHEN enabled THEN '🔴 Maintenance Mode ENABLED - Trading is BLOCKED' ELSE '✅ Trading is ACTIVE' END FROM maintenance_settings WHERE id = 1;"
+```
+
 ## Instructions
 
 The audit system verifies user balances against expected values using the formula:

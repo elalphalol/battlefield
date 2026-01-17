@@ -87,7 +87,7 @@ function UserProfilePageContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [priceLoaded, setPriceLoaded] = useState(false);
-  const [achievementTab, setAchievementTab] = useState<'missions' | 'achievements' | 'titles' | 'locked' | 'referrals'>('missions');
+  const [achievementTab, setAchievementTab] = useState<'missions' | 'achievements' | 'titles' | 'locked'>('missions');
   const [currentUserFid, setCurrentUserFid] = useState<number | null>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [referralData, setReferralData] = useState<{
@@ -136,28 +136,19 @@ function UserProfilePageContent() {
   const [cancellingReferral, setCancellingReferral] = useState(false);
   const [showClaimConfirmModal, setShowClaimConfirmModal] = useState<number | null>(null); // referralId or null
 
-  // Handle URL params for tab selection and referral code pre-fill
+  // Handle URL params for tab selection
   useEffect(() => {
     const tab = searchParams.get('tab');
-    const applyCode = searchParams.get('applyCode');
 
-    // Set tab if specified
+    // Set tab if specified - redirect referrals to battlefield page
     if (tab === 'referrals') {
-      setAchievementTab('referrals');
+      router.push('/battlefield?tab=referrals');
     } else if (tab === 'achievements') {
       setAchievementTab('achievements');
     } else if (tab === 'missions') {
       setAchievementTab('missions');
     }
-
-    // Pre-fill referral code if provided
-    if (applyCode) {
-      setReferralCodeInput(applyCode);
-      // Clear the URL param to prevent re-filling on refresh
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, '', newUrl);
-    }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   // Fetch BTC price
   useEffect(() => {
@@ -897,8 +888,8 @@ function UserProfilePageContent() {
           </div>
         </div>
 
-        {/* Profile Tab Navigation - 5 Tabs */}
-        <div className="grid grid-cols-5 gap-1">
+        {/* Profile Tab Navigation - 4 Tabs */}
+        <div className="grid grid-cols-4 gap-1">
           <button
             onClick={() => setAchievementTab('missions')}
             className={`py-3 px-1 rounded-lg font-bold text-xs transition-all ${
@@ -939,16 +930,6 @@ function UserProfilePageContent() {
           >
             Locked
           </button>
-          <button
-            onClick={() => setAchievementTab('referrals')}
-            className={`py-3 px-1 rounded-lg font-bold text-xs transition-all ${
-              achievementTab === 'referrals'
-                ? 'bg-yellow-500 text-slate-900'
-                : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-            }`}
-          >
-            Referrals
-          </button>
         </div>
 
         {/* Tab Content */}
@@ -965,288 +946,6 @@ function UserProfilePageContent() {
             <Missions walletAddress={profile.user.wallet_address} readOnly={!isOwnProfile} />
           </>
         ) : (
-          achievementTab === 'referrals' ? (
-            <div className="bg-slate-800 border-2 border-green-500 rounded-lg">
-              <div className="p-4 border-b border-slate-700">
-                <h2 className="text-xl font-bold text-yellow-400">🔗 Referrals</h2>
-              </div>
-              <div className="p-4 space-y-4">
-                {referralData ? (
-                  <>
-                    {/* Referral Code Display */}
-                    <div className="bg-slate-900/50 rounded-lg p-4">
-                      <p className="text-gray-400 text-sm mb-2">Your Referral Code</p>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-xl md:text-2xl font-mono font-bold text-white bg-slate-800 px-3 py-2 rounded">{referralData.referralCode}</span>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(referralData.referralCode);
-                            toast.success('Code copied!');
-                          }}
-                          className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
-                        >
-                          Copy Code
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Share Link - Opens in Farcaster app */}
-                    <div className="bg-slate-900/50 rounded-lg p-4">
-                      <p className="text-gray-400 text-sm mb-2">Share Link <span className="text-purple-400">(opens in Farcaster)</span></p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <input
-                          value={getReferralLink(referralData.referralCode)}
-                          readOnly
-                          className="flex-1 min-w-0 bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-mono"
-                        />
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(getReferralLink(referralData.referralCode));
-                            toast.success('Link copied!');
-                          }}
-                          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
-                        >
-                          Copy
-                        </button>
-                        <button
-                          onClick={async () => {
-                            try {
-                              const referralLink = getReferralLink(referralData.referralCode);
-                              await sdk.actions.composeCast({
-                                text: `Join me in BATTLEFIELD and we both get $5,000 paper money! 🎁\n\nUse my code: ${referralData.referralCode}`,
-                                embeds: [referralLink],
-                              });
-                            } catch {
-                              toast.error('Failed to open cast composer');
-                            }
-                          }}
-                          className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-1"
-                        >
-                          <FarcasterIcon className="w-4 h-4" /> Cast
-                        </button>
-                      </div>
-                      <p className="text-gray-500 text-xs mt-2">Friends who click this link will open BATTLEFIELD in Farcaster and automatically connect their account</p>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-900/50 rounded-lg p-4 text-center">
-                        <p className="text-3xl font-bold text-green-400">{referralData.referralCount}</p>
-                        <p className="text-gray-400 text-sm">Friends Referred</p>
-                      </div>
-                      <div className="bg-slate-900/50 rounded-lg p-4 text-center">
-                        <p className="text-3xl font-bold text-yellow-400">${referralData.referralEarnings.toLocaleString()}</p>
-                        <p className="text-gray-400 text-sm">Total Earned</p>
-                      </div>
-                    </div>
-
-                    {/* Claimable Referrals - Individual buttons per referral */}
-                    {isOwnProfile && referralData.claimableReferrals && referralData.claimableReferrals.length > 0 && (
-                      <div className="space-y-4">
-                        <div>
-                          <p className="text-yellow-400 font-bold text-lg">🎁 Referral Confirmations</p>
-                          <p className="text-gray-400 text-xs mt-1">Both you and your friend must confirm to receive $5,000 each!</p>
-                        </div>
-                        {referralData.claimableReferrals.map((ref) => (
-                          <div
-                            key={ref.referralId}
-                            className={`border-2 rounded-lg p-4 ${
-                              ref.iConfirmed && ref.theyConfirmed
-                                ? 'bg-green-900/30 border-green-500'
-                                : ref.iConfirmed
-                                ? 'bg-blue-900/30 border-blue-500'
-                                : ref.theyConfirmed
-                                ? 'bg-yellow-900/30 border-yellow-500 animate-pulse'
-                                : 'bg-slate-800/50 border-slate-600'
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <img
-                                src={ref.pfpUrl || '/battlefield-logo.jpg'}
-                                alt=""
-                                className="w-10 h-10 rounded-full border-2 border-slate-600 flex-shrink-0"
-                              />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <p className="text-white font-bold truncate">{ref.username}</p>
-                                    <p className="text-gray-400 text-xs">
-                                      {ref.type === 'asReferrer' ? 'You referred them' : 'They referred you'}
-                                    </p>
-                                  </div>
-                                  <div className="text-right flex-shrink-0">
-                                    <p className="text-yellow-400 font-bold">${ref.reward.toLocaleString()}</p>
-                                  </div>
-                                </div>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  <span className={`text-xs px-2 py-1 rounded ${ref.iConfirmed ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300'}`}>
-                                    You: {ref.iConfirmed ? '✓' : 'Pending'}
-                                  </span>
-                                  <span className={`text-xs px-2 py-1 rounded ${ref.theyConfirmed ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300'}`}>
-                                    {ref.username.split(' ')[0]}: {ref.theyConfirmed ? '✓' : 'Pending'}
-                                  </span>
-                                </div>
-                                <div className="mt-3">
-                                  {ref.iConfirmed ? (
-                                    <span className="text-xs text-blue-400">Waiting for {ref.username} to confirm</span>
-                                  ) : (
-                                    <button
-                                      onClick={() => setShowClaimConfirmModal(ref.referralId)}
-                                      disabled={claimingReferral === ref.referralId}
-                                      className={`w-full px-4 py-2 rounded-lg font-bold text-sm transition-all ${
-                                        ref.theyConfirmed
-                                          ? 'bg-yellow-500 hover:bg-yellow-400 text-black animate-pulse'
-                                          : 'bg-green-600 hover:bg-green-500 text-white'
-                                      }`}
-                                    >
-                                      {claimingReferral === ref.referralId ? 'Confirming...' : 'Confirm Referral'}
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Pending Referral - Awaiting First Trade */}
-                    {isOwnProfile && referralData.pendingReferral && (
-                      <div className="bg-slate-800/50 border-2 border-slate-600 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-gray-400 font-bold text-lg mb-1">⏳ Pending Reward</p>
-                            <p className="text-gray-300 text-sm">
-                              <span className="text-yellow-400 font-bold">${referralData.pendingReferral.amount.toLocaleString()}</span> bonus waiting!
-                            </p>
-                            <p className="text-gray-500 text-xs mt-1">
-                              Open your first trade to unlock (referred by {referralData.pendingReferral.referrerUsername})
-                            </p>
-                          </div>
-                          <button
-                            disabled={true}
-                            className="bg-gray-600 text-gray-400 font-bold px-6 py-3 rounded-lg cursor-not-allowed"
-                          >
-                            Trade First
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Show Who Referred This User (visible to everyone) */}
-                    {referralData.referredBy && (
-                      <div className="bg-purple-900/30 border border-purple-500 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-purple-400 font-bold">👥 Referred By</p>
-                          {isOwnProfile && referralData.canCancelReferral && (
-                            <button
-                              onClick={handleCancelReferral}
-                              disabled={cancellingReferral}
-                              className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-500"
-                              title="Wrong referral? Click to cancel and apply a new code"
-                            >
-                              {cancellingReferral ? 'Cancelling...' : 'Cancel'}
-                            </button>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => router.push(`/profile/${referralData.referredBy!.username}`)}
-                          className="flex items-center gap-3 hover:bg-slate-800/50 rounded-lg p-2 -m-2 transition-all group"
-                        >
-                          <img
-                            src={referralData.referredBy.pfpUrl || '/battlefield-logo.jpg'}
-                            alt=""
-                            className="w-10 h-10 rounded-full border-2 border-purple-500 group-hover:border-purple-400"
-                          />
-                          <span className="text-white font-bold group-hover:text-purple-400 transition-colors">{referralData.referredBy.username}</span>
-                          <span className="text-purple-400 text-sm">→</span>
-                        </button>
-                        {isOwnProfile && referralData.canCancelReferral && (
-                          <p className="text-gray-500 text-xs mt-2">Wrong referral? You can cancel and apply a different code before claiming rewards.</p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Enter Friend's Code (only on own profile, when not already referred) */}
-                    {isOwnProfile && !referralData.referredBy && (
-                      <div className="bg-blue-900/30 border border-blue-500 rounded-lg p-4">
-                        <p className="text-blue-400 font-bold mb-2">🎟️ Have a Friend&apos;s Code?</p>
-                        <p className="text-gray-300 text-sm mb-3">Enter their referral code to get $5,000 bonus when you open your first trade!</p>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={referralCodeInput}
-                            onChange={(e) => setReferralCodeInput(e.target.value)}
-                            placeholder="e.g. elalpha.battle"
-                            className="flex-1 bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-mono border border-slate-600 focus:border-blue-500 focus:outline-none"
-                          />
-                          <button
-                            onClick={handleApplyReferral}
-                            disabled={applyingReferral || !referralCodeInput.trim()}
-                            className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
-                          >
-                            {applyingReferral ? '...' : 'Apply'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Referral List */}
-                    {referralData.referrals.length > 0 && (
-                      <div className="bg-slate-900/50 rounded-lg p-4">
-                        <p className="text-gray-400 text-sm mb-3">Your Referrals</p>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {referralData.referrals.map((ref) => {
-                            // Determine badge based on status and confirmations
-                            let badgeClass = 'bg-gray-600 text-white';
-                            let badgeText = '⏳ Awaiting Trade';
-
-                            if (ref.status === 'completed') {
-                              badgeClass = 'bg-green-600 text-white';
-                              badgeText = '✓ $10,000';
-                            } else if (ref.status === 'claimable') {
-                              if (ref.referrer_claimed && ref.referred_claimed) {
-                                badgeClass = 'bg-green-600 text-white';
-                                badgeText = '✓ $10,000';
-                              } else if (ref.referrer_claimed && !ref.referred_claimed) {
-                                badgeClass = 'bg-blue-600 text-white';
-                                badgeText = '⏳ $5,000';
-                              } else if (!ref.referrer_claimed && ref.referred_claimed) {
-                                badgeClass = 'bg-yellow-500 text-black animate-pulse';
-                                badgeText = '💰 $5,000';
-                              } else {
-                                badgeClass = 'bg-yellow-600 text-white';
-                                badgeText = '⏳ $0';
-                              }
-                            }
-
-                            return (
-                              <div key={ref.referralId} className="flex items-center justify-between bg-slate-800 rounded-lg p-2">
-                                <button
-                                  onClick={() => router.push(`/profile/${ref.username}`)}
-                                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                                >
-                                  <img src={ref.pfp_url || '/battlefield-logo.jpg'} alt="" className="w-8 h-8 rounded-full" />
-                                  <span className="text-white font-medium text-sm">{ref.username}</span>
-                                </button>
-                                <span className={`text-xs font-bold px-2 py-1 rounded ${badgeClass}`}>
-                                  {badgeText}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <p>Loading referral data...</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
           <div className="bg-slate-800 border-2 border-purple-500 rounded-lg">
             <div className="p-4 border-b border-slate-700">
               <h2 className="text-xl font-bold text-yellow-400">
@@ -1288,7 +987,7 @@ function UserProfilePageContent() {
               )}
             </div>
           </div>
-        ))}
+        )}
 
         {/* Full Trading History with Pagination - Button to expand */}
         {profile.pagination.totalPages > 1 && (
@@ -1394,109 +1093,39 @@ function UserProfilePageContent() {
         </footer>
       </div>
 
-      {/* Referral Claim Confirmation Modal */}
-      {showClaimConfirmModal && referralData && (() => {
-        const selectedReferral = referralData.claimableReferrals.find(r => r.referralId === showClaimConfirmModal);
-        if (!selectedReferral) return null;
-
-        return (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4">
-            <div className="bg-slate-800 border-2 border-yellow-500 rounded-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-              <div className="text-center mb-4">
-                <span className="text-5xl">🤝</span>
-                <h3 className="text-xl font-bold text-yellow-400 mt-2">Confirm Referral</h3>
-              </div>
-
-              <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <img
-                    src={selectedReferral.pfpUrl || '/battlefield-logo.jpg'}
-                    alt=""
-                    className="w-12 h-12 rounded-full border-2 border-yellow-500"
-                  />
-                  <div>
-                    <p className="text-white font-bold">{selectedReferral.username}</p>
-                    <p className="text-gray-400 text-xs">
-                      {selectedReferral.type === 'asReferrer' ? 'You referred them' : 'They referred you'}
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-gray-300 text-sm mb-3">
-                  Confirming this referral with <span className="text-yellow-400 font-bold">{selectedReferral.username}</span>.
-                </p>
-
-                {selectedReferral.theyConfirmed ? (
-                  <div className="bg-green-900/30 border border-green-500/50 rounded-lg p-3">
-                    <p className="text-green-400 text-sm font-bold mb-1">🎉 Ready to complete!</p>
-                    <p className="text-gray-300 text-xs">
-                      {selectedReferral.username} has already confirmed. Once you confirm, you&apos;ll both receive <span className="text-yellow-400 font-bold">${selectedReferral.reward.toLocaleString()}</span>!
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-3">
-                    <p className="text-blue-400 text-sm font-bold mb-1">⏳ Waiting for friend</p>
-                    <p className="text-gray-300 text-xs">
-                      After you confirm, {selectedReferral.username} also needs to confirm. Once both confirm, you&apos;ll each get <span className="text-yellow-400 font-bold">${selectedReferral.reward.toLocaleString()}</span>!
-                    </p>
-                  </div>
-                )}
-
-                <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-3 mt-3">
-                  <p className="text-red-400 text-sm font-bold mb-1">🚨 Important:</p>
-                  <p className="text-gray-300 text-xs">
-                    Once confirmed, this referral becomes <span className="text-red-400 font-bold">permanent</span>. You cannot change or cancel it after confirming.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowClaimConfirmModal(null)}
-                  className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    const refId = showClaimConfirmModal;
-                    setShowClaimConfirmModal(null);
-                    handleClaimReferral(refId);
-                  }}
-                  disabled={!!claimingReferral}
-                  className="flex-1 bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-600 text-black font-bold py-3 rounded-lg transition-all"
-                >
-                  {claimingReferral ? 'Confirming...' : 'Confirm'}
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Bottom Navigation - 5 buttons: Leaders, Battle, Profile, Trade, Missions */}
+      {/* Bottom Navigation Bar - 7 buttons: Airdrop, Leaders, Battle, Profile (center), Trade, Missions, Referrals */}
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t-2 border-slate-700 z-50">
-        <div className="container mx-auto px-2">
-          <div className="flex justify-around items-center py-2">
+        <div className="container mx-auto px-1">
+          <div className="flex justify-between items-center py-1.5">
+            {/* Left side - 3 buttons */}
+            <button
+              onClick={() => router.push('/battlefield?tab=airdrop')}
+              className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
+            >
+              <span className="text-lg">🎖️</span>
+              <span className="text-[9px] font-bold">Airdrop</span>
+            </button>
+
             <button
               onClick={() => router.push('/battlefield?tab=leaderboard')}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+              className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
             >
-              <span className="text-2xl">🏆</span>
-              <span className="text-xs font-bold">Leaders</span>
+              <span className="text-lg">🏆</span>
+              <span className="text-[9px] font-bold">Leaders</span>
             </button>
 
             <button
               onClick={() => router.push('/battlefield?tab=battle')}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+              className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
             >
-              <span className="text-2xl">⚔️</span>
-              <span className="text-xs font-bold">Battle</span>
+              <span className="text-lg">⚔️</span>
+              <span className="text-[9px] font-bold">Battle</span>
             </button>
 
+            {/* Center - Profile (larger, raised) */}
             <button
               onClick={isOwnProfile ? undefined : () => router.push('/battlefield')}
-              className={`flex flex-col items-center gap-1 px-2 py-1 -mt-4 ${!isOwnProfile ? 'cursor-pointer' : ''}`}
+              className={`flex flex-col items-center gap-0.5 px-1 transition-all -mt-3 ${!isOwnProfile ? 'hover:opacity-80 cursor-pointer' : ''}`}
             >
               <Avatar
                 pfpUrl={profile.user.pfp_url}
@@ -1505,25 +1134,34 @@ function UserProfilePageContent() {
                 winningTrades={profile.stats.winning_trades}
                 size="lg"
               />
-              <span className="text-[10px] font-bold text-yellow-400">
+              <span className="text-[9px] font-bold text-yellow-400">
                 {isOwnProfile ? 'Profile' : 'Home'}
               </span>
             </button>
 
+            {/* Right side - 3 buttons */}
             <button
               onClick={() => router.push('/battlefield')}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+              className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
             >
-              <span className="text-2xl">🎯</span>
-              <span className="text-xs font-bold">Trade</span>
+              <span className="text-lg">🎯</span>
+              <span className="text-[9px] font-bold">Trade</span>
             </button>
 
             <button
               onClick={() => router.push('/battlefield?tab=missions')}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all"
+              className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
             >
-              <span className="text-2xl">🏅</span>
-              <span className="text-xs font-bold">Missions</span>
+              <span className="text-lg">🏅</span>
+              <span className="text-[9px] font-bold">Missions</span>
+            </button>
+
+            <button
+              onClick={() => router.push('/battlefield?tab=referrals')}
+              className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
+            >
+              <span className="text-lg">🔗</span>
+              <span className="text-[9px] font-bold">Referrals</span>
             </button>
           </div>
         </div>
