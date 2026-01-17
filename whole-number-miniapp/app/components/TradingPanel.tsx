@@ -90,7 +90,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   // Update input value when position size changes from slider (but not when typing)
   useEffect(() => {
     if (!isTyping) {
-      setInputValue(positionSize.toString());
+      setInputValue(Math.round(positionSize).toString());
     }
   }, [positionSize, isTyping]);
   
@@ -567,7 +567,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         {/* Position Size */}
         <div className="mb-4">
           <label className="block text-sm font-semibold text-gray-300 mb-2">
-            Position Size: <span className="text-cyan-400">${positionSize.toLocaleString()}</span>
+            Position Size: <span className="text-cyan-400">${Math.round(positionSize).toLocaleString()}</span>
           </label>
           
           {/* Direct Dollar Input */}
@@ -578,16 +578,11 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
               onFocus={() => setIsTyping(true)}
               onChange={(e) => {
                 const value = e.target.value;
-                // Allow digits and decimal point, max 2 decimal places
-                if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                // Allow only whole dollar amounts (digits only)
+                if (value === '' || /^\d+$/.test(value)) {
                   setInputValue(value);
-                  const numValue = parseFloat(value) || 0; // User enters dollars
-                  // Mark as manual input if user entered decimals
-                  if (value.includes('.')) {
-                    setIsManualInput(true);
-                  } else {
-                    setIsManualInput(false);
-                  }
+                  const numValue = parseInt(value, 10) || 0; // User enters whole dollars
+                  setIsManualInput(false);
                   if (numValue > 0 && numValue <= paperBalanceDollars) {
                     // Calculate exact percentage without rounding to avoid drift
                     const exactPercent = (numValue / paperBalanceDollars) * 100;
@@ -600,19 +595,19 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
               onBlur={() => {
                 setIsTyping(false);
                 // Ensure value is valid on blur
-                const numValue = parseFloat(inputValue) || 0;
+                const numValue = parseInt(inputValue, 10) || 0;
                 if (numValue < 0) {
                   setPositionSizePercent(0);
                   setInputValue('0');
                   setIsManualInput(false);
                 } else if (numValue > paperBalanceDollars) {
                   setPositionSizePercent(100);
-                  setInputValue(paperBalanceDollars.toFixed(2));
-                  setIsManualInput(true);
+                  setInputValue(Math.floor(paperBalanceDollars).toString());
+                  setIsManualInput(false);
                 }
               }}
               className="w-full bg-slate-700 text-white px-4 py-2 rounded border border-slate-600 focus:border-cyan-500 focus:outline-none"
-              placeholder="Enter amount in $ (e.g., 25.16)"
+              placeholder="Enter amount in $ (e.g., 25)"
             />
           </div>
           
