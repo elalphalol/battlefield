@@ -22,6 +22,31 @@ Note:
 - Missions use `reward_paid` column (actual amount paid when claimed)
 - Balances are capped at $0 minimum
 
+## Expected Values Reference
+
+All values are stored in **cents** in the database.
+
+### Claims (Daily)
+- **Daily Claim:** 100000 cents ($1,000)
+
+### Mission Rewards
+| Mission | Reward (cents) | Reward ($) |
+|---------|----------------|------------|
+| Open a Trade | 20000 | $200 |
+| Win a Trade | 50000 | $500 |
+| Cast a Trade | 50000 | $500 |
+| Two Faces | 35000 | $350 |
+| Follow Us! | 500000 | $5,000 |
+| Win 5 Trades | 200000 | $2,000 |
+| Trading Streak | 250000 | $2,500 |
+| Claim Streak | 150000 | $1,500 |
+| The Betrayer | 150000 | $1,500 |
+| Army Loyalty | 1000000 | $10,000 |
+
+### Referral Rewards
+- **Referrer Reward:** 250000 cents ($2,500)
+- **Referred Reward:** 250000 cents ($2,500)
+
 ## Quick Audit Summary
 
 ```bash

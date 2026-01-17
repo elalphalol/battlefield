@@ -136,3 +136,45 @@ FROM trades WHERE status = 'closed'
 - `backend/server.ts` - Main fix location (line ~1554)
 - `.claude/commands/audit.md` - Updated audit tool
 - Database tables: `users`, `trades`
+
+---
+
+# Additional Data Fixes (January 2026)
+
+## Mission Rewards Bug
+
+**Issue:** Mission `reward_paid` values were stored divided by 100 (e.g., $5 instead of $500).
+
+**Root Cause:** Incorrect conversion when storing reward values.
+
+**Fix Applied:** Updated 120 `user_missions` records, multiplying `reward_paid` by 100.
+
+**Affected Records:**
+- 120 mission reward records across 26 users
+- Total correction: +$153,150.00
+
+**Correct Mission Reward Values (in cents):**
+| Mission | Correct Value |
+|---------|---------------|
+| Open a Trade | 20000 ($200) |
+| Win a Trade | 50000 ($500) |
+| Cast a Trade | 50000 ($500) |
+| Two Faces | 35000 ($350) |
+| Follow Us! | 500000 ($5,000) |
+| Win 5 Trades | 200000 ($2,000) |
+| Trading Streak | 250000 ($2,500) |
+| Claim Streak | 150000 ($1,500) |
+| The Betrayer | 150000 ($1,500) |
+| Army Loyalty | 1000000 ($10,000) |
+
+## Claims Bug
+
+**Issue:** Daily claim amounts were stored as 1000 cents ($10) instead of 100000 cents ($1,000).
+
+**Fix Applied:** Updated 19 claim records from 1000 to 100000 cents.
+
+**Affected Records:**
+- 19 claim records across 7 users
+- Total correction: +$18,810.00
+
+**Correct Claim Value:** 100000 cents ($1,000) per daily claim
