@@ -45,3 +45,7 @@ next-env.d.ts
 # Private planning documents (not for public)
 BATTLE-TOKEN-LAUNCH-PLAN.md
 BATTLE-AMM-PLAN.md
+
+# Snapshot and audit reports
+PNL_SNAPSHOT_*.md
+BALANCE_AUDIT_REPORT_*.md
