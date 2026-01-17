@@ -24,9 +24,9 @@ interface ClosedTrade {
   exit_price: number;
   position_size: number;
   pnl: number;
-  status: 'closed' | 'liquidated';
+  status: 'closed' | 'liquidated' | 'voided';
   stop_loss: number | null;
-  closed_by: 'manual' | 'stop_loss' | 'liquidation' | null;
+  closed_by: 'manual' | 'stop_loss' | 'liquidation' | 'voided' | null;
   opened_at: string;
   closed_at: string;
 }
@@ -140,6 +140,7 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
           const pnlPercentage = (pnl / Number(trade.position_size)) * 100;
           const isProfit = pnl >= 0;
           const isLiquidated = trade.status === 'liquidated';
+          const isVoided = trade.status === 'voided';
           // Check if trade was closed by stop loss using the closed_by field
           const wasStopLoss = trade.closed_by === 'stop_loss';
 
@@ -250,7 +251,9 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
             <div
               key={trade.id}
               className={`border-2 rounded-lg p-3 relative overflow-hidden ${
-                isLiquidated
+                isVoided
+                  ? 'border-gray-700 bg-gray-950/30'
+                  : isLiquidated
                   ? 'border-red-900 bg-red-950/30'
                   : wasStopLoss
                   ? 'border-yellow-700 bg-yellow-950/20'
@@ -259,6 +262,14 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
                   : 'border-red-700 bg-red-950/20'
               }`}
             >
+              {/* Voided Stamp Overlay */}
+              {isVoided && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                  <div className="text-gray-500 font-black text-3xl opacity-30 rotate-[-15deg] border-4 border-gray-500 px-4 py-2 rounded">
+                    VOIDED
+                  </div>
+                </div>
+              )}
               {/* Liquidated Stamp Overlay */}
               {isLiquidated && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
@@ -282,8 +293,14 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
                       🛡️
                     </span>
                   )}
+                  {/* Voided Indicator */}
+                  {isVoided && (
+                    <span className="text-xs bg-gray-600/80 text-gray-200 px-1.5 py-0.5 rounded font-bold">
+                      🚫 Voided
+                    </span>
+                  )}
                 </div>
-                <div className={`text-right ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+                <div className={`text-right ${isVoided ? 'text-gray-500' : isProfit ? 'text-green-400' : 'text-red-400'}`}>
                   <div className="text-sm font-bold whitespace-nowrap">
                     {isProfit ? '+' : ''}${Math.round(pnl).toLocaleString('en-US')}
                   </div>
@@ -309,12 +326,14 @@ export function TradeHistory({ walletAddress }: TradeHistoryProps = {}) {
                 <div className="text-xs text-gray-500">
                   {new Date(trade.closed_at).toLocaleString()}
                 </div>
-                <button
-                  onClick={handleCast}
-                  className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
-                >
-                  <FarcasterIcon className="w-4 h-4" /> Cast
-                </button>
+                {!isVoided && (
+                  <button
+                    onClick={handleCast}
+                    className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded font-bold transition-all flex items-center gap-1"
+                  >
+                    <FarcasterIcon className="w-4 h-4" /> Cast
+                  </button>
+                )}
               </div>
             </div>
           );

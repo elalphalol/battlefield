@@ -86,15 +86,23 @@ node run-migration.js
 - `GET /health` - Health check
 - `POST /api/users` - Create/update user
 - `GET /api/users/:walletAddress` - Get user
+- `GET /api/profile/:identifier` - Get user profile (by FID, wallet, or username)
 - `POST /api/trades/open` - Open position
 - `POST /api/trades/close` - Close position
 - `GET /api/leaderboard` - Get rankings
 - `GET /api/army/stats` - Bears vs Bulls statistics
+- `GET /api/referrals/:walletAddress` - Get referral data
+- `POST /api/referrals/apply` - Apply a referral code
+- `POST /api/referrals/claim` - Claim referral rewards
+- `POST /api/referrals/cancel` - Cancel pending referral (before claiming)
 
 ### Database Tables
-- `users` - Player accounts, balances, stats
+- `users` - Player accounts, balances, stats, referral_code
 - `trades` - Open/closed positions with P&L
 - `claims` - Paper money claim history
+- `referrals` - Referral relationships and claim status
+- `missions` - Available missions
+- `user_missions` - User mission progress and claims
 - `army_stats` - Cached Bears/Bulls statistics
 - `achievements` - Player achievements
 - `leaderboard_snapshot` - Historical rankings

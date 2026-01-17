@@ -452,27 +452,24 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     const statusText = pnl >= 0 ? `up +$${Math.round(Math.abs(pnl)).toLocaleString('en-US')}` : `down -$${Math.round(Math.abs(pnl)).toLocaleString('en-US')}`;
     const shareText = `${armyEmoji} I have an OPEN position on @btcbattle!\n\n${trade.position_type.toUpperCase()} ${trade.leverage}x | Currently ${statusText} (${percentage >= 0 ? '+' : ''}${Math.round(percentage)}%)\n\n💭 Should I close it?\n\n⚔️ Bears vs Bulls`;
 
-    // Track the cast for mission progress
+    // Mark cast mission as complete immediately (fire-and-forget)
+    // User clicked Cast button and will be taken to Farcaster composer with pre-filled text
+    fetch(getApiUrl('api/missions/complete'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress: address, missionKey: 'cast_result' })
+    }).catch(() => {}); // Silently ignore errors - mission completion is best-effort
+
+    // Open Farcaster composer with pre-filled cast
+    const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
     try {
-      await fetch(getApiUrl('api/missions/complete'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: address, missionKey: 'cast_result' })
-      });
-    } catch (err) {
-      console.error('Failed to track cast mission:', err);
+      await sdk.actions.openUrl(castUrl);
+    } catch (error) {
+      console.error('Error opening Farcaster composer:', error);
+      window.open(castUrl, '_blank');
     }
 
-    // Use Farcaster Frame SDK to open composer
-    try {
-      const castUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(imageUrl)}`;
-      await sdk.actions.openUrl(castUrl);
-      toast.success('🎯 Mission done! Claim $500 in Missions tab');
-    } catch (error) {
-      console.error('Error casting to Farcaster:', error);
-      // Fallback: open Farcaster referral link
-      window.open('https://farcaster.xyz/~/code/C46NY7', '_blank');
-    }
+    toast.success('🎯 Cast mission done! Claim $500 in Missions tab');
   };
 
   if (!address) {

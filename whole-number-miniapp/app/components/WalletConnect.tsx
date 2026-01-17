@@ -5,6 +5,15 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { farcasterAuth, type FarcasterUser } from '../lib/farcaster';
 
+// Farcaster icon component
+const FarcasterIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <img
+    src="/farcaster-icon.svg"
+    alt=""
+    className={className}
+  />
+);
+
 export function WalletConnect() {
   const { address, isConnected } = useAccount();
   const { connect, connectors, error: connectError } = useConnect();
@@ -124,13 +133,13 @@ export function WalletConnect() {
           onClick={() => setShowModal(!showModal)}
           className={`rounded-lg px-4 py-2 text-white flex items-center gap-2 ${
             farcasterUser
-              ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500'
+              ? 'bg-transparent border-2 border-[#8B5CF6] hover:bg-[#8B5CF6]/20'
               : 'bg-slate-800 border-2 border-blue-500 hover:bg-slate-700'
           }`}
         >
           {farcasterUser ? (
             <>
-              <span>🎭</span>
+              <FarcasterIcon className="w-5 h-5" />
               <span className="font-semibold">{farcasterUser.username || farcasterUser.displayName || `FID ${farcasterUser.fid}`}</span>
             </>
           ) : (
@@ -144,7 +153,7 @@ export function WalletConnect() {
               <div className="text-sm text-gray-400 mb-2">Connected</div>
               {farcasterUser && (
                 <div className="mb-3 p-2 bg-purple-900/30 border border-purple-500/30 rounded">
-                  <div className="text-purple-400 text-xs mb-1">🎭 Farcaster</div>
+                  <div className="text-purple-400 text-xs mb-1 flex items-center gap-1"><FarcasterIcon className="w-3 h-3" /> Farcaster</div>
                   <div className="text-white font-semibold text-sm">
                     {farcasterUser.username || farcasterUser.displayName || `FID ${farcasterUser.fid}`}
                   </div>
@@ -177,9 +186,10 @@ export function WalletConnect() {
       <div className="relative">
         <button
           onClick={() => setShowModal(!showModal)}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg transition-all duration-200 hover:shadow-xl flex items-center gap-2"
+          className="bg-transparent border-2 border-[#8B5CF6] hover:bg-[#8B5CF6]/20 text-white px-6 py-2.5 rounded-lg font-bold transition-all duration-200 flex items-center gap-2"
         >
-          🎭 {farcasterUser.username || `FID ${farcasterUser.fid}`}
+          <FarcasterIcon className="w-5 h-5" />
+          {farcasterUser.username || `FID ${farcasterUser.fid}`}
         </button>
 
         {showModal && (

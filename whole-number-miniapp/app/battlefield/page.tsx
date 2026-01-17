@@ -130,9 +130,15 @@ export default function BattlefieldHome() {
             if (!data.message?.includes('already been referred')) {
               toast.error(data.message || 'Failed to apply referral code');
             }
-            // Clear pending referral if already referred or invalid
-            if (data.message?.includes('already been referred') || data.message?.includes('Invalid referral code')) {
+            // Clear pending referral for permanent error conditions
+            // (already referred, invalid code, circular referral, own code)
+            if (data.message?.includes('already been referred') ||
+                data.message?.includes('Invalid referral code') ||
+                data.message?.includes('cannot use a referral code from someone') ||
+                data.message?.includes('cannot use your own')) {
               localStorage.removeItem('pendingReferral');
+              // Also clear the URL param
+              window.history.replaceState({}, '', '/battlefield');
             }
           }
         } catch (error) {

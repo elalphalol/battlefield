@@ -14,7 +14,7 @@ SELECT
   m.mission_type as type,
   m.title,
   m.icon,
-  TO_CHAR(m.reward_amount, 'FM$999,999') as reward,
+  TO_CHAR(m.reward_amount/100, 'FM$999,999') as reward,
   COUNT(um.id) FILTER (WHERE um.is_completed) as completions,
   COUNT(um.id) FILTER (WHERE um.is_claimed) as claims
 FROM missions m
@@ -54,7 +54,7 @@ SELECT
 UNION ALL
 SELECT 'Total Claims', COUNT(*)::text FROM user_missions WHERE is_claimed = true
 UNION ALL
-SELECT 'Rewards Distributed', TO_CHAR(SUM(um.reward_paid), 'FM\$999,999,999')
+SELECT 'Rewards Distributed', TO_CHAR(SUM(um.reward_paid)/100, 'FM\$999,999,999')
   FROM user_missions um WHERE um.is_claimed = true
 UNION ALL
 SELECT 'Active Daily Missions', COUNT(*)::text FROM user_missions WHERE period_end > NOW() AND period_start > NOW() - INTERVAL '1 day'
@@ -70,7 +70,7 @@ PGPASSWORD=battlefield psql -U battlefield -h localhost -d battlefield -c "
 SELECT
   u.username,
   COUNT(um.id) as missions_claimed,
-  TO_CHAR(SUM(um.reward_paid), 'FM$999,999') as total_earned
+  TO_CHAR(SUM(um.reward_paid)/100, 'FM$999,999') as total_earned
 FROM users u
 JOIN user_missions um ON um.user_id = u.id
 WHERE um.is_claimed = true

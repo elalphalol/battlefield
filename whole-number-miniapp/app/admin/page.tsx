@@ -185,6 +185,7 @@ interface Mission {
 interface ReferralStats {
   totalReferrals: number;
   pendingReferrals: number;
+  claimableReferrals: number;
   completedReferrals: number;
   totalRewardsDistributed: number;
 }
@@ -203,6 +204,8 @@ interface ReferralActivity {
   status: string;
   referrer_reward_dollars: number;
   referred_reward_dollars: number;
+  referrer_claimed: boolean;
+  referred_claimed: boolean;
   created_at: string;
   completed_at: string | null;
 }
@@ -874,6 +877,10 @@ export default function AdminPage() {
                               icon = '💥';
                               text = `LIQUIDATED -$${Math.abs(activity.pnl ?? activity.amount ?? 0).toLocaleString()}`;
                               colorClass = 'text-orange-400';
+                            } else if (activity.action === 'voided') {
+                              icon = '🚫';
+                              text = `VOIDED (illegitimate position)`;
+                              colorClass = 'text-gray-400';
                             }
                             break;
                           case 'signup':
@@ -1417,14 +1424,18 @@ export default function AdminPage() {
               <>
                 {/* Stats Cards */}
                 {referralStats && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 text-center">
                       <p className="text-3xl font-bold text-white">{referralStats.totalReferrals}</p>
                       <p className="text-gray-400 text-sm">Total Referrals</p>
                     </div>
-                    <div className="bg-slate-800 border border-yellow-600 rounded-lg p-4 text-center">
-                      <p className="text-3xl font-bold text-yellow-400">{referralStats.pendingReferrals}</p>
+                    <div className="bg-slate-800 border border-gray-600 rounded-lg p-4 text-center">
+                      <p className="text-3xl font-bold text-gray-400">{referralStats.pendingReferrals}</p>
                       <p className="text-gray-400 text-sm">Pending</p>
+                    </div>
+                    <div className="bg-slate-800 border border-yellow-600 rounded-lg p-4 text-center">
+                      <p className="text-3xl font-bold text-yellow-400">{referralStats.claimableReferrals}</p>
+                      <p className="text-gray-400 text-sm">Claimable</p>
                     </div>
                     <div className="bg-slate-800 border border-green-600 rounded-lg p-4 text-center">
                       <p className="text-3xl font-bold text-green-400">{referralStats.completedReferrals}</p>
@@ -1483,9 +1494,21 @@ export default function AdminPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <span className={`text-xs font-bold px-2 py-1 rounded ${
-                                activity.status === 'completed' ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'
+                                activity.status === 'pending'
+                                  ? 'bg-gray-600 text-white'
+                                  : activity.referrer_claimed && activity.referred_claimed
+                                    ? 'bg-green-600 text-white'
+                                    : activity.referrer_claimed || activity.referred_claimed
+                                      ? 'bg-yellow-500 text-black'
+                                      : 'bg-yellow-600 text-white'
                               }`}>
-                                {activity.status === 'completed' ? `✓ $${(Number(activity.referrer_reward_dollars) + Number(activity.referred_reward_dollars)).toLocaleString()}` : '⏳ Pending'}
+                                {activity.status === 'pending'
+                                  ? '⏳ Trade First'
+                                  : activity.referrer_claimed && activity.referred_claimed
+                                    ? `✓ $${(Number(activity.referrer_reward_dollars) + Number(activity.referred_reward_dollars)).toLocaleString()}`
+                                    : activity.referrer_claimed || activity.referred_claimed
+                                      ? `⏳ $${Number(activity.referrer_reward_dollars).toLocaleString()}`
+                                      : '⏳ $0'}
                               </span>
                               <span className="text-gray-500 text-xs">
                                 {new Date(activity.created_at).toLocaleDateString()}
