@@ -1580,16 +1580,17 @@ app.post('/api/trades/open', tradingLimiter, checkMaintenance, async (req: Reque
     );
 
     // Auto-create user if they don't exist (inside transaction)
+    // paper_balance stored in CENTS: 1000000 = $10,000
     if (user.rows.length === 0) {
       console.log(`🆕 Auto-creating new user for wallet: ${walletAddress}`);
       const newUser = await pool.query(
         `INSERT INTO users (wallet_address, username, army, paper_balance)
-         VALUES (LOWER($1), $2, 'bulls', 10000.00)
+         VALUES (LOWER($1), $2, 'bulls', 1000000)
          RETURNING id, paper_balance`,
         [walletAddress, `Trader${walletAddress.slice(2, 8)}`]
       );
       user = newUser;
-      console.log(`✅ New user created with $10,000 balance`);
+      console.log(`✅ New user created with $10,000 balance (1000000 cents)`);
     }
 
     // The 'size' parameter IS the collateral (what user risks)
@@ -1599,9 +1600,12 @@ app.post('/api/trades/open', tradingLimiter, checkMaintenance, async (req: Reque
     // Check balance INSIDE transaction with row locked
     if (user.rows[0].paper_balance < collateral) {
       await pool.query('ROLLBACK');
+      // Convert cents to dollars for display
+      const availableDollars = (user.rows[0].paper_balance / 100).toFixed(2);
+      const requiredDollars = (collateral / 100).toFixed(2);
       return res.status(400).json({
         success: false,
-        message: `Insufficient balance. Available: $${user.rows[0].paper_balance.toFixed(2)}, Required: $${collateral.toFixed(2)}`
+        message: `Insufficient balance. Available: $${availableDollars}, Required: $${requiredDollars}`
       });
     }
 
@@ -4548,9 +4552,10 @@ app.post('/api/admin/users/reset', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Missing userId' });
     }
 
+    // paper_balance stored in CENTS: 1000000 = $10,000
     await pool.query(
       `UPDATE users SET
-        paper_balance = 10000,
+        paper_balance = 1000000,
         total_pnl = 0,
         total_trades = 0,
         winning_trades = 0,
