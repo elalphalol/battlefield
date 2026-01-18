@@ -79,6 +79,11 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const [resultIsLiquidated, setResultIsLiquidated] = useState(false);
   const [resultIsStopLoss, setResultIsStopLoss] = useState(false);
 
+  // Memoize onDismiss to prevent TradeResultToast useEffect from re-running on every render
+  const handleResultToastDismiss = useCallback(() => {
+    setShowResultToast(false);
+  }, []);
+
   // Calculate actual position size from percentage
   // NEW SYSTEM: Fees are deducted from P&L when closing, NOT when opening
   // So we just use the percentage of balance directly
@@ -522,7 +527,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         pnl={resultPnl}
         isLiquidated={resultIsLiquidated}
         isStopLoss={resultIsStopLoss}
-        onDismiss={() => setShowResultToast(false)}
+        onDismiss={handleResultToastDismiss}
       />
 
       {/* Open New Position */}
