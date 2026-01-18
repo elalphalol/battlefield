@@ -33,6 +33,8 @@ interface StoppedTradeInfo {
   isStopLoss: boolean;
 }
 
+type PriceDirection = 'up' | 'down' | 'none';
+
 interface TradingPanelProps {
   btcPrice: number;
   paperBalance: number;
@@ -40,9 +42,10 @@ interface TradingPanelProps {
   walletAddress?: string; // Add optional wallet address prop
   stoppedTradeInfo?: StoppedTradeInfo | null; // Info from auto-liquidation/stop loss
   onStoppedTradeShown?: () => void; // Callback when notification is shown
+  priceDirection?: PriceDirection; // For price change animations
 }
 
-export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAddress, stoppedTradeInfo, onStoppedTradeShown }: TradingPanelProps) {
+export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAddress, stoppedTradeInfo, onStoppedTradeShown, priceDirection = 'none' }: TradingPanelProps) {
   const { address: wagmiAddress } = useAccount();
   // Use passed wallet address if available, otherwise fall back to wagmi
   const address = walletAddress || wagmiAddress;
@@ -782,7 +785,9 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                         {trade.position_type.toUpperCase()} {trade.leverage}x
                       </span>
                     </div>
-                    <div className={`font-bold text-sm text-right ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`font-bold text-sm text-right transition-all duration-300 ${pnl >= 0 ? 'text-green-400' : 'text-red-400'} ${
+                      priceDirection !== 'none' ? 'scale-105' : ''
+                    }`}>
                       {pnl >= 0 ? '+' : ''}${Math.round(pnl).toLocaleString('en-US')}
                       <div className="text-xs">
                         ({percentage >= 0 ? '+' : ''}{Math.round(percentage)}%)
@@ -792,7 +797,10 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 mb-3">
                     <div>Entry: ${Math.round(Number(trade.entry_price)).toLocaleString('en-US')}</div>
-                    <div>Now: ${Math.round(btcPrice).toLocaleString('en-US')}</div>
+                    <div className={`transition-colors duration-300 ${
+                      priceDirection === 'up' ? 'text-green-400' :
+                      priceDirection === 'down' ? 'text-red-400' : ''
+                    }`}>Now: ${Math.round(btcPrice).toLocaleString('en-US')}</div>
                     <div>Size: ${Math.round(Number(trade.position_size) / 100).toLocaleString('en-US')}</div>
                     <div>Total: ${Math.round(Number(trade.position_size) / 100 * Number(trade.leverage)).toLocaleString('en-US')}</div>
                     <div>Liq: ${Math.round(Number(trade.liquidation_price)).toLocaleString('en-US')}</div>

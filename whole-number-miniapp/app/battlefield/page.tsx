@@ -33,7 +33,7 @@ export default function BattlefieldHome() {
   const router = useRouter();
   // Use context hooks for global state
   const { userData, walletAddress: address, refetch: refetchUser } = useUser();
-  const { btcPrice, priceTimestamp, isLoading } = usePrice();
+  const { btcPrice, priceTimestamp, isLoading, priceDirection } = usePrice();
 
   const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'missions' | 'airdrop' | 'referrals'>('trade');
   const [battleSection, setBattleSection] = useState<'market' | 'status' | 'predictions' | 'strategy' | 'tips'>('market');
@@ -458,6 +458,7 @@ export default function BattlefieldHome() {
                 walletAddress={address ?? undefined}
                 stoppedTradeInfo={stoppedTradeInfo}
                 onStoppedTradeShown={() => setStoppedTradeInfo(null)}
+                priceDirection={priceDirection}
               />
             </div>
 

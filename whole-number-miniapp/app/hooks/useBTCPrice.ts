@@ -1,13 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+
+export type PriceDirection = 'up' | 'down' | 'none';
 
 export function useBTCPrice(updateInterval: number = 5000) {
   const [price, setPrice] = useState<number>(0);
   const [priceTimestamp, setPriceTimestamp] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [priceDirection, setPriceDirection] = useState<PriceDirection>('none');
+  const prevPriceRef = useRef<number>(0);
 
   const fetchPrice = useCallback(async () => {
     const apiSources = [
@@ -42,7 +46,19 @@ export function useBTCPrice(updateInterval: number = 5000) {
           console.warn(`${source.name} returned invalid price:`, fetchedPrice);
           continue;
         }
-        
+
+        // Track price direction for animations
+        if (prevPriceRef.current > 0) {
+          if (fetchedPrice > prevPriceRef.current) {
+            setPriceDirection('up');
+          } else if (fetchedPrice < prevPriceRef.current) {
+            setPriceDirection('down');
+          }
+          // Reset direction after animation duration
+          setTimeout(() => setPriceDirection('none'), 500);
+        }
+        prevPriceRef.current = fetchedPrice;
+
         setPrice(fetchedPrice);
         setPriceTimestamp(Date.now());
         setError(null);
@@ -65,5 +81,5 @@ export function useBTCPrice(updateInterval: number = 5000) {
     return () => clearInterval(interval);
   }, [fetchPrice, updateInterval]);
 
-  return { price, priceTimestamp, isLoading, error, refetch: fetchPrice };
+  return { price, priceTimestamp, isLoading, error, priceDirection, refetch: fetchPrice };
 }

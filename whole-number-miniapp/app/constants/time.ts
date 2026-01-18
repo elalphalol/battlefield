@@ -11,8 +11,8 @@ export const MS = {
 
 // Application-specific intervals
 export const INTERVALS = {
-  /** BTC price update interval */
-  PRICE_UPDATE: 5 * MS.SECOND,
+  /** BTC price update interval (2s for fluid UX) */
+  PRICE_UPDATE: 2 * MS.SECOND,
 
   /** Open trades refresh interval */
   TRADES_REFRESH: 10 * MS.SECOND,
