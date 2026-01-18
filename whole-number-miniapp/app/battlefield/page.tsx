@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getApiUrl } from '../lib/api';
 import sdk from '@farcaster/miniapp-sdk';
@@ -275,11 +275,30 @@ export default function BattlefieldHome() {
   }, [address, userData, ensureUserExists]);
 
   // Track previous user data for achievement detection
+  // Use a ref to track if we've processed the current userData to avoid duplicate notifications
+  const lastProcessedUserRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (userData) {
-      setPreviousUserData(prev => prev?.wallet_address === userData.wallet_address ? prev : userData);
+      // Create a unique key for the current user state based on key stats
+      const stateKey = `${userData.wallet_address}-${userData.total_trades}-${userData.total_pnl}-${userData.winning_trades}-${userData.current_streak}`;
+
+      // Only update previousUserData if this is a NEW state we haven't processed
+      if (lastProcessedUserRef.current !== stateKey) {
+        // If we have previous data, keep it for comparison; otherwise use current as baseline
+        if (previousUserData === null) {
+          setPreviousUserData(userData);
+        }
+        // Mark this state as processed AFTER we've let the achievement detector run
+        // Use a microtask to ensure the detector sees the previous vs current comparison first
+        queueMicrotask(() => {
+          lastProcessedUserRef.current = stateKey;
+          // Now update previousUserData to current for the NEXT comparison
+          setPreviousUserData(userData);
+        });
+      }
     }
-  }, [userData]);
+  }, [userData, previousUserData]);
 
   // Auto-liquidate positions when price updates
   useEffect(() => {

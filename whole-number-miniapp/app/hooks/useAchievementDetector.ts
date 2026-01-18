@@ -313,14 +313,29 @@ export function useAchievementDetector(userStats: UserStats | null, previousStat
           });
         }
       } else if (previousStats.rank > 50 && userStats.rank <= 50) {
-        toast.success(`📈 You're now in the top 50! Rank #${userStats.rank}`, { duration: 5000 });
+        // Check if not already shown this session
+        const shownKey = `rank_toast_top_50_${userStats.rank}`;
+        if (typeof window !== 'undefined' && !sessionStorage.getItem(shownKey)) {
+          sessionStorage.setItem(shownKey, 'true');
+          toast.success(`📈 You're now in the top 50! Rank #${userStats.rank}`, { duration: 5000 });
+        }
       } else if (previousStats.rank > 100 && userStats.rank <= 100) {
-        toast.success(`🎯 Top 100 achieved! Rank #${userStats.rank}`, { duration: 5000 });
+        // Check if not already shown this session
+        const shownKey = `rank_toast_top_100_${userStats.rank}`;
+        if (typeof window !== 'undefined' && !sessionStorage.getItem(shownKey)) {
+          sessionStorage.setItem(shownKey, 'true');
+          toast.success(`🎯 Top 100 achieved! Rank #${userStats.rank}`, { duration: 5000 });
+        }
       }
 
       // Rank dropped (fell out of top 10)
       if (previousStats.rank <= 10 && userStats.rank > 10) {
-        toast.error(`⚠️ Dropped out of top 10 to rank #${userStats.rank}`, { duration: 6000 });
+        // Check if not already shown this session
+        const shownKey = `rank_drop_shown_${userStats.rank}`;
+        if (typeof window !== 'undefined' && !sessionStorage.getItem(shownKey)) {
+          sessionStorage.setItem(shownKey, 'true');
+          toast.error(`⚠️ Dropped out of top 10 to rank #${userStats.rank}`, { duration: 6000 });
+        }
       }
     }
 
