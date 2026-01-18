@@ -1,5 +1,8 @@
 'use client';
 
+import { Target, AlertTriangle, Zap, Hammer } from 'lucide-react';
+import { BearIcon, BullIcon } from './icons';
+
 interface BattlefieldVisualProps {
   coordinate: number;
   wholeNumber: number;
@@ -48,9 +51,9 @@ export function BattlefieldVisual({
       {/* Title */}
       <div className="text-center mb-6">
         <h2 className="text-2xl sm:text-3xl font-bold text-yellow-400 flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-          <span>🎯</span>
+          <Target className="w-6 h-6 sm:w-8 sm:h-8" />
           <span>THE BATTLEFIELD</span>
-          <span>🎯</span>
+          <Target className="w-6 h-6 sm:w-8 sm:h-8" />
         </h2>
       </div>
 
@@ -67,13 +70,13 @@ export function BattlefieldVisual({
       {/* Whole Number Labels */}
       <div className="flex justify-between items-center mb-3">
         <div className="text-center">
-          <div className="text-xl font-bold text-red-400">⚠️</div>
+          <AlertTriangle className="w-5 h-5 text-red-400 mx-auto" />
           <div className="text-2xl font-bold text-white mt-1">
             ${(safeWholeNumber / 1000).toFixed(0)}K
           </div>
         </div>
         <div className="text-center">
-          <div className="text-xl font-bold text-green-400">⚡</div>
+          <Zap className="w-5 h-5 text-green-400 mx-auto" />
           <div className="text-2xl font-bold text-white mt-1">
             ${(safeNextWholeNumber / 1000).toFixed(0)}K
           </div>
@@ -84,25 +87,25 @@ export function BattlefieldVisual({
       <div className="relative h-32 bg-slate-700 rounded-lg border-2 border-slate-600 overflow-hidden mb-6">
         {/* Background gradient showing armies */}
         <div className="absolute inset-0 flex">
-          <div 
+          <div
             className="bg-gradient-to-r from-red-600 to-red-500 flex items-center justify-center transition-all duration-500"
             style={{ width: `${bearPercent}%` }}
           >
             {bearPercent > 20 && (
               <div className="text-white font-bold text-center px-2">
-                <div className="text-3xl">🐻</div>
+                <BearIcon className="w-8 h-8 mx-auto" />
                 <div className="text-sm">BEARS</div>
                 <div className="text-2xl font-black">{bearPercent.toFixed(0)}%</div>
               </div>
             )}
           </div>
-          <div 
+          <div
             className="bg-gradient-to-r from-green-500 to-green-600 flex items-center justify-center transition-all duration-500"
             style={{ width: `${bullPercent}%` }}
           >
             {bullPercent > 20 && (
               <div className="text-white font-bold text-center px-2">
-                <div className="text-3xl">🐂</div>
+                <BullIcon className="w-8 h-8 mx-auto" />
                 <div className="text-sm">BULLS</div>
                 <div className="text-2xl font-black">{bullPercent.toFixed(0)}%</div>
               </div>
@@ -111,12 +114,12 @@ export function BattlefieldVisual({
         </div>
 
         {/* Position indicator */}
-        <div 
+        <div
           className="absolute top-0 bottom-0 w-1 bg-yellow-400 shadow-lg shadow-yellow-400/50 transition-all duration-300 z-10"
           style={{ left: `${positionPercent}%` }}
         >
           <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-            <div className="text-2xl">⚡</div>
+            <Zap className="w-6 h-6 text-yellow-400" />
           </div>
         </div>
 
@@ -163,18 +166,18 @@ export function BattlefieldVisual({
       }`}>
         <div className="text-2xl font-bold mb-2">{zoneInfo.name}</div>
         {beamsBroken.beam086 && (
-          <div className="text-red-400 font-bold animate-pulse">
-            🔨 SLEDGEHAMMER ACTIVE - ALL BEAMS BROKEN!
+          <div className="text-red-400 font-bold animate-pulse flex items-center justify-center gap-1">
+            <Hammer className="w-5 h-5" /> SLEDGEHAMMER ACTIVE - ALL BEAMS BROKEN!
           </div>
         )}
         {beamsBroken.beam113 && !beamsBroken.beam086 && (
-          <div className="text-orange-400 font-bold">
-            🔨 BEAM ZONE - 113 Broken!
+          <div className="text-orange-400 font-bold flex items-center justify-center gap-1">
+            <Hammer className="w-5 h-5" /> BEAM ZONE - 113 Broken!
           </div>
         )}
         {beamsBroken.beam226 && !beamsBroken.beam113 && (
-          <div className="text-yellow-400 font-bold">
-            🔨 BEAM ZONE - 226 Active
+          <div className="text-yellow-400 font-bold flex items-center justify-center gap-1">
+            <Hammer className="w-5 h-5" /> BEAM ZONE - 226 Active
           </div>
         )}
       </div>

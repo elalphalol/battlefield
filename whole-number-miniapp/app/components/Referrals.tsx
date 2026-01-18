@@ -7,6 +7,7 @@ import { getApiUrl } from '../lib/api';
 import { getReferralLink } from '../lib/farcaster';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
+import { Loader2, Link, Gift, Users, Copy, Share2, Check, X, Clock, CheckCircle, AlertCircle, Lightbulb } from 'lucide-react';
 
 // Farcaster icon component
 const FarcasterIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
@@ -233,7 +234,7 @@ export function Referrals({ walletAddress }: ReferralsProps) {
     return (
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-8">
         <div className="text-center">
-          <div className="animate-spin text-4xl mb-4">🔗</div>
+          <Loader2 className="w-10 h-10 animate-spin text-yellow-400 mx-auto mb-4" />
           <p className="text-gray-400">Loading referrals...</p>
         </div>
       </div>
@@ -243,7 +244,7 @@ export function Referrals({ walletAddress }: ReferralsProps) {
   if (!referralData) {
     return (
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-8 text-center">
-        <div className="text-4xl mb-4">❌</div>
+        <X className="w-10 h-10 text-red-400 mx-auto mb-4" />
         <h3 className="text-xl font-bold text-red-400 mb-2">Error Loading Referrals</h3>
         <p className="text-gray-400">Please try again later</p>
       </div>

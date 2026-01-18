@@ -7,14 +7,14 @@
 /** Starting balance for new users: $10,000 */
 export const STARTING_BALANCE_CENTS = 1000000;
 
-/** Daily claim amount: $10 */
-export const DAILY_CLAIM_CENTS = 1000;
+/** Daily claim amount: $1,000 */
+export const DAILY_CLAIM_CENTS = 100000;
 
 /** Referral reward for both parties: $5,000 */
 export const REFERRAL_REWARD_CENTS = 500000;
 
-/** Emergency claim threshold: $1 */
-export const EMERGENCY_CLAIM_THRESHOLD_CENTS = 100;
+/** Emergency claim threshold: $100 */
+export const EMERGENCY_CLAIM_THRESHOLD_CENTS = 10000;
 
 /** Minimum position size in dollars */
 export const MIN_POSITION_SIZE_DOLLARS = 100;

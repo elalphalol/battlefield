@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { getApiUrl } from '../lib/api';
+import { Swords, Crown, Diamond, Lightbulb, Loader2 } from 'lucide-react';
+import { BearIcon, BullIcon } from './icons';
 
 interface ArmyStats {
   bulls: {
@@ -49,7 +51,7 @@ export function ArmyBattleStatus() {
     return (
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6 mb-6">
         <div className="text-center">
-          <div className="animate-spin text-4xl mb-2">⚔️</div>
+          <Loader2 className="w-10 h-10 animate-spin text-yellow-400 mx-auto mb-2" />
           <p className="text-gray-400">Loading army battle status...</p>
         </div>
       </div>
@@ -106,7 +108,7 @@ export function ArmyBattleStatus() {
       <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border-b-2 border-yellow-500/30 p-4">
         <div className="flex items-center justify-between">
           <h3 className="text-2xl font-bold text-yellow-400 flex items-center gap-2">
-            <span>⚔️</span>
+            <Swords className="w-6 h-6" />
             <span>Army Battle Status</span>
           </h3>
           <div className="text-right">
@@ -128,11 +130,11 @@ export function ArmyBattleStatus() {
           } rounded-lg p-5 relative overflow-hidden transition-all duration-500`}>
             {winningArmy === 'bulls' && (
               <div className="absolute top-2 right-2">
-                <span className="text-2xl animate-pulse">👑</span>
+                <Crown className="w-6 h-6 text-yellow-400 animate-pulse" />
               </div>
             )}
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-4xl">🐂</span>
+              <BullIcon className="w-10 h-10 text-green-400" />
               <div>
                 <h4 className="text-xl font-bold text-green-400">Bulls Army</h4>
                 <p className="text-xs text-gray-400">{armyStats.bulls.playerCount} Warriors</p>
@@ -154,11 +156,11 @@ export function ArmyBattleStatus() {
           } rounded-lg p-5 relative overflow-hidden transition-all duration-500`}>
             {winningArmy === 'bears' && (
               <div className="absolute top-2 right-2">
-                <span className="text-2xl animate-pulse">👑</span>
+                <Crown className="w-6 h-6 text-yellow-400 animate-pulse" />
               </div>
             )}
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-4xl">🐻</span>
+              <BearIcon className="w-10 h-10 text-red-400" />
               <div>
                 <h4 className="text-xl font-bold text-red-400">Bears Army</h4>
                 <p className="text-xs text-gray-400">{armyStats.bears.playerCount} Warriors</p>
@@ -176,8 +178,8 @@ export function ArmyBattleStatus() {
         {/* Battle Progress Bar */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-bold text-green-400">🐂 Bulls Leading</span>
-            <span className="text-sm font-bold text-red-400">Bears Leading 🐻</span>
+            <span className="text-sm font-bold text-green-400 flex items-center gap-1"><BullIcon className="w-4 h-4" /> Bulls Leading</span>
+            <span className="text-sm font-bold text-red-400 flex items-center gap-1">Bears Leading <BearIcon className="w-4 h-4" /></span>
           </div>
           <div className="relative h-8 bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
             <div 
@@ -189,8 +191,8 @@ export function ArmyBattleStatus() {
               style={{ width: `${100 - bullsPercentage}%` }}
             />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-bold text-white drop-shadow-lg">
-                {winningArmy === 'bulls' ? '🐂' : '🐻'} {winningArmy.toUpperCase()} WINNING BY ${Math.round(difference).toLocaleString('en-US')}
+              <span className="text-xs font-bold text-white drop-shadow-lg flex items-center gap-1">
+                {winningArmy === 'bulls' ? <BullIcon className="w-4 h-4" /> : <BearIcon className="w-4 h-4" />} {winningArmy.toUpperCase()} WINNING BY ${Math.round(difference).toLocaleString('en-US')}
               </span>
             </div>
           </div>
@@ -199,16 +201,16 @@ export function ArmyBattleStatus() {
         {/* Weekly Airdrop Info */}
         <div className="bg-purple-900/30 border border-purple-500/50 rounded-lg p-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <span className="text-xl">💎</span>
+            <Diamond className="w-5 h-5 text-purple-300" />
             <span className="font-bold text-purple-300">Weekly Army Airdrop</span>
           </div>
           <p className="text-sm text-gray-300">
-            All warriors in the <strong className={winningArmy === 'bulls' ? 'text-green-400' : 'text-red-400'}>
-              {winningArmy === 'bulls' ? '🐂 Bulls' : '🐻 Bears'}
+            All warriors in the <strong className={`inline-flex items-center gap-1 ${winningArmy === 'bulls' ? 'text-green-400' : 'text-red-400'}`}>
+              {winningArmy === 'bulls' ? <><BullIcon className="w-4 h-4" /> Bulls</> : <><BearIcon className="w-4 h-4" /> Bears</>}
             </strong> army will receive $BATTLE tokens when snapshot is taken!
           </p>
-          <p className="text-xs text-gray-400 mt-2">
-            💡 Switch armies by closing winning positions in the opposite direction. Only positive P&L counts!
+          <p className="text-xs text-gray-400 mt-2 flex items-center justify-center gap-1">
+            <Lightbulb className="w-3 h-3" /> Switch armies by closing winning positions in the opposite direction. Only positive P&L counts!
           </p>
         </div>
       </div>

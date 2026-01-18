@@ -11,6 +11,7 @@ import { Avatar } from '../../components/Avatar';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
 import { getReferralLink } from '../../lib/farcaster';
+import { Award, Trophy, Swords, Target, Medal, Link } from 'lucide-react';
 
 // Farcaster icon component
 const FarcasterIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -1104,7 +1105,7 @@ function UserProfilePageContent() {
               onClick={() => router.push('/battlefield?tab=airdrop')}
               className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
             >
-              <span className="text-lg">🎖️</span>
+              <Award className="w-5 h-5" />
               <span className="text-[9px] font-bold">Airdrop</span>
             </button>
 
@@ -1112,7 +1113,7 @@ function UserProfilePageContent() {
               onClick={() => router.push('/battlefield?tab=leaderboard')}
               className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
             >
-              <span className="text-lg">🏆</span>
+              <Trophy className="w-5 h-5" />
               <span className="text-[9px] font-bold">Leaders</span>
             </button>
 
@@ -1120,7 +1121,7 @@ function UserProfilePageContent() {
               onClick={() => router.push('/battlefield?tab=battle')}
               className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
             >
-              <span className="text-lg">⚔️</span>
+              <Swords className="w-5 h-5" />
               <span className="text-[9px] font-bold">Battle</span>
             </button>
 
@@ -1146,7 +1147,7 @@ function UserProfilePageContent() {
               onClick={() => router.push('/battlefield')}
               className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
             >
-              <span className="text-lg">🎯</span>
+              <Target className="w-5 h-5" />
               <span className="text-[9px] font-bold">Trade</span>
             </button>
 
@@ -1154,7 +1155,7 @@ function UserProfilePageContent() {
               onClick={() => router.push('/battlefield?tab=missions')}
               className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
             >
-              <span className="text-lg">🏅</span>
+              <Medal className="w-5 h-5" />
               <span className="text-[9px] font-bold">Missions</span>
             </button>
 
@@ -1162,7 +1163,7 @@ function UserProfilePageContent() {
               onClick={() => router.push('/battlefield?tab=referrals')}
               className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-lg transition-all min-w-[48px] text-gray-400 hover:text-gray-300"
             >
-              <span className="text-lg">🔗</span>
+              <Link className="w-5 h-5" />
               <span className="text-[9px] font-bold">Referrals</span>
             </button>
           </div>

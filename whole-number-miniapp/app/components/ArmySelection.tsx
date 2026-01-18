@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { getApiUrl } from '../lib/api';
 import toast from 'react-hot-toast';
+import { Target, Check, Lightbulb } from 'lucide-react';
+import { BearIcon, BullIcon } from './icons';
 
 interface ArmySelectionProps {
   currentArmy?: 'bears' | 'bulls';
@@ -46,8 +48,8 @@ export function ArmySelection({ currentArmy, onArmyChange }: ArmySelectionProps)
 
   return (
     <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400">
-        🎯 Army Prediction Market 🎯
+      <h2 className="text-2xl font-bold text-center mb-4 text-yellow-400 flex items-center justify-center gap-2">
+        <Target className="w-6 h-6" /> Army Prediction Market <Target className="w-6 h-6" />
       </h2>
       
       <p className="text-center text-gray-300 mb-6">
@@ -76,7 +78,7 @@ export function ArmySelection({ currentArmy, onArmyChange }: ArmySelectionProps)
           `}
         >
           <div className="text-center">
-            <div className="text-6xl mb-3">🐻</div>
+            <BearIcon className="w-16 h-16 mx-auto mb-3 text-red-400" />
             <h3 className="text-2xl font-bold text-red-400 mb-2">BEAR ARMY</h3>
             <p className="text-sm text-gray-300 mb-3">Bearish Traders</p>
             <div className="space-y-1 text-xs text-gray-400">
@@ -88,8 +90,8 @@ export function ArmySelection({ currentArmy, onArmyChange }: ArmySelectionProps)
           
           {selectedArmy === 'bears' && (
             <div className="absolute top-2 right-2">
-              <span className="inline-flex items-center px-2 py-1 rounded bg-red-500 text-white text-xs font-bold">
-                ✓ ACTIVE
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500 text-white text-xs font-bold">
+                <Check className="w-3 h-3" /> ACTIVE
               </span>
             </div>
           )}
@@ -101,15 +103,15 @@ export function ArmySelection({ currentArmy, onArmyChange }: ArmySelectionProps)
           disabled={isChanging || !address}
           className={`
             relative p-6 rounded-lg border-4 transition-all transform hover:scale-105
-            ${selectedArmy === 'bulls' 
-              ? 'border-green-500 bg-green-900/30 shadow-lg shadow-green-500/50' 
+            ${selectedArmy === 'bulls'
+              ? 'border-green-500 bg-green-900/30 shadow-lg shadow-green-500/50'
               : 'border-slate-600 bg-slate-700/30 hover:border-green-400'
             }
             ${isChanging ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
           `}
         >
           <div className="text-center">
-            <div className="text-6xl mb-3">🐂</div>
+            <BullIcon className="w-16 h-16 mx-auto mb-3 text-green-400" />
             <h3 className="text-2xl font-bold text-green-400 mb-2">BULL ARMY</h3>
             <p className="text-sm text-gray-300 mb-3">Bullish Traders</p>
             <div className="space-y-1 text-xs text-gray-400">
@@ -121,8 +123,8 @@ export function ArmySelection({ currentArmy, onArmyChange }: ArmySelectionProps)
           
           {selectedArmy === 'bulls' && (
             <div className="absolute top-2 right-2">
-              <span className="inline-flex items-center px-2 py-1 rounded bg-green-500 text-white text-xs font-bold">
-                ✓ ACTIVE
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-500 text-white text-xs font-bold">
+                <Check className="w-3 h-3" /> ACTIVE
               </span>
             </div>
           )}
@@ -142,8 +144,8 @@ export function ArmySelection({ currentArmy, onArmyChange }: ArmySelectionProps)
       )}
 
       <div className="mt-6 p-4 bg-slate-700/50 rounded-lg">
-        <p className="text-xs text-gray-400 text-center">
-          💡 <strong>Tip:</strong> Your army choice affects leaderboard rankings and monthly bonuses. 
+        <p className="text-xs text-gray-400 text-center flex items-center justify-center gap-1">
+          <Lightbulb className="w-3 h-3" /> <strong>Tip:</strong> Your army choice affects leaderboard rankings and monthly bonuses.
           Choose wisely and lead your army to victory!
         </p>
       </div>

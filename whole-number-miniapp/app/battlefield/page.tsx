@@ -28,6 +28,8 @@ import { WholeNumberStrategy } from '../lib/strategy';
 import { useUser } from '../context/UserContext';
 import { usePrice } from '../context/PriceContext';
 import type { UserData } from '../types';
+import { Award, Trophy, Swords, Target, Medal, Link, TrendingUp, Lightbulb, Sparkles, User, Loader2 } from 'lucide-react';
+import { BearIcon, BullIcon } from '../components/icons';
 
 export default function BattlefieldHome() {
   const router = useRouter();
@@ -36,7 +38,7 @@ export default function BattlefieldHome() {
   const { btcPrice, priceTimestamp, isLoading, priceDirection } = usePrice();
 
   const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'missions' | 'airdrop' | 'referrals'>('trade');
-  const [battleSection, setBattleSection] = useState<'market' | 'status' | 'predictions' | 'strategy' | 'tips'>('market');
+  const [battleSection, setBattleSection] = useState<'market' | 'status' | 'predictions' | 'strategy' | 'tips'>('status');
   const [strategy] = useState(() => new WholeNumberStrategy());
   const [previousUserData, setPreviousUserData] = useState<UserData | null>(null);
 
@@ -46,6 +48,11 @@ export default function BattlefieldHome() {
     isLiquidated: boolean;
     isStopLoss: boolean;
   } | null>(null);
+
+  // Mark user as visited (so landing page is skipped next time)
+  useEffect(() => {
+    localStorage.setItem('battlefield_has_visited', 'true');
+  }, []);
 
   // Check URL params on mount to set initial tab
   useEffect(() => {
@@ -524,54 +531,54 @@ export default function BattlefieldHome() {
             {/* Section Navigation */}
             <div className="grid grid-cols-5 gap-1 mb-6">
               <button
-                onClick={() => setBattleSection('market')}
-                className={`py-2 px-1 rounded-lg font-bold text-[10px] md:text-xs transition-all ${
-                  battleSection === 'market'
-                    ? 'bg-yellow-500 text-slate-900'
-                    : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
-                }`}
-              >
-                🎯 Battle
-              </button>
-              <button
                 onClick={() => setBattleSection('status')}
-                className={`py-2 px-1 rounded-lg font-bold text-[10px] md:text-xs transition-all ${
+                className={`flex items-center justify-center gap-1 py-2 px-1 rounded-lg font-bold text-[10px] md:text-xs transition-all ${
                   battleSection === 'status'
                     ? 'bg-yellow-500 text-slate-900'
                     : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                 }`}
               >
-                ⚔️ Army
+                <Swords className="w-3 h-3" /> Army
+              </button>
+              <button
+                onClick={() => setBattleSection('market')}
+                className={`flex items-center justify-center gap-1 py-2 px-1 rounded-lg font-bold text-[10px] md:text-xs transition-all ${
+                  battleSection === 'market'
+                    ? 'bg-yellow-500 text-slate-900'
+                    : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                }`}
+              >
+                <Target className="w-3 h-3" /> Battle
               </button>
               <button
                 onClick={() => setBattleSection('strategy')}
-                className={`py-2 px-1 rounded-lg font-bold text-[10px] md:text-xs transition-all ${
+                className={`flex items-center justify-center gap-1 py-2 px-1 rounded-lg font-bold text-[10px] md:text-xs transition-all ${
                   battleSection === 'strategy'
                     ? 'bg-yellow-500 text-slate-900'
                     : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                 }`}
               >
-                📈 Strategy
+                <TrendingUp className="w-3 h-3" /> Strategy
               </button>
               <button
                 onClick={() => setBattleSection('tips')}
-                className={`py-2 px-1 rounded-lg font-bold text-[10px] md:text-xs transition-all ${
+                className={`flex items-center justify-center gap-1 py-2 px-1 rounded-lg font-bold text-[10px] md:text-xs transition-all ${
                   battleSection === 'tips'
                     ? 'bg-yellow-500 text-slate-900'
                     : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                 }`}
               >
-                💡 Tips
+                <Lightbulb className="w-3 h-3" /> Tips
               </button>
               <button
                 onClick={() => setBattleSection('predictions')}
-                className={`py-2 px-1 rounded-lg font-bold text-[10px] md:text-xs transition-all ${
+                className={`flex items-center justify-center gap-1 py-2 px-1 rounded-lg font-bold text-[10px] md:text-xs transition-all ${
                   battleSection === 'predictions'
                     ? 'bg-yellow-500 text-slate-900'
                     : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                 }`}
               >
-                🔮 Predict
+                <Sparkles className="w-3 h-3" /> Predict
               </button>
             </div>
 
@@ -1121,7 +1128,7 @@ export default function BattlefieldHome() {
                 activeTab === 'airdrop' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-lg">🎖️</span>
+              <Award className="w-5 h-5" />
               <span className="text-[9px] font-bold">Airdrop</span>
             </button>
 
@@ -1131,7 +1138,7 @@ export default function BattlefieldHome() {
                 activeTab === 'leaderboard' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-lg">🏆</span>
+              <Trophy className="w-5 h-5" />
               <span className="text-[9px] font-bold">Leaders</span>
             </button>
 
@@ -1141,7 +1148,7 @@ export default function BattlefieldHome() {
                 activeTab === 'battle' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-lg">⚔️</span>
+              <Swords className="w-5 h-5" />
               <span className="text-[9px] font-bold">Battle</span>
             </button>
 
@@ -1162,7 +1169,7 @@ export default function BattlefieldHome() {
               </button>
             ) : (
               <div className="w-14 h-14 -mt-3 rounded-full bg-slate-700 border-2 border-slate-600 flex items-center justify-center">
-                <span className="text-2xl">👤</span>
+                <User className="w-6 h-6 text-gray-400" />
               </div>
             )}
 
@@ -1173,7 +1180,7 @@ export default function BattlefieldHome() {
                 activeTab === 'trade' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-lg">🎯</span>
+              <Target className="w-5 h-5" />
               <span className="text-[9px] font-bold">Trade</span>
             </button>
 
@@ -1183,7 +1190,7 @@ export default function BattlefieldHome() {
                 activeTab === 'missions' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-lg">🏅</span>
+              <Medal className="w-5 h-5" />
               <span className="text-[9px] font-bold">Missions</span>
             </button>
 
@@ -1193,7 +1200,7 @@ export default function BattlefieldHome() {
                 activeTab === 'referrals' ? 'text-yellow-400' : 'text-gray-400 hover:text-gray-300'
               }`}
             >
-              <span className="text-lg">🔗</span>
+              <Link className="w-5 h-5" />
               <span className="text-[9px] font-bold">Referrals</span>
             </button>
           </div>

@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS trades (
 CREATE TABLE IF NOT EXISTS claims (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  amount DECIMAL(18, 2) DEFAULT 1000.00,            -- Amount claimed ($1,000)
+  amount DECIMAL(18, 2) DEFAULT 100000.00,           -- Amount claimed ($1,000 = 100,000 cents)
   claimed_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -133,7 +133,7 @@ INSERT INTO system_config (key, value, description) VALUES
 ('battle_token_address', '', 'Clanker deployed $BATTLE token address'),
 ('rewards_wallet_address', '', 'AI-managed rewards wallet address'),
 ('claim_cooldown_minutes', '10', 'Minutes between paper money claims'),
-('claim_amount', '1000', 'Amount of paper money per claim'),
+('claim_amount', '100000', 'Amount of paper money per claim (cents)'),
 ('starting_balance', '10000', 'Starting paper money balance'),
 ('weekly_rewards_enabled', 'false', 'Whether weekly rewards are active'),
 ('monthly_rewards_enabled', 'false', 'Whether monthly rewards are active')

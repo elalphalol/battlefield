@@ -1,18 +1,35 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import sdk from '@farcaster/miniapp-sdk';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+
+const VISITED_KEY = 'battlefield_has_visited';
 
 function LandingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isChecking, setIsChecking] = useState(true);
 
   // Capture referral code from URL
   const refCode = searchParams.get('ref') || searchParams.get('referral');
 
+  // Check if returning user - redirect to battlefield
+  useEffect(() => {
+    const hasVisited = localStorage.getItem(VISITED_KEY);
+    if (hasVisited) {
+      // Returning user - skip landing page
+      const url = refCode ? `/battlefield?ref=${refCode}` : '/battlefield';
+      router.replace(url);
+    } else {
+      setIsChecking(false);
+    }
+  }, [router, refCode]);
+
   const handleStartTrading = () => {
+    // Mark as visited for future
+    localStorage.setItem(VISITED_KEY, 'true');
+
     // Preserve referral code when navigating to battlefield
     if (refCode) {
       router.push(`/battlefield?ref=${refCode}`);
@@ -20,6 +37,15 @@ function LandingPageContent() {
       router.push('/battlefield');
     }
   };
+
+  // Show loading while checking localStorage
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center">
+        <div className="text-2xl">Loading...</div>
+      </div>
+    );
+  }
 
   const handleExternalLink = async (url: string) => {
     // Always try SDK first - it will only work in Farcaster miniapp

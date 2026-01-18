@@ -2,60 +2,67 @@
 
 Audit and manage user balances for BATTLEFIELD via the API.
 
+## Core Concept
+
+The audit separates **Trading** from **Rewards**:
+- **Trading Ledger**: Starting balance + Closed PnL (must be exact for fairplay)
+- **Rewards Ledger**: Claims + Missions + Referrals (tracked separately)
+- **Trading Discrepancy**: If user has more/less than trading allows → fairplay issue
+
 ## Commands
+
+- `/audit` - Quick summary of trading discrepancies
+- `/audit full` - Full audit with all details
+- `/audit user <name>` - Detailed breakdown for a specific user
+- `/audit fix` - Dry run preview of fixes
+- `/audit fix --apply` - Apply all balance fixes
+- `/audit fix user <id>` - Fix a specific user by ID
+- `/audit history` - View recent audit runs
+- `/audit rollback <id>` - Rollback a previous fix
 
 Based on user input, run ONE of these:
 
 ### Quick Summary (default: `/audit`)
 
 ```bash
-curl -s "http://localhost:3001/api/admin/audit?source=cli" | node -e "
-const chunks = [];
-process.stdin.on('data', c => chunks.push(c));
-process.stdin.on('end', () => {
-  const r = JSON.parse(Buffer.concat(chunks).toString());
-  if (!r.success) { console.log('Error:', r.message); return; }
-  console.log('=== AUDIT SUMMARY (all values in CENTS) ===');
-  console.log('Total Users:', r.summary.totalUsers);
-  console.log('With Discrepancy (>100 cents):', r.summary.usersWithDiscrepancy);
-  console.log('Total Excess:', '+' + r.summary.totalExcess.toLocaleString(), 'cents');
-  console.log('Total Deficit:', '-' + r.summary.totalDeficit.toLocaleString(), 'cents');
-  console.log(r.summary.usersWithDiscrepancy === 0 ? '\n✅ All balances correct!' : '\n⚠️  Run: /audit full');
-});
+curl -s "http://localhost:3001/api/admin/audit?source=cli" | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+s = r['summary']
+print('=== TRADING AUDIT ===')
+print(f'Total Users: {s[\"totalUsers\"]}')
+print(f'With Discrepancy: {s[\"usersWithDiscrepancy\"]}')
+print(f'Total Excess: +\${s[\"totalExcess\"]/100:,.2f} (possible exploits)')
+print(f'Total Deficit: -\${s[\"totalDeficit\"]/100:,.2f} (possible bugs)')
+print()
+print('✅ All correct!' if s['usersWithDiscrepancy'] == 0 else '⚠️  Run: /audit full')
 "
 ```
 
 ### Full Audit (`/audit full`)
 
 ```bash
-curl -s "http://localhost:3001/api/admin/audit?source=cli" | node -e "
-const chunks = [];
-process.stdin.on('data', c => chunks.push(c));
-process.stdin.on('end', () => {
-  const r = JSON.parse(Buffer.concat(chunks).toString());
-  if (!r.success) { console.log('Error:', r.message); return; }
+curl -s "http://localhost:3001/api/admin/audit?source=cli" | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+if not r['success']: print('Error:', r.get('message')); sys.exit(1)
 
-  console.log('=== BALANCE DISCREPANCIES (all CENTS) ===\n');
+excess = [d for d in r['discrepancies'] if d['tradingDiscrepancy'] > 0]
+deficit = [d for d in r['discrepancies'] if d['tradingDiscrepancy'] < 0]
 
-  if (r.discrepancies.length === 0) {
-    console.log('✅ No discrepancies found!');
-    return;
-  }
+print('=== EXCESS (fairplay concern) ===')
+for d in excess[:20]:
+    pos = 'OPEN' if d['hasOpenPositions'] else ''
+    print(f'{d[\"username\"]}: +\${d[\"tradingDiscrepancy\"]/100:,.2f} | PnL:\${d[\"closedPnl\"]/100:,.2f} Rewards:\${d[\"totalRewards\"]/100:,.2f} {pos}')
 
-  r.discrepancies.slice(0, 30).forEach(u => {
-    const diff = u.discrepancy;
-    console.log(u.username + ' (ID:' + u.id + ') ' + (u.hasOpenPositions ? '⚠️ OPEN' : ''));
-    console.log('  Balance: ' + u.currentBalance.toLocaleString() + ' | Expected: ' + u.expectedBalance.toLocaleString());
-    console.log('  Diff: ' + (diff >= 0 ? '+' : '') + diff.toLocaleString() + ' cents');
-    console.log('  Claims:' + u.claims.toLocaleString() + ' Missions:' + u.missions.toLocaleString() + ' Refs:' + u.referrals.toLocaleString() + ' PnL:' + u.pnl.toLocaleString() + ' Lock:' + u.openCollateral.toLocaleString());
-    console.log('');
-  });
+print(f'\n=== DEFICIT (possible bugs) ===')
+for d in deficit[:20]:
+    pos = 'OPEN' if d['hasOpenPositions'] else ''
+    print(f'{d[\"username\"]}: \${d[\"tradingDiscrepancy\"]/100:,.2f} | PnL:\${d[\"closedPnl\"]/100:,.2f} Rewards:\${d[\"totalRewards\"]/100:,.2f} {pos}')
 
-  console.log('--- Summary (cents) ---');
-  console.log('Total Excess: +' + r.summary.totalExcess.toLocaleString());
-  console.log('Total Deficit: -' + r.summary.totalDeficit.toLocaleString());
-  console.log('Users with discrepancy:', r.summary.usersWithDiscrepancy);
-});
+print(f'\n--- Summary ---')
+print(f'Excess: +\${r[\"summary\"][\"totalExcess\"]/100:,.2f} ({len(excess)} users)')
+print(f'Deficit: -\${r[\"summary\"][\"totalDeficit\"]/100:,.2f} ({len(deficit)} users)')
 "
 ```
 
@@ -64,188 +71,188 @@ process.stdin.on('end', () => {
 Replace `USERNAME` with the target user:
 
 ```bash
-curl -s "http://localhost:3001/api/admin/audit/user/USERNAME" | node -e "
-const chunks = [];
-process.stdin.on('data', c => chunks.push(c));
-process.stdin.on('end', () => {
-  const r = JSON.parse(Buffer.concat(chunks).toString());
-  if (!r.success) { console.log('Error:', r.message); return; }
+curl -s "http://localhost:3001/api/admin/audit/user/USERNAME" | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+if not r['success']: print('Error:', r.get('message')); sys.exit(1)
 
-  const u = r.user;
-  const b = r.breakdown;
+u = r['user']
+t = r['trading']
+rw = r['rewards']
 
-  console.log('=== ' + u.username + ' (ID: ' + u.id + ') ===');
-  console.log('ALL VALUES IN CENTS\n');
-  console.log('Current Balance: ' + u.currentBalanceCents.toLocaleString() + '\n');
-  console.log('--- Calculation ---');
-  console.log('Starting:     1,000,000');
-  console.log('+ Claims:     ' + b.claimsCents.toLocaleString());
-  console.log('+ Missions:   ' + b.missionsCents.toLocaleString());
-  console.log('+ Ref Given:  ' + b.refGivenCents.toLocaleString());
-  console.log('+ Ref Recv:   ' + b.refReceivedCents.toLocaleString());
-  console.log('+ PnL (corr): ' + b.pnlCorrectedCents.toLocaleString());
-  console.log('  (Raw PnL:   ' + b.pnlRawCents.toLocaleString() + ')');
-  console.log('- Collateral: ' + b.collateralCents.toLocaleString() + ' (' + b.openTradesCount + ' open)');
-  console.log('─────────────────────');
-  console.log('Expected:     ' + u.expectedCents.toLocaleString() + '\n');
-
-  if (u.isCorrect) {
-    console.log('✅ Balance is CORRECT');
-  } else {
-    const diff = u.discrepancyCents;
-    console.log('⚠️ Discrepancy: ' + (diff >= 0 ? '+' : '') + diff.toLocaleString() + ' cents');
-  }
-});
+print(f'=== {u[\"username\"]} (ID: {u[\"id\"]}) ===')
+print()
+print('CURRENT STATE:')
+print(f'  Paper Balance:   \${u[\"paperBalance\"]/100:>12,.2f}')
+print(f'  Open Collateral: \${u[\"openCollateral\"]/100:>12,.2f}')
+print(f'  Total Assets:    \${u[\"totalAssets\"]/100:>12,.2f}')
+print()
+print('TRADING LEDGER:')
+print(f'  Starting:        \${t[\"startingBalance\"]/100:>12,.2f}')
+print(f'  Closed PnL:      \${t[\"closedPnl\"]/100:>+12,.2f}')
+print(f'  Expected:        \${t[\"expectedFromTrading\"]/100:>12,.2f}')
+print(f'  Trading Assets:  \${t[\"tradingAssets\"]/100:>12,.2f}')
+print(f'  DISCREPANCY:     \${t[\"tradingDiscrepancy\"]/100:>+12,.2f}')
+print()
+print('REWARDS LEDGER:')
+print(f'  Claims:          \${rw[\"claims\"]/100:>12,.2f}')
+print(f'  Missions:        \${rw[\"missions\"]/100:>12,.2f}')
+print(f'  Referrals:       \${(rw[\"referralsGiven\"]+rw[\"referralsReceived\"])/100:>12,.2f}')
+print(f'  Total Rewards:   \${rw[\"totalRewards\"]/100:>12,.2f}')
+print()
+status = '✅ CORRECT' if u['isCorrect'] else f'⚠️ DISCREPANCY: \${u[\"tradingDiscrepancy\"]/100:+,.2f}'
+print(status)
 "
 ```
 
 ### Fix Dry Run (`/audit fix`)
 
-Preview what would be fixed without making changes:
-
 ```bash
 curl -s -X POST "http://localhost:3001/api/admin/audit/fix" \
   -H "Content-Type: application/json" \
-  -d '{"fixAll": true, "dryRun": true, "source": "cli"}' | node -e "
-const chunks = [];
-process.stdin.on('data', c => chunks.push(c));
-process.stdin.on('end', () => {
-  const r = JSON.parse(Buffer.concat(chunks).toString());
-  if (!r.success) { console.log('Error:', r.message); return; }
+  -d '{"fixAll": true, "dryRun": true, "source": "cli"}' | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+if not r['success']: print('Error:', r.get('message')); sys.exit(1)
 
-  console.log('=== DRY RUN - NO CHANGES (all CENTS) ===\n');
+print('=== DRY RUN - NO CHANGES ===\n')
+if not r['fixedUsers']:
+    print('✅ No discrepancies to fix!')
+    sys.exit(0)
 
-  if (r.fixedUsers.length === 0) {
-    console.log('✅ No discrepancies to fix!');
-    return;
-  }
+print(f'Would fix {len(r[\"fixedUsers\"])} users:\n')
+for u in r['fixedUsers']:
+    print(f'{u[\"username\"]}: \${u[\"previousBalance\"]/100:,.2f} -> \${u[\"newBalance\"]/100:,.2f} ({u[\"adjustment\"]/100:+,.2f})')
 
-  console.log('Would fix ' + r.fixedUsers.length + ' users:\n');
-  r.fixedUsers.forEach(u => {
-    const diff = u.adjustment;
-    console.log(u.username + ': ' + u.previousBalance.toLocaleString() + ' -> ' + u.newBalance.toLocaleString() + ' (' + (diff >= 0 ? '+' : '') + diff.toLocaleString() + ')');
-  });
-  console.log('\nTotal adjustment: ' + (r.totalAdjustment >= 0 ? '+' : '') + r.totalAdjustment.toLocaleString() + ' cents');
-  console.log('\n⚠️ To apply: /audit fix --apply');
-});
+print(f'\nTotal adjustment: \${r[\"totalAdjustment\"]/100:+,.2f}')
+print('\n⚠️ To apply: /audit fix --apply')
 "
 ```
 
 ### Fix Apply (`/audit fix --apply`)
 
-Actually apply the fixes:
+```bash
+curl -s -X POST "http://localhost:3001/api/admin/audit/fix" \
+  -H "Content-Type: application/json" \
+  -d '{"fixAll": true, "dryRun": false, "source": "cli"}' | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+if not r['success']: print('Error:', r.get('message')); sys.exit(1)
+
+print('=== FIXES APPLIED ===\n')
+if not r['fixedUsers']:
+    print('✅ No discrepancies to fix!')
+    sys.exit(0)
+
+for u in r['fixedUsers']:
+    print(f'✓ {u[\"username\"]}: \${u[\"previousBalance\"]/100:,.2f} -> \${u[\"newBalance\"]/100:,.2f} ({u[\"adjustment\"]/100:+,.2f})')
+
+print(f'\n✅ Fixed {len(r[\"fixedUsers\"])} users!')
+print(f'Total adjustment: \${r[\"totalAdjustment\"]/100:+,.2f}')
+"
+```
+
+### Fix Specific User (`/audit fix user <id>`)
+
+Replace `USERID` with the user's numeric ID:
 
 ```bash
 curl -s -X POST "http://localhost:3001/api/admin/audit/fix" \
   -H "Content-Type: application/json" \
-  -d '{"fixAll": true, "dryRun": false, "source": "cli"}' | node -e "
-const chunks = [];
-process.stdin.on('data', c => chunks.push(c));
-process.stdin.on('end', () => {
-  const r = JSON.parse(Buffer.concat(chunks).toString());
-  if (!r.success) { console.log('Error:', r.message); return; }
+  -d '{"userIds": [USERID], "dryRun": false, "source": "cli"}' | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+if not r['success']: print('Error:', r.get('message')); sys.exit(1)
 
-  console.log('=== APPLYING FIXES (all CENTS) ===\n');
+if not r['fixedUsers']:
+    print('✅ No discrepancy for this user!')
+    sys.exit(0)
 
-  if (r.fixedUsers.length === 0) {
-    console.log('✅ No discrepancies to fix!');
-    return;
-  }
-
-  r.fixedUsers.forEach(u => {
-    const diff = u.adjustment;
-    console.log('✓ ' + u.username + ': ' + u.previousBalance.toLocaleString() + ' -> ' + u.newBalance.toLocaleString() + ' (' + (diff >= 0 ? '+' : '') + diff.toLocaleString() + ')');
-  });
-
-  console.log('\n✅ Fixed ' + r.fixedUsers.length + ' users!');
-  console.log('Total adjustment: ' + (r.totalAdjustment >= 0 ? '+' : '') + r.totalAdjustment.toLocaleString() + ' cents');
-});
+u = r['fixedUsers'][0]
+print(f'=== FIXED: {u[\"username\"]} ===')
+print(f'Previous: \${u[\"previousBalance\"]/100:,.2f}')
+print(f'New:      \${u[\"newBalance\"]/100:,.2f}')
+print(f'Change:   \${u[\"adjustment\"]/100:+,.2f}')
+print('\n✅ Balance corrected!')
 "
 ```
 
 ### Audit History (`/audit history`)
 
-View recent audit runs:
-
 ```bash
-curl -s "http://localhost:3001/api/admin/audit/history?limit=10" | node -e "
-const chunks = [];
-process.stdin.on('data', c => chunks.push(c));
-process.stdin.on('end', () => {
-  const r = JSON.parse(Buffer.concat(chunks).toString());
-  if (!r.success) { console.log('Error:', r.message); return; }
+curl -s "http://localhost:3001/api/admin/audit/history?limit=10" | python3 -c "
+import json, sys
+from datetime import datetime
+r = json.load(sys.stdin)
+if not r['success']: print('Error'); sys.exit(1)
 
-  console.log('=== AUDIT HISTORY ===\n');
-
-  if (r.history.length === 0) {
-    console.log('No audit history found.');
-    return;
-  }
-
-  r.history.forEach(h => {
-    const date = new Date(h.runAt).toLocaleString();
-    const typeIcon = h.auditType === 'fix' ? '🔧' : h.auditType === 'rollback' ? '↩️' : '📋';
-    const adjustment = h.totalAdjustmentCents ? ' (' + (h.totalAdjustmentCents >= 0 ? '+' : '') + h.totalAdjustmentCents.toLocaleString() + ' cents)' : '';
-    const rolledBack = h.rolledBackAt ? ' [ROLLED BACK]' : '';
-
-    console.log('#' + h.id + ' ' + typeIcon + ' ' + h.auditType.toUpperCase() + ' - ' + date + rolledBack);
-    console.log('   Checked: ' + h.totalUsersChecked + ' | Discrepancies: ' + h.discrepanciesFound + ' | Fixed: ' + h.fixesApplied + adjustment);
-    console.log('   Source: ' + h.triggeredBy + (h.notes ? ' | ' + h.notes : ''));
-    console.log('');
-  });
-});
+print('=== AUDIT HISTORY ===\n')
+for h in r['history']:
+    icon = '🔧' if h['auditType'] == 'fix' else '↩️' if h['auditType'] == 'rollback' else '📋'
+    adj = f' ({h[\"totalAdjustmentCents\"]/100:+,.2f})' if h.get('totalAdjustmentCents') else ''
+    rb = ' [ROLLED BACK]' if h.get('rolledBackAt') else ''
+    print(f'#{h[\"id\"]} {icon} {h[\"auditType\"].upper()} - {h[\"runAt\"]}{rb}')
+    print(f'   Checked:{h[\"totalUsersChecked\"]} Disc:{h[\"discrepanciesFound\"]} Fixed:{h[\"fixesApplied\"]}{adj}')
+    print()
 "
 ```
 
 ### Rollback (`/audit rollback <id>`)
 
-Rollback a specific fix. Replace `LOGID` with the audit log ID:
+Replace `LOGID` with the audit log ID:
 
 ```bash
 curl -s -X POST "http://localhost:3001/api/admin/audit/rollback/LOGID" \
   -H "Content-Type: application/json" \
-  -d '{"source": "cli"}' | node -e "
-const chunks = [];
-process.stdin.on('data', c => chunks.push(c));
-process.stdin.on('end', () => {
-  const r = JSON.parse(Buffer.concat(chunks).toString());
-  if (!r.success) { console.log('Error:', r.message); return; }
+  -d '{"source": "cli"}' | python3 -c "
+import json, sys
+r = json.load(sys.stdin)
+if not r['success']: print('Error:', r.get('message')); sys.exit(1)
 
-  console.log('=== ROLLBACK COMPLETE ===\n');
+print('=== ROLLBACK COMPLETE ===\n')
+for u in r['rolledBackUsers']:
+    print(f'↩️ {u[\"username\"]}: \${u[\"previousBalance\"]/100:,.2f} -> \${u[\"newBalance\"]/100:,.2f}')
 
-  r.rolledBackUsers.forEach(u => {
-    console.log('↩️ ' + u.username + ': ' + u.previousBalance.toLocaleString() + ' -> ' + u.newBalance.toLocaleString());
-  });
-
-  console.log('\n✅ Rolled back ' + r.rolledBackUsers.length + ' users');
-  console.log('Total adjustment: ' + (r.totalRollbackAdjustment >= 0 ? '+' : '') + r.totalRollbackAdjustment.toLocaleString() + ' cents');
-  console.log('Rollback log ID: #' + r.rollbackLogId);
-});
+print(f'\n✅ Rolled back {len(r[\"rolledBackUsers\"])} users')
+print(f'Rollback log ID: #{r[\"rollbackLogId\"]}')
 "
 ```
 
-## Balance Formula (CENTS)
+## Formula
 
 ```
-Expected = MAX(0,
-  1,000,000 (starting)
-  + SUM(claims.amount)
-  + SUM(user_missions.reward_paid) WHERE is_claimed
-  + SUM(referrals.referrer_reward) WHERE referrer_claimed
-  + SUM(referrals.referred_reward) WHERE referred_claimed
-  + SUM(corrected_pnl) WHERE status='closed'
-  - SUM(position_size) WHERE status='open'
-)
+TRADING LEDGER (must be exact for fairplay):
+  Expected from Trading = Starting (1M) + Closed PnL
 
-corrected_pnl = pnl / leverage for leverage > 1
-Discrepancy threshold: >100 cents ($1)
+REWARDS LEDGER (tracked separately):
+  Total Rewards = Claims + Missions + Referrals
+
+CURRENT STATE:
+  Total Assets = paper_balance + open_collateral
+
+TRADING DISCREPANCY:
+  = (Total Assets - Total Rewards) - Expected from Trading
+  = Trading Assets - Expected from Trading
+
+  Positive = User has MORE than trading allows (possible exploit)
+  Negative = User has LESS than trading allows (possible bug)
 ```
 
-## Reference Values (CENTS)
+## How Fixes Work
 
-| Item | Cents |
-|------|-------|
-| Starting Balance | 1,000,000 |
-| Daily Claim | 100,000 |
-| Referrer Reward | 250,000 |
-| Referred Reward | 250,000 |
+The fix sets `paper_balance` so that:
+```
+paper_balance + open_collateral = Expected from Trading + Total Rewards
+paper_balance = Expected Total - open_collateral
+```
+
+This only adjusts paper_balance, never touches trade records.
+
+## Reference Values
+
+| Item | Cents | Dollars |
+|------|-------|---------|
+| Starting Balance | 1,000,000 | $10,000 |
+| Daily Claim | 100,000 | $1,000 |
+| Referrer Reward | 500,000 | $5,000 |
+| Referred Reward | 500,000 | $5,000 |

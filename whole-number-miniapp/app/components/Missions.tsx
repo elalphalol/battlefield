@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getApiUrl } from '../lib/api';
 import toast from 'react-hot-toast';
 import sdk from '@farcaster/miniapp-sdk';
+import { Loader2, Target } from 'lucide-react';
 
 interface Mission {
   id: number;
@@ -239,7 +240,7 @@ export function Missions({ walletAddress, readOnly = false }: MissionsProps) {
   if (loading) {
     return (
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-6 text-center">
-        <div className="animate-spin text-4xl mb-2">🎯</div>
+        <Loader2 className="w-10 h-10 animate-spin text-yellow-400 mx-auto mb-2" />
         <p className="text-gray-400">Loading missions...</p>
       </div>
     );

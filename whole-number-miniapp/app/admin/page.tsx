@@ -80,6 +80,52 @@ interface TopTrader {
   balance: string;
 }
 
+// User Profile Detail interfaces (for clickable user modal)
+interface UserProfileDetail {
+  user: {
+    id: number;
+    fid: number;
+    username: string;
+    pfp_url: string;
+    wallet_address: string;
+    army: 'bears' | 'bulls';
+    referral_code: string;
+  };
+  stats: {
+    paper_balance: number;
+    total_pnl: number;
+    total_trades: number;
+    winning_trades: number;
+    win_rate: number;
+    current_streak: number;
+    best_streak: number;
+    times_liquidated: number;
+    battle_tokens_earned: string;
+    rank: string;
+    last_active: string;
+  };
+  openPositions: TradePosition[];
+  recentHistory: TradePosition[];
+}
+
+interface TradePosition {
+  id: number;
+  position_type: 'long' | 'short';
+  leverage: number;
+  entry_price: number;
+  exit_price?: number;
+  position_size: number;
+  collateral?: number;
+  pnl?: number;
+  current_pnl?: number;
+  liquidation_price?: number;
+  status: 'open' | 'closed' | 'liquidated';
+  stop_loss?: number;
+  closed_by?: string;
+  opened_at: string;
+  closed_at?: string;
+}
+
 interface HourlyData {
   hour_utc: number;
   trades: string;
@@ -342,6 +388,11 @@ export default function AdminPage() {
   const [referralActivity, setReferralActivity] = useState<ReferralActivity[]>([]);
   const [referralsLoading, setReferralsLoading] = useState(false);
   const [revertingReferralId, setRevertingReferralId] = useState<number | null>(null);
+
+  // User Profile Detail Modal state
+  const [userProfileDetail, setUserProfileDetail] = useState<UserProfileDetail | null>(null);
+  const [userProfileLoading, setUserProfileLoading] = useState(false);
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
 
   const handleRevertReferral = async (referralId: number, referrerUsername: string, referredUsername: string) => {
     if (!confirm(`Are you sure you want to revert the referral from ${referrerUsername} → ${referredUsername}? This will deduct rewards if already completed.`)) {
@@ -613,9 +664,11 @@ export default function AdminPage() {
     }
   };
 
-  // Helper to format cents as display value
-  const formatCents = (cents: number): string => {
-    return cents.toLocaleString();
+  // Helper to format cents as dollars
+  const formatCents = (cents: number | undefined | null): string => {
+    if (cents === undefined || cents === null || isNaN(cents)) return '$0.00';
+    const dollars = cents / 100;
+    return '$' + dollars.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const fetchReferrals = async () => {
@@ -674,6 +727,33 @@ export default function AdminPage() {
     }
   };
 
+  // Fetch user profile details for modal
+  const fetchUserProfile = async (username: string) => {
+    setUserProfileLoading(true);
+    setShowUserProfileModal(true);
+    try {
+      // Get current BTC price for calculating current P&L on open positions
+      const priceResponse = await fetch(getApiUrl('api/price'));
+      const priceData = await priceResponse.json();
+      const currentPrice = priceData.success ? priceData.price : 100000;
+
+      const response = await fetch(getApiUrl(`api/profile/${encodeURIComponent(username)}?currentPrice=${currentPrice}`));
+      const data = await response.json();
+      if (data.success) {
+        setUserProfileDetail(data.profile);
+      } else {
+        toast.error(data.message || 'Failed to fetch user profile');
+        setShowUserProfileModal(false);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      toast.error('Failed to fetch user profile');
+      setShowUserProfileModal(false);
+    } finally {
+      setUserProfileLoading(false);
+    }
+  };
+
   const updateUserBalance = async () => {
     if (!selectedUser || !editBalance) return;
 
@@ -705,7 +785,7 @@ export default function AdminPage() {
   };
 
   const resetUserStats = async (userId: number) => {
-    if (!confirm('Are you sure you want to reset this user\'s stats?')) return;
+    if (!confirm('Are you sure you want to reset this user\'s stats? This will close all open trades.')) return;
 
     try {
       const response = await fetch(getApiUrl('api/admin/users/reset'), {
@@ -717,12 +797,93 @@ export default function AdminPage() {
       if (data.success) {
         toast.success('User stats reset');
         fetchUsers();
+        if (userProfileDetail?.user) {
+          fetchUserProfile(userProfileDetail.user.username);
+        }
       } else {
         toast.error(data.message || 'Failed to reset stats');
       }
     } catch (error) {
       console.error('Error resetting stats:', error);
       toast.error('Failed to reset stats');
+    }
+  };
+
+  // Factory reset - delete ALL trades and reset to $10,000
+  const factoryResetUser = async (userId: number) => {
+    if (!confirm('⚠️ FACTORY RESET: This will DELETE ALL TRADES and reset balance to $10,000. This cannot be undone. Continue?')) return;
+
+    try {
+      const response = await fetch(getApiUrl('api/admin/users/factory-reset'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`Factory reset complete. Deleted ${data.tradesDeleted} trades.`);
+        fetchUsers();
+        if (userProfileDetail?.user) {
+          fetchUserProfile(userProfileDetail.user.username);
+        }
+      } else {
+        toast.error(data.message || 'Failed to factory reset');
+      }
+    } catch (error) {
+      console.error('Error factory resetting:', error);
+      toast.error('Failed to factory reset');
+    }
+  };
+
+  // Recalculate balance from trade history
+  const recalculateUserBalance = async (userId: number) => {
+    if (!confirm('Recalculate balance from trade history? This will update balance and stats based on actual trades.')) return;
+
+    try {
+      const response = await fetch(getApiUrl('api/admin/users/recalculate-balance'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`Balance recalculated: ${formatCents(data.previousBalance)} → ${formatCents(data.newBalance)}`);
+        fetchUsers();
+        if (userProfileDetail?.user) {
+          fetchUserProfile(userProfileDetail.user.username);
+        }
+      } else {
+        toast.error(data.message || 'Failed to recalculate balance');
+      }
+    } catch (error) {
+      console.error('Error recalculating balance:', error);
+      toast.error('Failed to recalculate balance');
+    }
+  };
+
+  // Delete individual trade
+  const deleteTrade = async (tradeId: number, recalculate: boolean = true) => {
+    if (!confirm(`Delete trade #${tradeId}? ${recalculate ? 'Balance will be recalculated.' : ''}`)) return;
+
+    try {
+      const response = await fetch(getApiUrl('api/admin/trades/delete'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tradeId, recalculateBalance: recalculate })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`Trade #${tradeId} deleted`);
+        fetchUsers();
+        if (userProfileDetail?.user) {
+          fetchUserProfile(userProfileDetail.user.username);
+        }
+      } else {
+        toast.error(data.message || 'Failed to delete trade');
+      }
+    } catch (error) {
+      console.error('Error deleting trade:', error);
+      toast.error('Failed to delete trade');
     }
   };
 
@@ -1192,7 +1353,14 @@ export default function AdminPage() {
                         <tbody>
                           {analytics.topTraders.map((trader, i) => (
                             <tr key={i} className="border-b border-slate-700/50 hover:bg-slate-700/30">
-                              <td className="py-2 text-white font-bold">{trader.username}</td>
+                              <td className="py-2">
+                                <button
+                                  onClick={() => fetchUserProfile(trader.username)}
+                                  className="text-white font-bold hover:text-yellow-400 hover:underline transition-colors text-left"
+                                >
+                                  {trader.username}
+                                </button>
+                              </td>
                               <td className="py-2 text-center">
                                 <span className={trader.army === 'bulls' ? 'text-green-400' : 'text-red-400'}>
                                   {trader.army === 'bulls' ? '🐂' : '🐻'}
@@ -1200,7 +1368,7 @@ export default function AdminPage() {
                               </td>
                               <td className="py-2 text-right text-blue-400 font-bold">{trader.total_trades}</td>
                               <td className={`py-2 text-right font-bold ${Number(trader.pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                {Number(trader.pnl) >= 0 ? '+' : ''}${Number(trader.pnl).toLocaleString()}
+                                {Number(trader.pnl) >= 0 ? '+' : ''}${Math.round(Number(trader.pnl) / 100).toLocaleString()}
                               </td>
                               <td className="py-2 text-right text-purple-400">{trader.win_rate}%</td>
                               <td className="py-2 text-right text-red-400">{trader.liquidations}</td>
@@ -1695,7 +1863,7 @@ export default function AdminPage() {
           <div className="space-y-6">
             {/* Info Banner */}
             <div className="bg-blue-900/30 border border-blue-500 rounded-lg p-3">
-              <p className="text-blue-400 text-sm font-medium">All values displayed in CENTS (100 cents = $1)</p>
+              <p className="text-blue-400 text-sm font-medium">All values displayed in USD (paper dollars)</p>
             </div>
 
             {/* Maintenance Mode Control */}
@@ -1807,12 +1975,10 @@ export default function AdminPage() {
                     <div className="bg-slate-800 rounded-lg p-3">
                       <p className="text-gray-400 text-xs">Current Balance</p>
                       <p className="text-2xl font-bold text-white">{formatCents(userLookupResult.user.currentBalanceCents)}</p>
-                      <p className="text-gray-500 text-xs">cents</p>
                     </div>
                     <div className="bg-slate-800 rounded-lg p-3">
                       <p className="text-gray-400 text-xs">Expected Balance</p>
                       <p className="text-2xl font-bold text-cyan-400">{formatCents(userLookupResult.user.expectedCents)}</p>
-                      <p className="text-gray-500 text-xs">cents</p>
                     </div>
                   </div>
 
@@ -1824,13 +1990,13 @@ export default function AdminPage() {
                       <p className={`text-xl font-bold ${
                         userLookupResult.user.discrepancyCents > 0 ? 'text-red-400' : 'text-green-400'
                       }`}>
-                        {userLookupResult.user.discrepancyCents > 0 ? '+' : ''}{formatCents(userLookupResult.user.discrepancyCents)} cents
+                        {userLookupResult.user.discrepancyCents > 0 ? '+' : ''}{formatCents(userLookupResult.user.discrepancyCents)}
                       </p>
                     </div>
                   )}
 
                   <div className="border-t border-slate-600 pt-4">
-                    <h5 className="text-sm font-bold text-yellow-400 mb-3">Balance Breakdown (all cents)</h5>
+                    <h5 className="text-sm font-bold text-yellow-400 mb-3">Balance Breakdown</h5>
                     <div className="font-mono text-sm space-y-1">
                       <div className="flex justify-between">
                         <span className="text-gray-400">Starting:</span>
@@ -1985,7 +2151,7 @@ export default function AdminPage() {
                 {auditResult.discrepancies.length > 0 && (
                   <div className="bg-slate-800 border-2 border-slate-700 rounded-lg overflow-hidden">
                     <div className="p-4 border-b border-slate-700">
-                      <h3 className="text-lg font-bold text-yellow-400">Discrepancy Details (all values in cents)</h3>
+                      <h3 className="text-lg font-bold text-yellow-400">Discrepancy Details</h3>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -2256,6 +2422,257 @@ export default function AdminPage() {
                   Save
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* User Profile Detail Modal */}
+        {showUserProfileModal && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-slate-800 border-2 border-yellow-500 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto my-4">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-4 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-yellow-400">User Profile</h2>
+                <button
+                  onClick={() => {
+                    setShowUserProfileModal(false);
+                    setUserProfileDetail(null);
+                  }}
+                  className="text-gray-400 hover:text-white text-2xl leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+
+              {userProfileLoading ? (
+                <div className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+                  <p className="text-gray-400">Loading user profile...</p>
+                </div>
+              ) : userProfileDetail ? (
+                <div className="p-6 space-y-6">
+                  {/* User Info Header */}
+                  <div className="flex items-center gap-4 bg-slate-700/50 p-4 rounded-lg">
+                    {userProfileDetail.user.pfp_url && (
+                      <img
+                        src={userProfileDetail.user.pfp_url}
+                        alt={userProfileDetail.user.username}
+                        className="w-16 h-16 rounded-full border-2 border-yellow-500"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{userProfileDetail.user.army === 'bulls' ? '🐂' : '🐻'}</span>
+                        <h3 className="text-xl font-bold text-white">{userProfileDetail.user.username}</h3>
+                        <span className="text-xs bg-slate-600 px-2 py-1 rounded text-gray-300">Rank #{userProfileDetail.stats.rank}</span>
+                      </div>
+                      <p className="text-gray-400 text-sm mt-1">
+                        FID: {userProfileDetail.user.fid} • {userProfileDetail.user.wallet_address.slice(0, 6)}...{userProfileDetail.user.wallet_address.slice(-4)}
+                      </p>
+                      <p className="text-gray-500 text-xs mt-1">
+                        Last active: {new Date(userProfileDetail.stats.last_active).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-slate-700/50 p-3 rounded-lg text-center">
+                      <p className="text-gray-400 text-xs">Balance</p>
+                      <p className="text-cyan-400 font-bold">${Math.round(userProfileDetail.stats.paper_balance / 100).toLocaleString()}</p>
+                    </div>
+                    <div className="bg-slate-700/50 p-3 rounded-lg text-center">
+                      <p className="text-gray-400 text-xs">Total P&L</p>
+                      <p className={`font-bold ${userProfileDetail.stats.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {userProfileDetail.stats.total_pnl >= 0 ? '+' : ''}${Math.round(userProfileDetail.stats.total_pnl / 100).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="bg-slate-700/50 p-3 rounded-lg text-center">
+                      <p className="text-gray-400 text-xs">Win Rate</p>
+                      <p className="text-purple-400 font-bold">{userProfileDetail.stats.win_rate.toFixed(1)}%</p>
+                    </div>
+                    <div className="bg-slate-700/50 p-3 rounded-lg text-center">
+                      <p className="text-gray-400 text-xs">Total Trades</p>
+                      <p className="text-blue-400 font-bold">{userProfileDetail.stats.total_trades}</p>
+                    </div>
+                    <div className="bg-slate-700/50 p-3 rounded-lg text-center">
+                      <p className="text-gray-400 text-xs">Wins</p>
+                      <p className="text-green-400 font-bold">{userProfileDetail.stats.winning_trades}</p>
+                    </div>
+                    <div className="bg-slate-700/50 p-3 rounded-lg text-center">
+                      <p className="text-gray-400 text-xs">Liquidations</p>
+                      <p className="text-red-400 font-bold">{userProfileDetail.stats.times_liquidated}</p>
+                    </div>
+                    <div className="bg-slate-700/50 p-3 rounded-lg text-center">
+                      <p className="text-gray-400 text-xs">Current Streak</p>
+                      <p className="text-orange-400 font-bold">{userProfileDetail.stats.current_streak}</p>
+                    </div>
+                    <div className="bg-slate-700/50 p-3 rounded-lg text-center">
+                      <p className="text-gray-400 text-xs">Best Streak</p>
+                      <p className="text-yellow-400 font-bold">{userProfileDetail.stats.best_streak}</p>
+                    </div>
+                  </div>
+
+                  {/* Admin Actions */}
+                  <div className="bg-slate-700/30 p-4 rounded-lg">
+                    <h4 className="text-sm font-bold text-yellow-400 mb-3">Admin Actions</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => recalculateUserBalance(userProfileDetail.user.id)}
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded text-sm font-bold transition-all"
+                      >
+                        Recalculate Balance
+                      </button>
+                      <button
+                        onClick={() => resetUserStats(userProfileDetail.user.id)}
+                        className="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-2 rounded text-sm font-bold transition-all"
+                      >
+                        Reset Stats (Close Trades)
+                      </button>
+                      <button
+                        onClick={() => factoryResetUser(userProfileDetail.user.id)}
+                        className="bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded text-sm font-bold transition-all"
+                      >
+                        Factory Reset (Delete All)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Open Positions */}
+                  <div>
+                    <h4 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                      📊 Open Positions ({userProfileDetail.openPositions.length})
+                    </h4>
+                    {userProfileDetail.openPositions.length === 0 ? (
+                      <p className="text-gray-500 text-sm bg-slate-700/30 p-4 rounded-lg">No open positions</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-slate-700 text-gray-400">
+                              <th className="text-left py-2">ID</th>
+                              <th className="text-left py-2">Type</th>
+                              <th className="text-right py-2">Leverage</th>
+                              <th className="text-right py-2">Entry</th>
+                              <th className="text-right py-2">Size</th>
+                              <th className="text-right py-2">Liq. Price</th>
+                              <th className="text-right py-2">Current P&L</th>
+                              <th className="text-right py-2">Opened</th>
+                              <th className="text-center py-2">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {userProfileDetail.openPositions.map((pos) => (
+                              <tr key={pos.id} className="border-b border-slate-700/50">
+                                <td className="py-2 text-gray-500 text-xs">#{pos.id}</td>
+                                <td className="py-2">
+                                  <span className={`font-bold ${pos.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                                    {pos.position_type === 'long' ? '📈 LONG' : '📉 SHORT'}
+                                  </span>
+                                </td>
+                                <td className="text-right text-orange-400 font-bold">{pos.leverage}x</td>
+                                <td className="text-right text-white">${pos.entry_price?.toLocaleString()}</td>
+                                <td className="text-right text-cyan-400">${Math.round((pos.collateral || pos.position_size) / 100).toLocaleString()}</td>
+                                <td className="text-right text-red-400">${pos.liquidation_price?.toLocaleString()}</td>
+                                <td className={`text-right font-bold ${(pos.current_pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  {(pos.current_pnl || 0) >= 0 ? '+' : ''}${Math.round((pos.current_pnl || 0) / 100).toLocaleString()}
+                                </td>
+                                <td className="text-right text-gray-400 text-xs">{new Date(pos.opened_at).toLocaleDateString()}</td>
+                                <td className="text-center">
+                                  <button
+                                    onClick={() => deleteTrade(pos.id)}
+                                    className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-500/20"
+                                  >
+                                    Delete
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Trade History */}
+                  <div>
+                    <h4 className="text-lg font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                      📜 Recent Trade History ({userProfileDetail.recentHistory.length})
+                    </h4>
+                    {userProfileDetail.recentHistory.length === 0 ? (
+                      <p className="text-gray-500 text-sm bg-slate-700/30 p-4 rounded-lg">No trade history</p>
+                    ) : (
+                      <div className="overflow-x-auto max-h-80 overflow-y-auto">
+                        <table className="w-full text-sm">
+                          <thead className="sticky top-0 bg-slate-800">
+                            <tr className="border-b border-slate-700 text-gray-400">
+                              <th className="text-left py-2">ID</th>
+                              <th className="text-left py-2">Type</th>
+                              <th className="text-right py-2">Lev</th>
+                              <th className="text-right py-2">Entry</th>
+                              <th className="text-right py-2">Exit</th>
+                              <th className="text-right py-2">Size</th>
+                              <th className="text-right py-2">P&L</th>
+                              <th className="text-center py-2">Status</th>
+                              <th className="text-right py-2">Closed</th>
+                              <th className="text-center py-2">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {userProfileDetail.recentHistory.map((trade) => (
+                              <tr key={trade.id} className="border-b border-slate-700/50">
+                                <td className="py-2 text-gray-500 text-xs">#{trade.id}</td>
+                                <td className="py-2">
+                                  <span className={`font-bold ${trade.position_type === 'long' ? 'text-green-400' : 'text-red-400'}`}>
+                                    {trade.position_type === 'long' ? '📈' : '📉'}
+                                  </span>
+                                </td>
+                                <td className="text-right text-orange-400">{trade.leverage}x</td>
+                                <td className="text-right text-white text-xs">${trade.entry_price?.toLocaleString()}</td>
+                                <td className="text-right text-white text-xs">${trade.exit_price?.toLocaleString() || '-'}</td>
+                                <td className="text-right text-cyan-400">${Math.round(trade.position_size / 100).toLocaleString()}</td>
+                                <td className={`text-right font-bold ${(trade.pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  {(trade.pnl || 0) >= 0 ? '+' : ''}${Math.round((trade.pnl || 0) / 100).toLocaleString()}
+                                </td>
+                                <td className="text-center">
+                                  {trade.status === 'liquidated' ? (
+                                    <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded">LIQ</span>
+                                  ) : (
+                                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">CLOSED</span>
+                                  )}
+                                </td>
+                                <td className="text-right text-gray-400 text-xs">
+                                  {trade.closed_at ? new Date(trade.closed_at).toLocaleDateString() : '-'}
+                                </td>
+                                <td className="text-center">
+                                  <button
+                                    onClick={() => deleteTrade(trade.id)}
+                                    className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-500/20"
+                                  >
+                                    Delete
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Referral Code */}
+                  {userProfileDetail.user.referral_code && (
+                    <div className="bg-slate-700/30 p-4 rounded-lg">
+                      <p className="text-gray-400 text-sm">Referral Code</p>
+                      <p className="text-yellow-400 font-mono font-bold">{userProfileDetail.user.referral_code}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-gray-400">
+                  No user data available
+                </div>
+              )}
             </div>
           </div>
         )}

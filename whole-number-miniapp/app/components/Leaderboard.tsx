@@ -5,6 +5,8 @@ import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { getApiUrl } from '../lib/api';
 import { Avatar } from './Avatar';
+import { Loader2, Trophy, Crown, Medal, Award, Flame } from 'lucide-react';
+import { BearIcon, BullIcon } from './icons';
 
 interface LeaderboardEntry {
   id: number;
@@ -133,7 +135,7 @@ export function Leaderboard({ filterArmy = 'all' }: LeaderboardProps) {
     return (
       <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-8">
         <div className="text-center">
-          <div className="animate-spin text-4xl mb-4">⚔️</div>
+          <Loader2 className="w-10 h-10 animate-spin text-yellow-400 mx-auto mb-4" />
           <p className="text-gray-400">Loading leaderboard...</p>
         </div>
       </div>
