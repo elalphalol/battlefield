@@ -269,6 +269,21 @@ interface UserAuditResult {
   };
 }
 
+// Audit history entry
+interface AuditHistoryEntry {
+  id: number;
+  auditType: 'full' | 'fix' | 'rollback';
+  runAt: string;
+  totalUsersChecked: number;
+  discrepanciesFound: number;
+  fixesApplied: number;
+  totalAdjustmentCents: number;
+  triggeredBy: string;
+  notes: string | null;
+  rollbackOf: number | null;
+  rolledBackAt: string | null;
+}
+
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
@@ -280,6 +295,9 @@ export default function AdminPage() {
   const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditFixing, setAuditFixing] = useState(false);
+  const [auditHistory, setAuditHistory] = useState<AuditHistoryEntry[]>([]);
+  const [auditHistoryLoading, setAuditHistoryLoading] = useState(false);
+  const [rollbackLoading, setRollbackLoading] = useState<number | null>(null);
 
   // User lookup state
   const [userLookupSearch, setUserLookupSearch] = useState('');
@@ -436,6 +454,7 @@ export default function AdminPage() {
     if (isAuthenticated && activeTab === 'audit') {
       fetchAudit();
       fetchMaintenanceStatus();
+      fetchAuditHistory();
     }
   }, [isAuthenticated, activeTab]);
 
@@ -478,27 +497,94 @@ export default function AdminPage() {
     }
   };
 
-  const fetchAudit = async (autoFix = false) => {
-    if (autoFix) {
-      setAuditFixing(true);
-    } else {
-      setAuditLoading(true);
-    }
+  const fetchAudit = async () => {
+    setAuditLoading(true);
     try {
-      const response = await fetch(getApiUrl(`api/admin/audit${autoFix ? '?autoFix=true' : ''}`));
+      const response = await fetch(getApiUrl('api/admin/audit?source=admin_panel'));
       const data = await response.json();
       if (data.success) {
         setAuditResult(data);
-        if (autoFix && data.fixedUsers.length > 0) {
-          toast.success(`Fixed ${data.fixedUsers.length} user balance(s)`);
-        }
       }
     } catch (error) {
       console.error('Error fetching audit:', error);
       toast.error('Failed to run audit');
     } finally {
       setAuditLoading(false);
+    }
+  };
+
+  const applyAuditFix = async () => {
+    setAuditFixing(true);
+    try {
+      const response = await fetch(getApiUrl('api/admin/audit/fix'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fixAll: true, source: 'admin_panel' })
+      });
+      const data = await response.json();
+      if (data.success) {
+        if (data.fixedUsers.length > 0) {
+          toast.success(`Fixed ${data.fixedUsers.length} user balance(s)`);
+          // Update the audit result with fixed users
+          setAuditResult(prev => prev ? {
+            ...prev,
+            fixedUsers: data.fixedUsers,
+            summary: { ...prev.summary, usersFixed: data.fixedUsers.length }
+          } : null);
+          // Refresh history
+          fetchAuditHistory();
+        } else {
+          toast.success('No discrepancies to fix');
+        }
+      } else {
+        toast.error(data.message || 'Failed to apply fixes');
+      }
+    } catch (error) {
+      console.error('Error applying audit fix:', error);
+      toast.error('Failed to apply fixes');
+    } finally {
       setAuditFixing(false);
+    }
+  };
+
+  const fetchAuditHistory = async () => {
+    setAuditHistoryLoading(true);
+    try {
+      const response = await fetch(getApiUrl('api/admin/audit/history?limit=20'));
+      const data = await response.json();
+      if (data.success) {
+        setAuditHistory(data.history);
+      }
+    } catch (error) {
+      console.error('Error fetching audit history:', error);
+    } finally {
+      setAuditHistoryLoading(false);
+    }
+  };
+
+  const rollbackFix = async (logId: number) => {
+    setRollbackLoading(logId);
+    try {
+      const response = await fetch(getApiUrl(`api/admin/audit/rollback/${logId}`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: 'admin_panel' })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`Rolled back ${data.rolledBackUsers.length} user(s)`);
+        // Refresh history
+        fetchAuditHistory();
+        // Re-run audit to update current state
+        fetchAudit();
+      } else {
+        toast.error(data.message || 'Failed to rollback');
+      }
+    } catch (error) {
+      console.error('Error rolling back:', error);
+      toast.error('Failed to rollback');
+    } finally {
+      setRollbackLoading(null);
     }
   };
 
@@ -1801,7 +1887,7 @@ export default function AdminPage() {
               <h2 className="text-xl font-bold text-yellow-400">Full Audit</h2>
               <div className="flex gap-3">
                 <button
-                  onClick={() => fetchAudit(false)}
+                  onClick={() => fetchAudit()}
                   disabled={auditLoading}
                   className="bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all"
                 >
@@ -1810,7 +1896,7 @@ export default function AdminPage() {
                 <button
                   onClick={() => {
                     if (confirm('This will automatically fix ALL users with discrepancies. Continue?')) {
-                      fetchAudit(true);
+                      applyAuditFix();
                     }
                   }}
                   disabled={auditFixing || auditLoading}
@@ -1959,6 +2045,71 @@ export default function AdminPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Audit History */}
+                <div className="bg-slate-800 border-2 border-slate-700 rounded-lg overflow-hidden">
+                  <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+                    <h3 className="text-lg font-bold text-purple-400">Audit History</h3>
+                    <button
+                      onClick={fetchAuditHistory}
+                      disabled={auditHistoryLoading}
+                      className="text-sm text-gray-400 hover:text-white"
+                    >
+                      {auditHistoryLoading ? 'Loading...' : 'Refresh'}
+                    </button>
+                  </div>
+                  {auditHistoryLoading ? (
+                    <div className="p-8 text-center text-gray-400">Loading history...</div>
+                  ) : auditHistory.length === 0 ? (
+                    <div className="p-8 text-center text-gray-400">No audit history yet</div>
+                  ) : (
+                    <div className="divide-y divide-slate-700">
+                      {auditHistory.map((entry) => (
+                        <div key={entry.id} className="p-4 hover:bg-slate-700/50">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">
+                                  {entry.auditType === 'fix' ? '🔧' : entry.auditType === 'rollback' ? '↩️' : '📋'}
+                                </span>
+                                <span className="font-bold text-white uppercase">{entry.auditType}</span>
+                                <span className="text-gray-500 text-sm">#{entry.id}</span>
+                                {entry.rolledBackAt && (
+                                  <span className="bg-orange-600 text-white text-xs px-2 py-0.5 rounded">ROLLED BACK</span>
+                                )}
+                              </div>
+                              <p className="text-gray-400 text-sm mt-1">
+                                {new Date(entry.runAt).toLocaleString()} via {entry.triggeredBy}
+                              </p>
+                              <p className="text-gray-500 text-sm">
+                                Checked: {entry.totalUsersChecked} | Found: {entry.discrepanciesFound} | Fixed: {entry.fixesApplied}
+                                {entry.totalAdjustmentCents !== 0 && (
+                                  <span className={entry.totalAdjustmentCents >= 0 ? 'text-green-400' : 'text-red-400'}>
+                                    {' '}({entry.totalAdjustmentCents >= 0 ? '+' : ''}{entry.totalAdjustmentCents.toLocaleString()} cents)
+                                  </span>
+                                )}
+                              </p>
+                              {entry.notes && <p className="text-gray-500 text-xs mt-1">{entry.notes}</p>}
+                            </div>
+                            {entry.auditType === 'fix' && !entry.rolledBackAt && (
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Rollback fix #${entry.id}? This will restore ${entry.fixesApplied} user(s) to their previous balances.`)) {
+                                    rollbackFix(entry.id);
+                                  }
+                                }}
+                                disabled={rollbackLoading === entry.id}
+                                className="bg-orange-600 hover:bg-orange-500 disabled:bg-orange-800 text-white px-3 py-1 rounded text-sm font-bold"
+                              >
+                                {rollbackLoading === entry.id ? '...' : 'Rollback'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {/* Formula Reference */}
                 <div className="bg-slate-800 border-2 border-slate-700 rounded-lg p-4">

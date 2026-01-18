@@ -1407,8 +1407,8 @@ app.post('/api/claims/status', async (req: Request, res: Response) => {
 
     // Check if already claimed today
     const claimedToday = lastClaim && lastClaim >= todayUTC;
-    // Emergency claim allowed if balance < $100
-    const emergencyClaim = paperBalance < 100;
+    // Emergency claim allowed if balance < $100 (10000 cents)
+    const emergencyClaim = paperBalance < 10000;
     // Can claim if: no claim today OR balance < $100 (emergency claim)
     const canClaim = !claimedToday || emergencyClaim;
 
@@ -1462,8 +1462,8 @@ app.post('/api/claims', claimLimiter, checkMaintenance, async (req: Request, res
 
     // Check if already claimed today
     const claimedToday = lastClaim && lastClaim >= todayUTC;
-    // Emergency claim allowed if balance < $100
-    const emergencyClaim = paperBalance < 100;
+    // Emergency claim allowed if balance < $100 (10000 cents)
+    const emergencyClaim = paperBalance < 10000;
 
     // Only check for open positions if this is an EMERGENCY claim (not daily claim)
     if (emergencyClaim) {
@@ -1491,22 +1491,22 @@ app.post('/api/claims', claimLimiter, checkMaintenance, async (req: Request, res
       });
     }
 
-    // Add $1,000 and update claim time
+    // Add $1,000 (100000 cents) and update claim time
     await pool.query('BEGIN');
 
     const updated = await pool.query(
-      `UPDATE users 
-       SET paper_balance = paper_balance + 1000, 
+      `UPDATE users
+       SET paper_balance = paper_balance + 100000,
            last_claim_time = NOW(),
            last_active = NOW()
-       WHERE wallet_address = $1 
+       WHERE wallet_address = $1
        RETURNING paper_balance`,
       [walletAddress]
     );
 
     // Log claim
     await pool.query(
-      'INSERT INTO claims (user_id, amount) VALUES ($1, 1000)',
+      'INSERT INTO claims (user_id, amount) VALUES ($1, 100000)',
       [user.rows[0].id]
     );
 
@@ -1517,7 +1517,7 @@ app.post('/api/claims', claimLimiter, checkMaintenance, async (req: Request, res
 
     res.json({
       success: true,
-      amount: 1000,
+      amount: 100000,
       newBalance: updated.rows[0].paper_balance
     });
   } catch (error) {
@@ -4248,114 +4248,103 @@ app.get('/api/admin/analytics', async (req: Request, res: Response) => {
   }
 });
 
-// Admin: Balance Audit - Check all user balances and optionally fix discrepancies
+// ============================================================================
+// AUDIT SYSTEM - Balance verification and correction
+// ============================================================================
+
+// Shared audit query - calculates expected balances for all users
+const getAuditQuery = () => `
+  WITH user_claims AS (
+    SELECT user_id, COALESCE(SUM(amount), 0) as total_claims
+    FROM claims GROUP BY user_id
+  ),
+  user_missions AS (
+    SELECT user_id, COALESCE(SUM(reward_paid), 0) as total_mission_rewards
+    FROM user_missions
+    WHERE is_claimed = true GROUP BY user_id
+  ),
+  user_referrer_rewards AS (
+    SELECT referrer_id as user_id, COALESCE(SUM(referrer_reward), 0) as referrer_rewards
+    FROM referrals WHERE referrer_claimed = true GROUP BY referrer_id
+  ),
+  user_referred_rewards AS (
+    SELECT referred_user_id as user_id, COALESCE(SUM(referred_reward), 0) as referred_rewards
+    FROM referrals WHERE referred_claimed = true GROUP BY referred_user_id
+  ),
+  user_pnl AS (
+    SELECT user_id, COALESCE(SUM(CASE WHEN leverage > 1 THEN pnl / leverage ELSE pnl END), 0) as total_pnl
+    FROM trades WHERE status = 'closed' GROUP BY user_id
+  ),
+  open_positions AS (
+    SELECT user_id, COALESCE(SUM(position_size), 0) as collateral_locked
+    FROM trades WHERE status = 'open' GROUP BY user_id
+  )
+  SELECT
+    u.id,
+    u.username,
+    u.paper_balance as current_balance,
+    COALESCE(op.collateral_locked, 0) as open_collateral,
+    u.paper_balance + COALESCE(op.collateral_locked, 0) as total_assets,
+    COALESCE(p.total_pnl, 0) as corrected_pnl,
+    u.total_pnl as raw_pnl,
+    COALESCE(c.total_claims, 0) as claims,
+    COALESCE(m.total_mission_rewards, 0) as missions,
+    COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) as referrals,
+    (1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+           COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
+           COALESCE(p.total_pnl, 0)) as max_assets,
+    GREATEST(0, 1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+           COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
+           COALESCE(p.total_pnl, 0) - COALESCE(op.collateral_locked, 0)) as expected_balance,
+    (u.paper_balance - GREATEST(0, 1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+           COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
+           COALESCE(p.total_pnl, 0) - COALESCE(op.collateral_locked, 0))) as discrepancy,
+    CASE WHEN COALESCE(op.collateral_locked, 0) > 0 THEN true ELSE false END as has_open_positions
+  FROM users u
+  LEFT JOIN user_claims c ON c.user_id = u.id
+  LEFT JOIN user_missions m ON m.user_id = u.id
+  LEFT JOIN user_referrer_rewards rr ON rr.user_id = u.id
+  LEFT JOIN user_referred_rewards rd ON rd.user_id = u.id
+  LEFT JOIN user_pnl p ON p.user_id = u.id
+  LEFT JOIN open_positions op ON op.user_id = u.id
+  ORDER BY ABS(u.paper_balance - GREATEST(0, 1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
+           COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
+           COALESCE(p.total_pnl, 0) - COALESCE(op.collateral_locked, 0))) DESC
+`;
+
+// Admin: Run full audit (no auto-fix - use /fix endpoint for that)
 app.get('/api/admin/audit', async (req: Request, res: Response) => {
   try {
-    const autoFix = req.query.autoFix === 'true';
+    const triggeredBy = (req.query.source as string) || 'api';
 
-    // Calculate expected balance for all users
-    // ALL VALUES IN CENTS: paper_balance, position_size, pnl, claims, missions, referrals
-    // Starting balance = 1000000 cents ($10,000)
-    const auditResult = await pool.query(`
-      WITH user_claims AS (
-        SELECT user_id, COALESCE(SUM(amount), 0) as total_claims
-        FROM claims GROUP BY user_id
-      ),
-      user_missions AS (
-        SELECT user_id, COALESCE(SUM(reward_paid), 0) as total_mission_rewards
-        FROM user_missions
-        WHERE is_claimed = true GROUP BY user_id
-      ),
-      user_referrer_rewards AS (
-        SELECT referrer_id as user_id, COALESCE(SUM(referrer_reward), 0) as referrer_rewards
-        FROM referrals WHERE referrer_claimed = true GROUP BY referrer_id
-      ),
-      user_referred_rewards AS (
-        SELECT referred_user_id as user_id, COALESCE(SUM(referred_reward), 0) as referred_rewards
-        FROM referrals WHERE referred_claimed = true GROUP BY referred_user_id
-      ),
-      user_pnl AS (
-        -- Use corrected P&L: pnl / leverage for leverage > 1 (historical bug fix)
-        SELECT user_id, COALESCE(SUM(CASE WHEN leverage > 1 THEN pnl / leverage ELSE pnl END), 0) as total_pnl
-        FROM trades WHERE status = 'closed' GROUP BY user_id
-      ),
-      open_positions AS (
-        SELECT user_id, COALESCE(SUM(position_size), 0) as collateral_locked
-        FROM trades WHERE status = 'open' GROUP BY user_id
-      )
-      SELECT
-        u.id,
-        u.username,
-        u.paper_balance as current_balance,
-        COALESCE(op.collateral_locked, 0) as open_collateral,
-        u.paper_balance + COALESCE(op.collateral_locked, 0) as total_assets,
-        COALESCE(p.total_pnl, 0) as corrected_pnl,
-        u.total_pnl as raw_pnl,
-        COALESCE(c.total_claims, 0) as claims,
-        COALESCE(m.total_mission_rewards, 0) as missions,
-        COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) as referrals,
-        -- Max assets = starting (1000000 cents) + claims + missions + referrals + pnl
-        (1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
-               COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               COALESCE(p.total_pnl, 0)) as max_assets,
-        -- Expected available = max_assets - open_collateral (capped at 0)
-        GREATEST(0, 1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
-               COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               COALESCE(p.total_pnl, 0) - COALESCE(op.collateral_locked, 0)) as expected_balance,
-        -- Discrepancy in cents (positive = user has more than expected)
-        (u.paper_balance - GREATEST(0, 1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
-               COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               COALESCE(p.total_pnl, 0) - COALESCE(op.collateral_locked, 0))) as discrepancy,
-        CASE WHEN COALESCE(op.collateral_locked, 0) > 0 THEN true ELSE false END as has_open_positions
-      FROM users u
-      LEFT JOIN user_claims c ON c.user_id = u.id
-      LEFT JOIN user_missions m ON m.user_id = u.id
-      LEFT JOIN user_referrer_rewards rr ON rr.user_id = u.id
-      LEFT JOIN user_referred_rewards rd ON rd.user_id = u.id
-      LEFT JOIN user_pnl p ON p.user_id = u.id
-      LEFT JOIN open_positions op ON op.user_id = u.id
-      ORDER BY ABS(u.paper_balance - GREATEST(0, 1000000 + COALESCE(c.total_claims, 0) + COALESCE(m.total_mission_rewards, 0) +
-               COALESCE(rr.referrer_rewards, 0) + COALESCE(rd.referred_rewards, 0) +
-               COALESCE(p.total_pnl, 0) - COALESCE(op.collateral_locked, 0))) DESC
-    `);
-
+    const auditResult = await pool.query(getAuditQuery());
     const allUsers = auditResult.rows;
-    const discrepancies = allUsers.filter((u: any) => Math.abs(u.discrepancy) > 1);
-    const fixable = discrepancies; // Fix ALL users with discrepancies, even with open positions
-    const needsManualReview: any[] = []; // No longer need manual review - we fix everyone
+    const discrepancies = allUsers.filter((u: any) => Math.abs(u.discrepancy) > 100);
 
-    let fixedUsers: any[] = [];
-
-    // Auto-fix ALL users with discrepancies if requested
-    // Set paper_balance directly to expected value (DO NOT touch total_pnl - it's the truth snapshot!)
-    if (autoFix && fixable.length > 0) {
-      for (const user of fixable) {
-        await pool.query(
-          'UPDATE users SET paper_balance = $1 WHERE id = $2',
-          [user.expected_balance, user.id]
-        );
-        fixedUsers.push({
-          id: user.id,
-          username: user.username,
-          previousBalance: user.current_balance,
-          newBalance: user.expected_balance,
-          adjustment: Number(user.expected_balance) - Number(user.current_balance),
-          hadOpenPositions: user.has_open_positions
-        });
-        console.log(`🔧 Auto-fixed balance for ${user.username}: $${user.current_balance} -> $${user.expected_balance}${user.has_open_positions ? ' (has open positions)' : ''}`);
-      }
-    }
-
-    // Summary stats
     const summary = {
       totalUsers: allUsers.length,
       usersWithDiscrepancy: discrepancies.length,
-      usersFixable: fixable.length,
-      usersNeedingManualReview: needsManualReview.length,
+      usersFixable: discrepancies.length,
+      usersNeedingManualReview: 0,
       totalExcess: discrepancies.filter((u: any) => u.discrepancy > 0).reduce((sum: number, u: any) => sum + Number(u.discrepancy), 0),
       totalDeficit: discrepancies.filter((u: any) => u.discrepancy < 0).reduce((sum: number, u: any) => sum + Math.abs(Number(u.discrepancy)), 0),
-      usersFixed: fixedUsers.length
+      usersFixed: 0
     };
+
+    // Log the audit run
+    const discrepancyData = discrepancies.map((u: any) => ({
+      id: u.id,
+      username: u.username,
+      currentBalance: Number(u.current_balance),
+      expectedBalance: Number(u.expected_balance),
+      discrepancy: Number(u.discrepancy),
+      hasOpenPositions: u.has_open_positions
+    }));
+
+    await pool.query(`
+      INSERT INTO audit_log (audit_type, total_users_checked, discrepancies_found, fixes_applied, total_adjustment_cents, discrepancies, triggered_by)
+      VALUES ('full', $1, $2, 0, 0, $3, $4)
+    `, [allUsers.length, discrepancies.length, JSON.stringify(discrepancyData), triggeredBy]);
 
     res.json({
       success: true,
@@ -4376,7 +4365,7 @@ app.get('/api/admin/audit', async (req: Request, res: Response) => {
         pnl: Number(u.corrected_pnl),
         rawPnl: Number(u.raw_pnl)
       })),
-      fixedUsers,
+      fixedUsers: [],
       auditTimestamp: new Date().toISOString()
     });
   } catch (error) {
@@ -4391,7 +4380,6 @@ app.get('/api/admin/audit/user/:identifier', async (req: Request, res: Response)
   try {
     const { identifier } = req.params;
 
-    // Find user by username, ID, or wallet
     const userResult = await pool.query(`
       SELECT id, username, paper_balance, total_pnl as stored_total_pnl
       FROM users
@@ -4406,7 +4394,6 @@ app.get('/api/admin/audit/user/:identifier', async (req: Request, res: Response)
     const user = userResult.rows[0];
     const userId = user.id;
 
-    // Get all components (ALL IN CENTS)
     const [claims, missions, refGiven, refReceived, pnl, openTrades] = await Promise.all([
       pool.query('SELECT COALESCE(SUM(amount), 0) as total FROM claims WHERE user_id = $1', [userId]),
       pool.query('SELECT COALESCE(SUM(reward_paid), 0) as total FROM user_missions WHERE user_id = $1 AND is_claimed = true', [userId]),
@@ -4434,8 +4421,7 @@ app.get('/api/admin/audit/user/:identifier', async (req: Request, res: Response)
     const openCount = Number(openTrades.rows[0].count);
     const currentBalanceCents = Number(user.paper_balance);
 
-    // Calculate expected (ALL IN CENTS)
-    const startingCents = 1000000; // $10,000
+    const startingCents = 1000000;
     const expectedCents = Math.max(0,
       startingCents + claimsCents + missionsCents + refGivenCents + refReceivedCents + pnlCorrectedCents - collateralCents
     );
@@ -4466,6 +4452,293 @@ app.get('/api/admin/audit/user/:identifier', async (req: Request, res: Response)
     });
   } catch (error) {
     console.error('Error auditing user:', error);
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
+  }
+});
+
+// Admin: Fix discrepancies
+app.post('/api/admin/audit/fix', async (req: Request, res: Response) => {
+  try {
+    const { userIds, fixAll, dryRun } = req.body;
+    const triggeredBy = (req.body.source as string) || 'api';
+
+    // Get current discrepancies
+    const auditResult = await pool.query(getAuditQuery());
+    const allUsers = auditResult.rows;
+    let discrepancies = allUsers.filter((u: any) => Math.abs(u.discrepancy) > 100);
+
+    // Filter to specific users if userIds provided
+    if (userIds && Array.isArray(userIds) && userIds.length > 0) {
+      discrepancies = discrepancies.filter((u: any) => userIds.includes(u.id));
+    } else if (!fixAll) {
+      return res.status(400).json({
+        success: false,
+        message: 'Specify userIds array or set fixAll: true'
+      });
+    }
+
+    if (discrepancies.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No discrepancies to fix',
+        fixedUsers: [],
+        dryRun: !!dryRun
+      });
+    }
+
+    const fixedUsers: any[] = [];
+    let totalAdjustment = 0;
+
+    if (!dryRun) {
+      for (const user of discrepancies) {
+        const previousBalance = Number(user.current_balance);
+        const newBalance = Number(user.expected_balance);
+        const adjustment = newBalance - previousBalance;
+
+        await pool.query(
+          'UPDATE users SET paper_balance = $1 WHERE id = $2',
+          [newBalance, user.id]
+        );
+
+        fixedUsers.push({
+          id: user.id,
+          username: user.username,
+          previousBalance,
+          newBalance,
+          adjustment,
+          hadOpenPositions: user.has_open_positions
+        });
+
+        totalAdjustment += adjustment;
+        console.log(`🔧 Fixed balance for ${user.username}: ${previousBalance} -> ${newBalance} (${adjustment >= 0 ? '+' : ''}${adjustment})`);
+      }
+
+      // Log the fix
+      await pool.query(`
+        INSERT INTO audit_log (audit_type, total_users_checked, discrepancies_found, fixes_applied, total_adjustment_cents, fixes, triggered_by)
+        VALUES ('fix', $1, $2, $3, $4, $5, $6)
+      `, [
+        allUsers.length,
+        discrepancies.length,
+        fixedUsers.length,
+        totalAdjustment,
+        JSON.stringify(fixedUsers),
+        triggeredBy
+      ]);
+    } else {
+      // Dry run - just calculate what would be fixed
+      for (const user of discrepancies) {
+        const previousBalance = Number(user.current_balance);
+        const newBalance = Number(user.expected_balance);
+        const adjustment = newBalance - previousBalance;
+
+        fixedUsers.push({
+          id: user.id,
+          username: user.username,
+          previousBalance,
+          newBalance,
+          adjustment,
+          hadOpenPositions: user.has_open_positions
+        });
+        totalAdjustment += adjustment;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: dryRun ? `Would fix ${fixedUsers.length} users` : `Fixed ${fixedUsers.length} users`,
+      fixedUsers,
+      totalAdjustment,
+      dryRun: !!dryRun
+    });
+  } catch (error) {
+    console.error('Error fixing discrepancies:', error);
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
+  }
+});
+
+// Admin: Get audit history
+app.get('/api/admin/audit/history', async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const result = await pool.query(`
+      SELECT
+        id, audit_type, run_at, total_users_checked, discrepancies_found,
+        fixes_applied, total_adjustment_cents, triggered_by, notes,
+        rollback_of, rolled_back_at
+      FROM audit_log
+      ORDER BY run_at DESC
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+
+    const countResult = await pool.query('SELECT COUNT(*) as total FROM audit_log');
+    const total = parseInt(countResult.rows[0].total);
+
+    res.json({
+      success: true,
+      history: result.rows.map(row => ({
+        id: row.id,
+        auditType: row.audit_type,
+        runAt: row.run_at,
+        totalUsersChecked: row.total_users_checked,
+        discrepanciesFound: row.discrepancies_found,
+        fixesApplied: row.fixes_applied,
+        totalAdjustmentCents: Number(row.total_adjustment_cents),
+        triggeredBy: row.triggered_by,
+        notes: row.notes,
+        rollbackOf: row.rollback_of,
+        rolledBackAt: row.rolled_back_at
+      })),
+      pagination: {
+        total,
+        limit,
+        offset
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching audit history:', error);
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
+  }
+});
+
+// Admin: Get single audit log details (including fix data)
+app.get('/api/admin/audit/history/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(`
+      SELECT * FROM audit_log WHERE id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Audit log not found' });
+    }
+
+    const row = result.rows[0];
+
+    res.json({
+      success: true,
+      log: {
+        id: row.id,
+        auditType: row.audit_type,
+        runAt: row.run_at,
+        totalUsersChecked: row.total_users_checked,
+        discrepanciesFound: row.discrepancies_found,
+        fixesApplied: row.fixes_applied,
+        totalAdjustmentCents: Number(row.total_adjustment_cents),
+        discrepancies: row.discrepancies,
+        fixes: row.fixes,
+        triggeredBy: row.triggered_by,
+        notes: row.notes,
+        rollbackOf: row.rollback_of,
+        rolledBackAt: row.rolled_back_at,
+        rolledBackBy: row.rolled_back_by
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching audit log:', error);
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
+  }
+});
+
+// Admin: Rollback a fix
+app.post('/api/admin/audit/rollback/:logId', async (req: Request, res: Response) => {
+  try {
+    const { logId } = req.params;
+    const triggeredBy = (req.body.source as string) || 'api';
+
+    // Get the original fix log
+    const logResult = await pool.query(`
+      SELECT * FROM audit_log WHERE id = $1 AND audit_type = 'fix'
+    `, [logId]);
+
+    if (logResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Fix log not found' });
+    }
+
+    const log = logResult.rows[0];
+
+    if (log.rolled_back_at) {
+      return res.status(400).json({ success: false, message: 'This fix has already been rolled back' });
+    }
+
+    const fixes = log.fixes as any[];
+    if (!fixes || fixes.length === 0) {
+      return res.status(400).json({ success: false, message: 'No fix data available for rollback' });
+    }
+
+    const rolledBackUsers: any[] = [];
+    let totalRollbackAdjustment = 0;
+
+    // Rollback each fix
+    for (const fix of fixes) {
+      // Get current balance to verify we can rollback
+      const currentResult = await pool.query(
+        'SELECT paper_balance FROM users WHERE id = $1',
+        [fix.id]
+      );
+
+      if (currentResult.rows.length === 0) {
+        console.log(`Skipping rollback for user ${fix.id} - user not found`);
+        continue;
+      }
+
+      const currentBalance = Number(currentResult.rows[0].paper_balance);
+
+      // Restore to previous balance
+      await pool.query(
+        'UPDATE users SET paper_balance = $1 WHERE id = $2',
+        [fix.previousBalance, fix.id]
+      );
+
+      const adjustment = fix.previousBalance - currentBalance;
+      rolledBackUsers.push({
+        id: fix.id,
+        username: fix.username,
+        previousBalance: currentBalance,
+        newBalance: fix.previousBalance,
+        adjustment
+      });
+      totalRollbackAdjustment += adjustment;
+
+      console.log(`↩️ Rolled back ${fix.username}: ${currentBalance} -> ${fix.previousBalance}`);
+    }
+
+    // Create rollback log entry
+    const rollbackLogResult = await pool.query(`
+      INSERT INTO audit_log (audit_type, total_users_checked, discrepancies_found, fixes_applied, total_adjustment_cents, fixes, triggered_by, rollback_of, notes)
+      VALUES ('rollback', $1, 0, $2, $3, $4, $5, $6, $7)
+      RETURNING id
+    `, [
+      rolledBackUsers.length,
+      rolledBackUsers.length,
+      totalRollbackAdjustment,
+      JSON.stringify(rolledBackUsers),
+      triggeredBy,
+      logId,
+      `Rollback of audit log #${logId}`
+    ]);
+
+    // Mark original fix as rolled back
+    await pool.query(`
+      UPDATE audit_log SET rolled_back_at = NOW(), rolled_back_by = $1 WHERE id = $2
+    `, [rollbackLogResult.rows[0].id, logId]);
+
+    res.json({
+      success: true,
+      message: `Rolled back ${rolledBackUsers.length} users`,
+      rolledBackUsers,
+      totalRollbackAdjustment,
+      rollbackLogId: rollbackLogResult.rows[0].id
+    });
+  } catch (error) {
+    console.error('Error rolling back fix:', error);
     Sentry.captureException(error);
     res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
