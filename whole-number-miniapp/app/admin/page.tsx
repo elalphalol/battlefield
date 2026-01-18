@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getApiUrl } from '../config/api';
+import { getApiUrl } from '../lib/api';
 import toast from 'react-hot-toast';
 
 // Simple password protection - change this to your secret

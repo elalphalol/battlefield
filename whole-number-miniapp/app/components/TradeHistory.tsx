@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { getApiUrl } from '../config/api';
+import { getApiUrl } from '../lib/api';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
 import { getReferralLink } from '../lib/farcaster';

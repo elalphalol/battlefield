@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getApiUrl } from '../config/api';
+import { getApiUrl } from '../lib/api';
 
 interface ArmyStats {
   bulls: {

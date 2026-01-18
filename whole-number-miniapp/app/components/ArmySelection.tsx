@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { getApiUrl } from '../config/api';
+import { getApiUrl } from '../lib/api';
 import toast from 'react-hot-toast';
 
 interface ArmySelectionProps {

@@ -488,8 +488,12 @@ app.post('/api/users', async (req: Request, res: Response) => {
     console.log(`✅ Created new user: ${newUser.rows[0].username} (FID: ${fid || 'null - regular wallet'}, Referral Code: ${newUserReferralCode})`);
     res.json({ success: true, user: newUser.rows[0], isNew: true });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/users' },
+      extra: { walletAddress, fid, username, army }
+    });
     console.error('Error creating/updating user:', error);
-    res.status(500).json({ success: false, message: 'Failed to process user' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -526,10 +530,14 @@ app.post('/api/users/update-farcaster', async (req: Request, res: Response) => {
     console.log(`✅ Updated user with Farcaster data: ${username} (FID: ${fid})`);
     res.json({ success: true, user: updated.rows[0] });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/users/update-farcaster' },
+      extra: { walletAddress, fid, username }
+    });
     console.error('Error updating user with Farcaster data:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to update user' 
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred. Please try again.'
     });
   }
 });
@@ -550,8 +558,12 @@ app.get('/api/users/:walletAddress', async (req: Request, res: Response) => {
 
     res.json({ success: true, user: result.rows[0] });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/users/:walletAddress' },
+      extra: { walletAddress }
+    });
     console.error('Error fetching user:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch user' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -743,8 +755,12 @@ app.get('/api/referrals/:walletAddress', async (req: Request, res: Response) => 
       pendingReferral
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/referrals/:walletAddress' },
+      extra: { walletAddress }
+    });
     console.error('Error fetching referral stats:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch referral stats' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -903,8 +919,12 @@ app.post('/api/referrals/apply', checkMaintenance, async (req: Request, res: Res
       claimable: false
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/referrals/apply' },
+      extra: { walletAddress, referralCode }
+    });
     console.error('Error applying referral code:', error);
-    res.status(500).json({ success: false, message: 'Failed to apply referral code' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -1106,8 +1126,12 @@ app.post('/api/referrals/claim', checkMaintenance, async (req: Request, res: Res
       newBalance: Number(updatedUser.rows[0].paper_balance)
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/referrals/claim' },
+      extra: { walletAddress: req.body.walletAddress, referralId: req.body.referralId }
+    });
     console.error('Error claiming referral reward:', error);
-    res.status(500).json({ success: false, message: 'Failed to claim referral reward' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -1166,8 +1190,12 @@ app.post('/api/referrals/cancel', async (req: Request, res: Response) => {
       message: `Referral from ${referral.referrer_username} has been cancelled. You can now apply a new referral code.`
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/referrals/cancel' },
+      extra: { walletAddress }
+    });
     console.error('Error cancelling referral:', error);
-    res.status(500).json({ success: false, message: 'Failed to cancel referral' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -1231,7 +1259,8 @@ app.get('/api/admin/referrals', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching admin referral stats:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch referral stats' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -1305,7 +1334,8 @@ app.post('/api/admin/referrals/revert', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error reverting referral:', error);
-    res.status(500).json({ success: false, message: 'Failed to revert referral' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -1335,8 +1365,12 @@ app.patch('/api/users/:walletAddress/army', async (req: Request, res: Response) 
 
     res.json({ success: true, user: result.rows[0] });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/users/:walletAddress/army' },
+      extra: { walletAddress, army }
+    });
     console.error('Error updating army:', error);
-    res.status(500).json({ success: false, message: 'Failed to update army' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -1390,8 +1424,12 @@ app.post('/api/claims/status', async (req: Request, res: Response) => {
       nextReset: tomorrowUTC.toISOString()
     });
   } catch (error) {
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/claims/status' },
+      extra: { walletAddress }
+    });
     console.error('Error checking claim status:', error);
-    res.status(500).json({ success: false, message: 'Failed to check claim status' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -1484,8 +1522,12 @@ app.post('/api/claims', claimLimiter, checkMaintenance, async (req: Request, res
     });
   } catch (error) {
     await pool.query('ROLLBACK');
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/claims' },
+      extra: { walletAddress }
+    });
     console.error('Error claiming paper money:', error);
-    res.status(500).json({ success: false, message: 'Failed to claim paper money' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -1625,8 +1667,12 @@ app.post('/api/trades/open', tradingLimiter, checkMaintenance, async (req: Reque
     res.json({ success: true, trade: trade.rows[0] });
   } catch (error) {
     await pool.query('ROLLBACK');
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/trades/open' },
+      extra: { walletAddress, type, leverage, size, entryPrice }
+    });
     console.error('Error opening trade:', error);
-    res.status(500).json({ success: false, message: 'Failed to open trade' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -1814,8 +1860,12 @@ app.post('/api/trades/close', tradingLimiter, checkMaintenance, async (req: Requ
     });
   } catch (error) {
     await pool.query('ROLLBACK');
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/trades/close' },
+      extra: { tradeId, exitPrice }
+    });
     console.error('Error closing trade:', error);
-    res.status(500).json({ success: false, message: 'Failed to close trade' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2055,7 +2105,8 @@ app.post('/api/trades/auto-liquidate', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error in auto-liquidation:', error);
-    res.status(500).json({ success: false, message: 'Failed to process auto-liquidation' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2163,8 +2214,12 @@ app.post('/api/trades/add-collateral', checkMaintenance, async (req: Request, re
     });
   } catch (error) {
     await pool.query('ROLLBACK');
+    Sentry.captureException(error, {
+      tags: { endpoint: '/api/trades/add-collateral' },
+      extra: { tradeId, additionalCollateral, walletAddress }
+    });
     console.error('Error adding collateral:', error);
-    res.status(500).json({ success: false, message: 'Failed to add collateral' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2229,7 +2284,8 @@ app.post('/api/trades/update-stop-loss', checkMaintenance, async (req: Request, 
     });
   } catch (error) {
     console.error('Error updating stop loss:', error);
-    res.status(500).json({ success: false, message: 'Failed to update stop loss' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2250,7 +2306,8 @@ app.get('/api/trades/:walletAddress/open', async (req: Request, res: Response) =
     res.json({ success: true, trades: result.rows });
   } catch (error) {
     console.error('Error fetching open trades:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch trades' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2273,7 +2330,8 @@ app.get('/api/trades/:walletAddress/history', async (req: Request, res: Response
     res.json({ success: true, trades: result.rows });
   } catch (error) {
     console.error('Error fetching trade history:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch trade history' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2426,9 +2484,10 @@ app.get('/api/profile/:identifier', async (req: Request, res: Response) => {
     res.json({ success: true, profile });
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch user profile' 
+    Sentry.captureException(error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred. Please try again.'
     });
   }
 });
@@ -2511,7 +2570,8 @@ app.get('/api/leaderboard', async (req: Request, res: Response) => {
     res.json({ success: true, leaderboard: result.rows });
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch leaderboard' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2541,7 +2601,8 @@ app.get('/api/leaderboard/rank/:walletAddress', async (req: Request, res: Respon
     res.json({ success: true, rank: Number(rankResult.rows[0].rank) });
   } catch (error) {
     console.error('Error fetching user rank:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch rank' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2704,7 +2765,8 @@ app.get('/api/army/stats', async (req: Request, res: Response) => {
     res.json({ success: true, stats });
   } catch (error) {
     console.error('Error fetching army stats:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch army stats' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2748,7 +2810,8 @@ app.get('/api/volume/stats', async (req: Request, res: Response) => {
     res.json({ success: true, stats });
   } catch (error) {
     console.error('Error fetching volume stats:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch volume stats' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2790,8 +2853,9 @@ app.post('/api/admin/update-user-profile', adminAuth, async (req: Request, res: 
     res.json({ success: true, user: updated.rows[0] });
   } catch (error) {
     console.error('Error updating user profile:', error);
+    Sentry.captureException(error);
     auditLog('UPDATE_USER_PROFILE', { walletAddress, fid, username, error: String(error) }, (req as any).adminIp, false);
-    res.status(500).json({ success: false, message: 'Failed to update user profile' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2814,8 +2878,9 @@ app.post('/api/admin/recalculate-armies', adminAuth, async (req: Request, res: R
     });
   } catch (error) {
     console.error('Error recalculating armies:', error);
+    Sentry.captureException(error);
     auditLog('RECALCULATE_ARMIES', { error: String(error) }, (req as any).adminIp, false);
-    res.status(500).json({ success: false, message: 'Failed to recalculate armies' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2877,8 +2942,9 @@ app.post('/api/admin/fix-balances', adminAuth, async (req: Request, res: Respons
     });
   } catch (error) {
     console.error('Error fixing balances:', error);
+    Sentry.captureException(error);
     auditLog('FIX_BALANCES', { error: String(error) }, (req as any).adminIp, false);
-    res.status(500).json({ success: false, message: 'Failed to fix balances' });
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -2899,7 +2965,8 @@ app.get('/api/config', async (req: Request, res: Response) => {
     res.json({ success: true, config });
   } catch (error) {
     console.error('Error fetching config:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch config' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -3079,7 +3146,8 @@ app.post('/api/notifications/daily-reminder', async (req: Request, res: Response
     });
   } catch (error) {
     console.error('Error sending daily reminders:', error);
-    res.status(500).json({ success: false, message: 'Failed to send reminders' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -3102,7 +3170,8 @@ app.post('/api/notifications/achievement', async (req: Request, res: Response) =
     res.json({ success: true, result });
   } catch (error) {
     console.error('Error sending achievement notification:', error);
-    res.status(500).json({ success: false, message: 'Failed to send achievement notification' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -3128,7 +3197,8 @@ app.get('/api/notifications/settings/:walletAddress', async (req: Request, res: 
     res.json({ success: true, settings: result.rows[0] });
   } catch (error) {
     console.error('Error fetching notification settings:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch settings' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -3158,7 +3228,8 @@ app.post('/api/notifications/settings', async (req: Request, res: Response) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating notification settings:', error);
-    res.status(500).json({ success: false, message: 'Failed to update settings' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -3334,7 +3405,8 @@ app.get('/api/missions', async (req: Request, res: Response) => {
     res.json({ success: true, missions: result.rows });
   } catch (error) {
     console.error('Error fetching missions:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch missions' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -3407,7 +3479,8 @@ app.get('/api/missions/:walletAddress', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching user missions:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch missions' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -3502,7 +3575,8 @@ app.post('/api/missions/:missionId/claim', checkMaintenance, async (req: Request
   } catch (error) {
     await pool.query('ROLLBACK');
     console.error('Error claiming mission:', error);
-    res.status(500).json({ success: false, message: 'Failed to claim mission' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -3568,7 +3642,8 @@ app.get('/api/missions/verify-follow/:walletAddress', async (req: Request, res: 
     });
   } catch (error) {
     console.error('Error verifying follow:', error);
-    res.status(500).json({ success: false, message: 'Failed to verify follow status' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -3648,7 +3723,8 @@ app.post('/api/missions/complete', async (req: Request, res: Response) => {
     res.json({ success: true, message: 'Mission completed' });
   } catch (error) {
     console.error('Error completing mission:', error);
-    res.status(500).json({ success: false, message: 'Failed to complete mission' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4163,7 +4239,8 @@ app.get('/api/admin/analytics', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching admin analytics:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch analytics' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4300,7 +4377,8 @@ app.get('/api/admin/audit', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error running balance audit:', error);
-    res.status(500).json({ success: false, message: 'Failed to run audit' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4384,7 +4462,8 @@ app.get('/api/admin/audit/user/:identifier', async (req: Request, res: Response)
     });
   } catch (error) {
     console.error('Error auditing user:', error);
-    res.status(500).json({ success: false, message: 'Failed to audit user' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4432,7 +4511,8 @@ app.get('/api/admin/users', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching admin users:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch users' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4454,7 +4534,8 @@ app.post('/api/admin/users/balance', async (req: Request, res: Response) => {
     res.json({ success: true, message: 'Balance updated' });
   } catch (error) {
     console.error('Error updating user balance:', error);
-    res.status(500).json({ success: false, message: 'Failed to update balance' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4492,7 +4573,8 @@ app.post('/api/admin/users/reset', async (req: Request, res: Response) => {
     res.json({ success: true, message: 'User stats reset' });
   } catch (error) {
     console.error('Error resetting user stats:', error);
-    res.status(500).json({ success: false, message: 'Failed to reset stats' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4520,7 +4602,8 @@ app.get('/api/admin/missions', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching admin missions:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch missions' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4548,7 +4631,8 @@ app.post('/api/admin/missions/update', async (req: Request, res: Response) => {
     res.json({ success: true, message: 'Mission updated' });
   } catch (error) {
     console.error('Error updating mission:', error);
-    res.status(500).json({ success: false, message: 'Failed to update mission' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4570,7 +4654,8 @@ app.post('/api/admin/missions/toggle', async (req: Request, res: Response) => {
     res.json({ success: true, message: 'Mission toggled' });
   } catch (error) {
     console.error('Error toggling mission:', error);
-    res.status(500).json({ success: false, message: 'Failed to toggle mission' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4691,7 +4776,8 @@ app.get('/api/admin/activity', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching admin activity:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch activity' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 
@@ -4779,7 +4865,8 @@ app.post('/api/admin/maintenance', adminAuth, async (req: Request, res: Response
     });
   } catch (error) {
     console.error('Error toggling maintenance mode:', error);
-    res.status(500).json({ success: false, message: 'Failed to toggle maintenance mode' });
+    Sentry.captureException(error);
+    res.status(500).json({ success: false, message: 'An error occurred. Please try again.' });
   }
 });
 

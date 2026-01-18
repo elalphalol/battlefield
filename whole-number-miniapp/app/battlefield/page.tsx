@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
-import { getApiUrl } from '../config/api';
+import { getApiUrl } from '../lib/api';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
 import { WalletConnect } from '../components/WalletConnect';
@@ -24,36 +23,21 @@ import { Missions } from '../components/Missions';
 import { Avatar } from '../components/Avatar';
 import { GenesisAirdrop } from '../components/GenesisAirdrop';
 import { Referrals } from '../components/Referrals';
-import { useBTCPrice } from '../hooks/useBTCPrice';
 import { useAchievementDetector } from '../hooks/useAchievementDetector';
 import { WholeNumberStrategy } from '../lib/strategy';
-
-interface UserData {
-  id: number;
-  fid: number;
-  wallet_address: string;
-  username: string;
-  pfp_url: string;
-  army: 'bears' | 'bulls';
-  paper_balance: number;
-  total_pnl: number;
-  total_trades: number;
-  winning_trades: number;
-  current_streak: number;
-  best_streak: number;
-  times_liquidated: number;
-  battle_tokens_earned: number;
-}
+import { useUser } from '../context/UserContext';
+import { usePrice } from '../context/PriceContext';
+import type { UserData } from '../types';
 
 export default function BattlefieldHome() {
   const router = useRouter();
-  const { address: wagmiAddress } = useAccount();
-  const { price: btcPrice, isLoading } = useBTCPrice(5000);
-  const [userData, setUserData] = useState<UserData | null>(null);
+  // Use context hooks for global state
+  const { userData, walletAddress: address, refetch: refetchUser } = useUser();
+  const { btcPrice, priceTimestamp, isLoading } = usePrice();
+
   const [activeTab, setActiveTab] = useState<'trade' | 'leaderboard' | 'battle' | 'missions' | 'airdrop' | 'referrals'>('trade');
   const [battleSection, setBattleSection] = useState<'market' | 'status' | 'predictions' | 'strategy' | 'tips'>('market');
   const [strategy] = useState(() => new WholeNumberStrategy());
-  const [farcasterWallet, setFarcasterWallet] = useState<string | null>(null);
   const [previousUserData, setPreviousUserData] = useState<UserData | null>(null);
 
   // Stopped/liquidated trade notification state
@@ -62,9 +46,6 @@ export default function BattlefieldHome() {
     isLiquidated: boolean;
     isStopLoss: boolean;
   } | null>(null);
-
-  // Use Farcaster wallet if available, otherwise use wagmi wallet
-  const address = farcasterWallet || wagmiAddress;
 
   // Check URL params on mount to set initial tab
   useEffect(() => {
@@ -203,36 +184,7 @@ export default function BattlefieldHome() {
     }
   };
 
-  // Initialize Farcaster and get wallet address
-  useEffect(() => {
-    const initFarcaster = async () => {
-      try {
-        console.log('🔍 Initializing Farcaster...');
-        const { farcasterAuth } = await import('../lib/farcaster');
-        const initialized = await farcasterAuth.initialize();
-        console.log('Farcaster initialized:', initialized);
-        
-        if (farcasterAuth.isInFarcasterFrame()) {
-          console.log('✅ Running in Farcaster Frame');
-          const signInResult = await farcasterAuth.signInWithFarcaster();
-          console.log('Sign in result:', signInResult);
-          
-          if (signInResult && signInResult.walletAddress) {
-            console.log('✅ Farcaster wallet detected:', signInResult.walletAddress);
-            setFarcasterWallet(signInResult.walletAddress);
-          } else {
-            console.warn('⚠️ No wallet address in Farcaster sign-in result');
-          }
-        } else {
-          console.log('⚠️ Not in Farcaster Frame');
-        }
-      } catch (error) {
-        console.error('❌ Farcaster initialization error:', error);
-      }
-    };
-    
-    initFarcaster();
-  }, []);
+  // Farcaster wallet resolution is now handled by UserContext
 
   // Update strategy with new price
   useEffect(() => {
@@ -256,50 +208,36 @@ export default function BattlefieldHome() {
     }
   }, [btcPrice, coordinate, wholeNumber, strategy]);
 
-  // Fetch or create user when wallet connects
-  const fetchUserData = useCallback(async () => {
-    if (!address) {
-      setUserData(null);
-      setPreviousUserData(null);
-      return;
-    }
+  // Create user if they don't exist (UserContext handles fetching)
+  const ensureUserExists = useCallback(async () => {
+    if (!address) return;
 
     try {
-      // Try to get existing user
+      // Check if user exists
       const response = await fetch(getApiUrl(`api/users/${address}`));
       const data = await response.json();
 
-      if (data.success) {
-        // Save previous data before updating (for achievement detection)
-        setUserData(prevData => {
-          setPreviousUserData(prevData);
-          return data.user;
-        });
-      } else {
-        // No user found - try to get Farcaster data
+      if (!data.success) {
+        // No user found - create new user
         const { farcasterAuth } = await import('../lib/farcaster');
         const farcasterUser = await farcasterAuth.getFarcasterUser();
 
         let fid, username, pfpUrl;
-        
+
         if (farcasterUser) {
-          // Use real Farcaster data (ONLY in Farcaster mini app)
           fid = farcasterUser.fid;
           username = farcasterUser.username || farcasterUser.displayName || `User${farcasterUser.fid}`;
           pfpUrl = farcasterUser.pfpUrl || '';
           console.log('✅ Creating user with Farcaster data:', { fid, username, pfpUrl });
         } else {
-          // For regular wallet users (desktop/mobile browser - NO Farcaster)
-          fid = null; // NULL for non-Farcaster users
-          username = `Trader${address.slice(2, 8)}`; // Use wallet address for username
-          pfpUrl = '/battlefield-logo.jpg'; // Generic game PFP
+          fid = null;
+          username = `Trader${address.slice(2, 8)}`;
+          pfpUrl = '/battlefield-logo.jpg';
           console.log('⚠️ Creating regular wallet user (no Farcaster):', { fid, username, pfpUrl });
         }
 
-        // Check for pending referral code
         const pendingReferral = typeof window !== 'undefined' ? localStorage.getItem('pendingReferral') : null;
 
-        // Create new user
         const createResponse = await fetch(getApiUrl('api/users'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -308,34 +246,40 @@ export default function BattlefieldHome() {
             walletAddress: address,
             username,
             pfpUrl,
-            army: 'bulls', // Default army for backend
-            referralCode: pendingReferral // Pass referral code if present
+            army: 'bulls',
+            referralCode: pendingReferral
           })
         });
 
         const createData = await createResponse.json();
         if (createData.success) {
-          // For new users, no previous data
-          setPreviousUserData(null);
-          setUserData(createData.user);
           console.log('✅ User created successfully:', createData.user);
-          // Clear pending referral after successful creation
           if (pendingReferral) {
             localStorage.removeItem('pendingReferral');
             console.log('✅ Referral code applied:', pendingReferral);
           }
+          // Refresh context after user creation
+          refetchUser();
         }
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('Error ensuring user exists:', error);
     }
-  }, [address]);
+  }, [address, refetchUser]);
 
+  // Create user if needed when address changes
   useEffect(() => {
-    // Data fetching on address change is intentional
-    // eslint-disable-next-line
-    fetchUserData();
-  }, [address, fetchUserData]);
+    if (address && !userData) {
+      ensureUserExists();
+    }
+  }, [address, userData, ensureUserExists]);
+
+  // Track previous user data for achievement detection
+  useEffect(() => {
+    if (userData) {
+      setPreviousUserData(prev => prev?.wallet_address === userData.wallet_address ? prev : userData);
+    }
+  }, [userData]);
 
   // Auto-liquidate positions when price updates
   useEffect(() => {
@@ -362,7 +306,7 @@ export default function BattlefieldHome() {
             });
             // Refresh user data if any liquidations occurred
             if (address) {
-              fetchUserData();
+              refetchUser();
             }
           }
 
@@ -378,7 +322,7 @@ export default function BattlefieldHome() {
             });
             // Refresh user data
             if (address) {
-              fetchUserData();
+              refetchUser();
             }
           }
         } catch (error) {
@@ -388,23 +332,21 @@ export default function BattlefieldHome() {
 
       checkLiquidations();
     }
-  }, [btcPrice, address, fetchUserData]);
+  }, [btcPrice, address, refetchUser]);
 
-  const handleArmyChange = (army: 'bears' | 'bulls') => {
-    if (userData) {
-      setUserData({ ...userData, army });
-    }
+  const handleArmyChange = () => {
+    // Refresh user data after army change
+    refetchUser();
   };
 
-  const handleClaim = (newBalance: number) => {
-    if (userData) {
-      setUserData({ ...userData, paper_balance: newBalance });
-    }
+  const handleClaim = () => {
+    // Refresh user data after claim
+    refetchUser();
   };
 
   const handleTradeComplete = () => {
     // Refresh user data after trade
-    fetchUserData();
+    refetchUser();
   };
 
   const scrollToTrading = () => {
@@ -455,7 +397,7 @@ export default function BattlefieldHome() {
                 <span className="text-sm text-gray-400 font-medium">BTC</span>
               </div>
               {/* Minimal Volume Display */}
-              <VolumeTracker walletAddress={address} showUserVolume={false} showExplanation={false} minimal={true} />
+              <VolumeTracker walletAddress={address ?? undefined} showUserVolume={false} showExplanation={false} minimal={true} />
             </div>
           </div>
         )}
@@ -493,7 +435,7 @@ export default function BattlefieldHome() {
                       });
                       const data = await response.json();
                       if (data.success) {
-                        await fetchUserData(); // Refresh user data
+                        await refetchUser(); // Refresh user data
                         toast.success('$1,000 added! Click 9 more times to reach $10k or start trading!');
                       }
                     } catch (error) {
@@ -513,7 +455,7 @@ export default function BattlefieldHome() {
                 btcPrice={btcPrice}
                 paperBalance={userData?.paper_balance || 0}
                 onTradeComplete={handleTradeComplete}
-                walletAddress={address}
+                walletAddress={address ?? undefined}
                 stoppedTradeInfo={stoppedTradeInfo}
                 onStoppedTradeShown={() => setStoppedTradeInfo(null)}
               />
@@ -546,7 +488,7 @@ export default function BattlefieldHome() {
                   <PaperMoneyClaim 
                     onClaim={handleClaim} 
                     paperBalance={userData?.paper_balance || 0}
-                    walletAddress={address}
+                    walletAddress={address ?? undefined}
                   />
                 </div>
               </div>
@@ -1135,7 +1077,7 @@ export default function BattlefieldHome() {
           </div>
         ) : activeTab === 'missions' ? (
           <div>
-            <Missions walletAddress={address} />
+            <Missions walletAddress={address ?? undefined} />
           </div>
         ) : activeTab === 'airdrop' ? (
           <div>
@@ -1143,7 +1085,7 @@ export default function BattlefieldHome() {
           </div>
         ) : activeTab === 'referrals' ? (
           <div>
-            <Referrals walletAddress={address} />
+            <Referrals walletAddress={address ?? undefined} />
           </div>
         ) : null}
       </div>

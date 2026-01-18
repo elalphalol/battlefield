@@ -10,6 +10,7 @@ import { ReactNode, useEffect } from 'react';
 import sdk from '@farcaster/miniapp-sdk';
 import { Toaster } from 'react-hot-toast';
 import { TwemojiProvider } from './components/TwemojiProvider';
+import { UserProvider, PriceProvider, TradeProvider } from './context';
 
 const queryClient = new QueryClient();
 
@@ -99,7 +100,13 @@ export function Providers({ children }: { children: ReactNode }) {
             }}
           />
           <TwemojiProvider>
-            {children}
+            <UserProvider>
+              <PriceProvider>
+                <TradeProvider>
+                  {children}
+                </TradeProvider>
+              </PriceProvider>
+            </UserProvider>
           </TwemojiProvider>
         </OnchainKitProvider>
       </QueryClientProvider>

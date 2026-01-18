@@ -5,6 +5,7 @@ import axios from 'axios';
 
 export function useBTCPrice(updateInterval: number = 5000) {
   const [price, setPrice] = useState<number>(0);
+  const [priceTimestamp, setPriceTimestamp] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +44,7 @@ export function useBTCPrice(updateInterval: number = 5000) {
         }
         
         setPrice(fetchedPrice);
+        setPriceTimestamp(Date.now());
         setError(null);
         setIsLoading(false);
         return;
@@ -63,5 +65,5 @@ export function useBTCPrice(updateInterval: number = 5000) {
     return () => clearInterval(interval);
   }, [fetchPrice, updateInterval]);
 
-  return { price, isLoading, error, refetch: fetchPrice };
+  return { price, priceTimestamp, isLoading, error, refetch: fetchPrice };
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
-import { getApiUrl } from '../config/api';
+import { getApiUrl } from '../lib/api';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
 import { TradeResultToast } from './TradeResultToast';
@@ -60,6 +60,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   const [showCollateralModal, setShowCollateralModal] = useState(false);
   const [collateralAmount, setCollateralAmount] = useState('');
   const [selectedTradeId, setSelectedTradeId] = useState<number | null>(null);
+  const [isSubmittingCollateral, setIsSubmittingCollateral] = useState(false);
 
   // Stop loss states
   const [stopLossEnabled, setStopLossEnabled] = useState(false);
@@ -97,6 +98,33 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
   // Calculate fee for display purposes only (will be deducted from P&L later)
   const feePercentage = leverage > 1 ? leverage * 0.05 : 0;
 
+  const fetchUserData = useCallback(async () => {
+    if (!address) return;
+    try {
+      const response = await fetch(getApiUrl(`api/users/${address}`));
+      const data = await response.json();
+      if (data.success) {
+        setUserData(data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  }, [address]);
+
+  const fetchOpenTrades = useCallback(async () => {
+    if (!address) return;
+
+    try {
+      const response = await fetch(getApiUrl(`api/trades/${address}/open`));
+      const data = await response.json();
+      if (data.success) {
+        setOpenTrades(data.trades);
+      }
+    } catch (error) {
+      console.error('Error fetching open trades:', error);
+    }
+  }, [address]);
+
   useEffect(() => {
     if (address) {
       fetchOpenTrades();
@@ -105,7 +133,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       const interval = setInterval(fetchOpenTrades, 10000);
       return () => clearInterval(interval);
     }
-  }, [address]);
+  }, [address, fetchOpenTrades, fetchUserData]);
 
   // Handle stopped/liquidated trade notifications from parent
   useEffect(() => {
@@ -121,34 +149,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     }
   }, [stoppedTradeInfo, onStoppedTradeShown]);
 
-  const fetchUserData = async () => {
-    if (!address) return;
-    try {
-      const response = await fetch(getApiUrl(`api/users/${address}`));
-      const data = await response.json();
-      if (data.success) {
-        setUserData(data.user);
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    }
-  };
-
-  const fetchOpenTrades = async () => {
-    if (!address) return;
-
-    try {
-      const response = await fetch(getApiUrl(`api/trades/${address}/open`));
-      const data = await response.json();
-      if (data.success) {
-        setOpenTrades(data.trades);
-      }
-    } catch (error) {
-      console.error('Error fetching open trades:', error);
-    }
-  };
-
-  const handleOpenTrade = async (type: 'long' | 'short') => {
+  const handleOpenTrade = useCallback(async (type: 'long' | 'short') => {
     // Check position limit
     if (openTrades.length >= 10) {
       toast.error('❌ Maximum 10 open positions allowed. Please close some positions first.');
@@ -221,9 +222,9 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     } finally {
       setIsOpening(false);
     }
-  };
+  }, [openTrades.length, positionSize, address, paperBalanceDollars, stopLossEnabled, stopLossPrice, leverage, positionSizeCents, btcPrice, fetchOpenTrades, onTradeComplete]);
 
-  const handleCloseTrade = async (tradeId: number) => {
+  const handleCloseTrade = useCallback(async (tradeId: number) => {
     if (!address) return;
 
     setClosingTradeId(tradeId);
@@ -266,17 +267,17 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     } finally {
       setClosingTradeId(null);
     }
-  };
+  }, [address, btcPrice, fetchOpenTrades, onTradeComplete]);
 
-  const calculateLiquidationPrice = () => {
+  const calculateLiquidationPrice = useCallback(() => {
     if (tradeType === 'long') {
       return btcPrice * (1 - 1 / leverage);
     } else {
       return btcPrice * (1 + 1 / leverage);
     }
-  };
+  }, [tradeType, btcPrice, leverage]);
 
-  const calculatePnL = (trade: Trade) => {
+  const calculatePnL = useCallback((trade: Trade) => {
     const entryPrice = Number(trade.entry_price);
     // position_size is stored in CENTS, convert to dollars for calculation
     const collateralCents = Number(trade.position_size);
@@ -310,21 +311,21 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       percentage: percentageReturn,
       leveragedPosition: leveragedPositionSize
     };
-  };
+  }, [btcPrice]);
 
-  const isNearLiquidation = (trade: Trade) => {
+  const isNearLiquidation = useCallback((trade: Trade) => {
     const { percentage } = calculatePnL(trade);
     return percentage <= -90; // Warning at -90%
-  };
+  }, [calculatePnL]);
 
-  const openCollateralModal = (tradeId: number) => {
+  const openCollateralModal = useCallback((tradeId: number) => {
     setSelectedTradeId(tradeId);
     setCollateralAmount('');
     setShowCollateralModal(true);
-  };
+  }, []);
 
-  const handleAddCollateral = async () => {
-    if (!address || !selectedTradeId) return;
+  const handleAddCollateral = useCallback(async () => {
+    if (!address || !selectedTradeId || isSubmittingCollateral) return;
 
     const additionalCollateralDollars = Number(collateralAmount); // User enters dollars
 
@@ -338,8 +339,9 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
       return;
     }
 
+    // Disable submit button and show loading state while request is in flight
+    setIsSubmittingCollateral(true);
     setAddingCollateralTradeId(selectedTradeId);
-    setShowCollateralModal(false);
 
     const additionalCollateralCents = Math.round(additionalCollateralDollars * 100); // Convert to cents for API
     try {
@@ -358,31 +360,42 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
       if (data.success) {
         toast.success(`+$${additionalCollateralDollars.toFixed(0)} added! New Liq: $${data.newLiquidationPrice.toFixed(0)}`);
-        fetchOpenTrades();
+        // Refresh position data before closing modal
+        await fetchOpenTrades();
         onTradeComplete();
+        // Close modal only after successful response and data refresh
+        setShowCollateralModal(false);
+        setCollateralAmount('');
+        setSelectedTradeId(null);
       } else {
+        // Keep modal open on error so user can retry
         toast.error(`❌ ${data.message || 'Failed'}`);
       }
     } catch (error) {
+      // Keep modal open on error so user can retry
       console.error('Error adding collateral:', error);
       toast.error(`❌ Failed to add margin`);
     } finally {
+      setIsSubmittingCollateral(false);
       setAddingCollateralTradeId(null);
-      setSelectedTradeId(null);
     }
-  };
+  }, [address, selectedTradeId, isSubmittingCollateral, collateralAmount, paperBalanceDollars, btcPrice, fetchOpenTrades, onTradeComplete]);
 
-  const openStopLossModal = (trade: Trade) => {
+  const openStopLossModal = useCallback((trade: Trade) => {
     setEditingStopLossTrade(trade);
     setEditStopLossPrice(trade.stop_loss ? trade.stop_loss.toString() : '');
     setShowStopLossModal(true);
-  };
+  }, []);
 
-  const handleUpdateStopLoss = async (forceRemove: boolean = false) => {
+  const handleUpdateStopLoss = useCallback(async (forceRemove: boolean = false) => {
     if (!address || !editingStopLossTrade) return;
 
     const newStopLoss = forceRemove ? null : (editStopLossPrice ? Number(editStopLossPrice) : null);
     const tradeId = editingStopLossTrade.id; // Capture before any state changes
+
+    // Store previous state for rollback on error
+    const previousTrade = editingStopLossTrade;
+    const previousStopLossPrice = editStopLossPrice;
 
     setUpdatingStopLossTradeId(tradeId);
     setShowStopLossModal(false);
@@ -414,17 +427,25 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
           return [...newTrades]; // Force new array reference
         });
       } else {
+        // Rollback: restore modal state so user can retry
+        setEditingStopLossTrade(previousTrade);
+        setEditStopLossPrice(previousStopLossPrice);
+        setShowStopLossModal(true);
         toast.error(`❌ ${data.message || 'Failed to update stop loss'}`);
       }
     } catch (error) {
       console.error('Error updating stop loss:', error);
+      // Rollback: restore modal state so user can retry
+      setEditingStopLossTrade(previousTrade);
+      setEditStopLossPrice(previousStopLossPrice);
+      setShowStopLossModal(true);
       toast.error('❌ Failed to update stop loss');
     } finally {
       setUpdatingStopLossTradeId(null);
     }
-  };
+  }, [address, editingStopLossTrade, editStopLossPrice]);
 
-  const handleCastOpenPosition = async (trade: Trade, pnl: number, percentage: number) => {
+  const handleCastOpenPosition = useCallback(async (trade: Trade, pnl: number, percentage: number) => {
     const army = userData?.army || 'bulls';
     const armyEmoji = army === 'bears' ? '🐻' : '🐂';
     const websiteUrl = window.location.origin;
@@ -479,7 +500,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
     }
 
     toast.success('🎯 Cast mission done! Claim $500 in Missions tab');
-  };
+  }, [userData, address]);
 
   if (!address) {
     return (
@@ -825,7 +846,7 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-800 border-2 border-blue-500 rounded-lg p-6 max-w-sm w-full">
             <h3 className="text-lg font-bold text-white mb-4">Add Margin</h3>
-            
+
             <div className="mb-4">
               <label className="block text-sm text-gray-400 mb-2">Amount ($)</label>
               <input
@@ -834,7 +855,8 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
                 pattern="[0-9]*"
                 value={collateralAmount}
                 onChange={(e) => setCollateralAmount(e.target.value)}
-                className="w-full bg-slate-700 text-white px-4 py-3 rounded border border-slate-600 focus:border-blue-500 focus:outline-none text-lg"
+                disabled={isSubmittingCollateral}
+                className="w-full bg-slate-700 text-white px-4 py-3 rounded border border-slate-600 focus:border-blue-500 focus:outline-none text-lg disabled:opacity-50"
                 placeholder="100"
                 autoFocus
               />
@@ -843,16 +865,22 @@ export function TradingPanel({ btcPrice, paperBalance, onTradeComplete, walletAd
 
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => setShowCollateralModal(false)}
-                className="bg-slate-600 hover:bg-slate-500 text-white py-3 rounded font-semibold transition-all"
+                onClick={() => {
+                  setShowCollateralModal(false);
+                  setCollateralAmount('');
+                  setSelectedTradeId(null);
+                }}
+                disabled={isSubmittingCollateral}
+                className="bg-slate-600 hover:bg-slate-500 text-white py-3 rounded font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddCollateral}
-                className="bg-blue-600 hover:bg-blue-500 text-white py-3 rounded font-semibold transition-all"
+                disabled={isSubmittingCollateral}
+                className="bg-blue-600 hover:bg-blue-500 text-white py-3 rounded font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add
+                {isSubmittingCollateral ? 'Adding...' : 'Add'}
               </button>
             </div>
           </div>

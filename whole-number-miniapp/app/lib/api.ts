@@ -15,15 +15,22 @@ export const API_ENDPOINTS = {
   config: `${API_URL}/api/config`,
 };
 
+// Helper function to get full API URL for a path
+export function getApiUrl(path: string): string {
+  // Remove leading slash if present to avoid double slashes
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  return `${API_URL}/${cleanPath}`;
+}
+
 // Helper function to build URL with parameters
 export function buildUrl(endpoint: string, params?: Record<string, string | number>): string {
   if (!params) return endpoint;
-  
+
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     searchParams.append(key, String(value));
   });
-  
+
   return `${endpoint}?${searchParams.toString()}`;
 }
 

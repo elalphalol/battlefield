@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
-import { getApiUrl } from '../config/api';
+import { getApiUrl } from '../lib/api';
 import { getReferralLink } from '../lib/farcaster';
 import sdk from '@farcaster/miniapp-sdk';
 import toast from 'react-hot-toast';
